@@ -3,6 +3,7 @@ import { useTheme } from '@/app/providers/ThemeProvider';
 import { useLanguage } from '@/app/providers/LanguageProvider';
 import type { TimetableItem } from '@/shared/types/usas';
 import { extractDayName, formatDayDisplay } from '@/shared/lib/dayFormat';
+import { buildCourseColorMap, getCourseColorSlot } from '@/shared/lib/courseColors';
 import { MapPin } from 'lucide-react';
 import {
   getCourseHighlightKey,
@@ -102,7 +103,10 @@ export default function MatrixGridView({
   const { theme } = useTheme();
   const { t, lang } = useLanguage();
   const isLight = theme === 'light';
-  
+
+  // Stable unique colour per course (shared with the card and export views).
+  const courseColorMap = useMemo(() => buildCourseColorMap(timetable), [timetable]);
+
   const getCourseForSlot = (dayName: string, slotTime: string) => {
     const targetDay = extractDayName(dayName);
     const slotHour = parseTo24hHour(slotTime);
@@ -185,7 +189,6 @@ export default function MatrixGridView({
           {/* Body - Transposed: Days as rows, slots aligned using colSpan */}
           <tbody>
             {days.map((d) => {
-              const color = getDayColors(d, isLight);
               let skipCount = 0;
 
               return (
@@ -201,7 +204,7 @@ export default function MatrixGridView({
                     style={{ fontSize: `${autoScale * 10}px` }}
                   >
                     <span className="flex items-center justify-center gap-1.5 min-h-[42px] sm:min-h-[48px] whitespace-nowrap">
-                      <span className={color.text}>{formatDayDisplay(d, t)}</span>
+                      <span className={isLight ? 'text-slate-600' : 'text-white/70'}>{formatDayDisplay(d, t)}</span>
                     </span>
                   </td>
                   {activeTimeSlots.map((slot) => {
@@ -211,6 +214,9 @@ export default function MatrixGridView({
                     }
 
                     const course = getCourseForSlot(d, slot);
+                    const courseColor = course
+                      ? getDayColors(getCourseColorSlot(courseColorMap, course.course_id || course.kod_kursus), isLight)
+                      : null;
                     const courseKey = course ? getCourseHighlightKey(course) : '';
                     const courseStatus =
                       courseKey && activeHighlights
@@ -246,7 +252,7 @@ export default function MatrixGridView({
                         }`}
                       >
                         {course ? (
-                          <div className={`px-2 py-2 rounded-md border h-full flex flex-col justify-between gap-0.5 transition-all duration-300 hover:brightness-105 ${color.bg} ${color.border} ${
+                          <div className={`px-2 py-2 rounded-md border h-full flex flex-col justify-between gap-0.5 transition-all duration-300 hover:brightness-105 ${courseColor?.bg} ${courseColor?.border} ${
                             courseStatus === 'ongoing'
                               ? 'ring-1 ring-emerald-400/70 shadow-[0_0_16px_rgba(52,211,153,0.20)]'
                               : courseStatus === 'upcoming'
@@ -254,7 +260,7 @@ export default function MatrixGridView({
                                 : ''
                           }`}>
                             <div className="flex items-center justify-between gap-2 mb-0.5">
-                              <div className={`font-bold truncate ${color.text}`} style={{ fontSize: `${autoScale * 12}px` }}>
+                              <div className={`font-bold truncate ${courseColor?.text}`} style={{ fontSize: `${autoScale * 12}px` }}>
                                 {course.course_id || course.kod_kursus}
                               </div>
                               {durationText && (

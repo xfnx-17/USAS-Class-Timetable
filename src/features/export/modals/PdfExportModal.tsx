@@ -4,6 +4,7 @@ import { useLanguage } from '@/app/providers/LanguageProvider';
 import { useTheme } from '@/app/providers/ThemeProvider';
 import { generateTimetablePdf, generateElementPng, generateLockscreenImage } from '@/features/export/lib/pdfGenerator';
 import { extractDayName, formatDayDisplay } from '@/shared/lib/dayFormat';
+import { buildCourseColorMap, getCourseColorSlot } from '@/shared/lib/courseColors';
 import type { TimetableItem } from '@/shared/types/usas';
 import {
   X, Download, Smartphone, RotateCw, ChevronDown, Plus, Minus, FileBadge
@@ -385,6 +386,9 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
 
   // Courses sorted by weekday then start time, so the formal table can merge
   // consecutive rows of the same day into a single day cell (rowSpan).
+  // Stable unique colour per course (shared with the card and grid views).
+  const courseColorMap = useMemo(() => buildCourseColorMap(allCourses), [allCourses]);
+
   const pdfCourses = useMemo(() => {
     const order = ['ISNIN', 'SELASA', 'RABU', 'KHAMIS', 'JUMAAT', 'SABTU', 'AHAD'];
     return [...allCourses].sort((a, b) => {
@@ -1288,11 +1292,10 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                 </thead>
                                 <tbody>
                                   {daysList.map((d) => {
-                                    const dayColor = getModalDayColors(d, exportTheme);
                                     return (
                                       <tr key={d} style={{ height: `${rowHeightPx}px` }} className={`border-t ${lockscreenConfig.cellBorder}`}>
                                         <td
-                                          className={`p-0 font-bold border-r ${lockscreenConfig.cellBorder} ${lockscreenConfig.dayText} ${dayColor.text}`}
+                                          className={`p-0 font-bold border-r ${lockscreenConfig.cellBorder} ${lockscreenConfig.dayText}`}
                                           style={{ height: `${rowHeightPx}px` }}
                                         >
                                           <div className="w-full px-1 flex items-center justify-center text-center" style={{ height: `${rowHeightPx}px` }}>
@@ -1305,11 +1308,15 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                           if (covered) return null;
                                           if (course) {
                                             const courseSpan = getWallpaperCourseSpan(course);
+                                            const courseColor = getModalDayColors(
+                                              getCourseColorSlot(courseColorMap, course.course_id || course.kod_kursus),
+                                              exportTheme,
+                                            );
                                             return (
                                               <td
                                                 key={hourStart}
                                                 colSpan={courseSpan}
-                                                className={`border-r align-middle p-0.5 overflow-visible ${lockscreenConfig.cellBorder} ${dayColor.bg} ${dayColor.border}`}
+                                                className={`border-r align-middle p-0.5 overflow-visible ${lockscreenConfig.cellBorder} ${courseColor.bg} ${courseColor.border}`}
                                                 style={{ height: `${rowHeightPx}px` }}
                                               >
                                                 {renderWallpaperCourseContent(course, courseSpan, colWidth * courseSpan, rowHeightPx, lockscreenConfig.isLight, style)}

@@ -15,6 +15,7 @@ import {
   getShortTimeRange,
 } from '@/shared/lib/timetableTime';
 import { extractDayName, formatDayDisplay, isSameDay } from '@/shared/lib/dayFormat';
+import { buildCourseColorMap, getCourseColorSlot } from '@/shared/lib/courseColors';
 import { restoreStringRecord } from '@/shared/lib/storage';
 import { 
   Clock, MapPin, User, BookOpen, Search, 
@@ -68,16 +69,9 @@ const DAY_COLOR_KEY: Record<string, string> = {
   ISNIN: 'emerald', SELASA: 'blue', RABU: 'amber', KHAMIS: 'purple', JUMAAT: 'rose', SABTU: 'orange', AHAD: 'slate',
 };
 
-const COURSE_COLOR_ORDER = ['emerald', 'blue', 'amber', 'purple', 'rose', 'teal', 'indigo', 'cyan', 'orange', 'fuchsia', 'lime', 'slate'];
-
-const getCardDayColor = (day: string | undefined, isLight: boolean): CardColorScheme => {
-  const key = DAY_COLOR_KEY[extractDayName(day)] || 'emerald';
+const getCardColorBySlot = (slot: string | undefined, isLight: boolean): CardColorScheme => {
+  const key = DAY_COLOR_KEY[slot || ''] || 'emerald';
   return (isLight ? CARD_LIGHT_COLORS[key] : CARD_DARK_COLORS[key]) || (isLight ? CARD_LIGHT_COLORS.emerald : CARD_DARK_COLORS.emerald);
-};
-
-const getCourseColorByIndex = (index: number, isLight: boolean): CardColorScheme => {
-  const color = COURSE_COLOR_ORDER[Math.abs(index) % COURSE_COLOR_ORDER.length];
-  return (isLight ? CARD_LIGHT_COLORS[color] : CARD_DARK_COLORS[color]) || (isLight ? CARD_LIGHT_COLORS.emerald : CARD_DARK_COLORS.emerald);
 };
 
 type TimetableGridProps = {
@@ -135,18 +129,7 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
   const allCourses = useMemo(() => timetableItems || [], [timetableItems]);
 
   // Assign each distinct course a stable, unique colour slot.
-  const courseColorIndex = useMemo(() => {
-    const map = new Map<string, number>();
-    let index = 0;
-    allCourses.forEach((course) => {
-      const id = String(course.course_id || course.kod_kursus || '').toUpperCase();
-      if (id && !map.has(id)) {
-        map.set(id, index);
-        index += 1;
-      }
-    });
-    return map;
-  }, [allCourses]);
+  const courseColorMap = useMemo(() => buildCourseColorMap(allCourses), [allCourses]);
 
   const handleSaveNote = (courseId) => {
     const updated = { ...courseNotes, [courseId]: noteInput };
@@ -235,7 +218,6 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
           {/* Day Filter Pills */}
           <div className="flex items-center gap-0.5 w-full sm:flex-1 overflow-x-auto no-scrollbar -mx-0.5 px-0.5">
             {daysList.map(day => {
-              const color = getCardDayColor(day, isLight);
               const count = allCourses.filter(c => isSameDay(c.day, day)).length;
               const isActive = selectedDay === day || (selectedDay !== 'ALL' && isSameDay(selectedDay, day));
               return (
@@ -252,7 +234,6 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
                           : 'border-transparent text-white/30 hover:text-white/50 hover:bg-white/[0.04]')
                   }`}
                 >
-                  <span className={`w-1.5 h-1.5 rounded-full ${color.dot}`} />
                   <span>{formatDayDisplay(day, t)}</span>
                   {count > 0 && <span className={`text-[9px] ${isLight ? 'text-slate-400' : 'text-white/20'}`}>{count}</span>}
                 </button>
@@ -350,7 +331,7 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 items-start">
                   {filteredCourses.map((course) => {
                     const courseId = course.course_id || course.kod_kursus;
-                    const cardColor = getCourseColorByIndex(courseColorIndex.get(String(courseId || '').toUpperCase()) ?? 0, isLight);
+                    const cardColor = getCardColorBySlot(getCourseColorSlot(courseColorMap, courseId), isLight);
                     const cardKey = getCourseHighlightKey(course);
                     const isExpanded = expandAll ? true : !!expandedCards[cardKey];
                     const currentNote = courseNotes[courseId] || '';
