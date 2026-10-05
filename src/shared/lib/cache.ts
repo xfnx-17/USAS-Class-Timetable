@@ -1,6 +1,6 @@
 import type { StudentSession, TimetableData } from '../types/usas';
 import { isValidLoginUserId, sanitizeSession, sanitizeTimetableItem, sanitizeTextForShare, sanitizeSingleLine } from './security';
-import { normalizeDayLabel } from './dayFormat';
+import { normalizeDayLabel, sortDayLabels } from './dayFormat';
 
 const POISON_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
@@ -79,11 +79,11 @@ export function restoreTimetableFromCache(value: string): TimetableData | null {
         .filter(hasTimetableContent)
     : [];
   const days = Array.isArray(parsed.days)
-    ? Array.from(new Set(
+    ? sortDayLabels(Array.from(new Set(
         parsed.days
           .map((day) => normalizeDayLabel(sanitizeSingleLine(day, 64)))
           .filter(Boolean)
-      ))
+      )))
     : [];
 
   return {

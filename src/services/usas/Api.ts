@@ -16,7 +16,7 @@ import {
   sanitizeTimetableItem,
   sanitizeTextForShare,
 } from '@/shared/lib/security';
-import { normalizeDayLabel, parseDisplayDate } from '@/shared/lib/dayFormat';
+import { normalizeDayLabel, parseDisplayDate, sortDayLabels } from '@/shared/lib/dayFormat';
 
 // USAS API Service Layer
 // Dual JSON & Form-UrlEncoded transport layer with multi-endpoint fallback
@@ -627,11 +627,11 @@ export async function fetchTimetableAPI(session: StudentSession): Promise<Timeta
     // Keep the formatted date + weekday label (e.g. "05-10-2026 (ISNIN)") so the
     // UI can render the real date beside the translated weekday, while still
     // de-duplicating repeated weekdays.
-    rawDays = Array.from(new Set(
+    rawDays = sortDayLabels(Array.from(new Set(
       (timetablePayloadRes.server_response_day || [])
         .map((day) => normalizeDayLabel(sanitizeSingleLine(day, 64)))
         .filter(Boolean)
-    ));
+    )));
   } else if (kehadiranPayloadTyped?.server_response && kehadiranPayloadTyped.server_response.length > 0) {
     rawItems = kehadiranPayloadTyped.server_response.map((item, i) => {
       const parsed = parseFallbackJadual(item.jadual);
@@ -659,11 +659,11 @@ export async function fetchTimetableAPI(session: StudentSession): Promise<Timeta
   // If the backend did not return a day list, derive it from the timetable
   // items themselves, preserving any embedded date labels.
   if (rawDays.length === 0 && rawItems.length > 0) {
-    rawDays = Array.from(new Set(
+    rawDays = sortDayLabels(Array.from(new Set(
       rawItems
         .map((item) => normalizeDayLabel(sanitizeSingleLine(item.day, 64)))
         .filter(Boolean)
-    ));
+    )));
   }
 
   // Resolve the real lecture-attendance percentage per course from the official

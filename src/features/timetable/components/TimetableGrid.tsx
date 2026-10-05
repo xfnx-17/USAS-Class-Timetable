@@ -14,7 +14,7 @@ import {
   getCourseHighlightKey,
   getShortTimeRange,
 } from '@/shared/lib/timetableTime';
-import { extractDayName, formatDayDisplay, isSameDay } from '@/shared/lib/dayFormat';
+import { extractDayName, formatDayDisplay, isSameDay, sortDayLabels } from '@/shared/lib/dayFormat';
 import { buildCourseColorMap, getCourseColorSlot } from '@/shared/lib/courseColors';
 import { restoreStringRecord } from '@/shared/lib/storage';
 import { 
@@ -117,7 +117,7 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
 
   const daysList = useMemo(() => {
     if (timetableDays && timetableDays.length > 0) {
-      return Array.from(new Set(timetableDays));
+      return sortDayLabels(Array.from(new Set(timetableDays)));
     }
     const defaultOrder = ['ISNIN', 'SELASA', 'RABU', 'KHAMIS', 'JUMAAT', 'SABTU', 'AHAD'];
     const daysInCourses = new Set((timetableItems || []).map(c => extractDayName(c.day)).filter(Boolean));

@@ -3,7 +3,7 @@ import { useAuth } from '@/app/providers/AuthProvider';
 import { useLanguage } from '@/app/providers/LanguageProvider';
 import { useTheme } from '@/app/providers/ThemeProvider';
 import { generateTimetablePdf, generateElementPng, generateLockscreenImage } from '@/features/export/lib/pdfGenerator';
-import { extractDayName, formatDayDisplay } from '@/shared/lib/dayFormat';
+import { extractDayName, formatDayDisplay, sortDayLabels } from '@/shared/lib/dayFormat';
 import { buildCourseColorMap, getCourseColorSlot } from '@/shared/lib/courseColors';
 import type { TimetableItem } from '@/shared/types/usas';
 import {
@@ -387,7 +387,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
 
   const daysList = useMemo(() => {
     if (timetableDays && timetableDays.length > 0) {
-      return Array.from(new Set(timetableDays));
+      return sortDayLabels(Array.from(new Set(timetableDays)));
     }
     const defaultOrder = ['ISNIN', 'SELASA', 'RABU', 'KHAMIS', 'JUMAAT', 'SABTU', 'AHAD'];
     const daysInCourses = new Set(allCourses.map(c => extractDayName(c.day)).filter(Boolean));

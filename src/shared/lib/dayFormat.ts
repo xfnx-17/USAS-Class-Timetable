@@ -1,5 +1,7 @@
 const MALAY_DAYS = ['ISNIN', 'SELASA', 'RABU', 'KHAMIS', 'JUMAAT', 'SABTU', 'AHAD'] as const;
 
+export const WEEKDAY_ORDER = [...MALAY_DAYS] as string[];
+
 const EN_DAY_MAP: Record<string, string> = {
   MONDAY: 'ISNIN',
   TUESDAY: 'SELASA',
@@ -94,6 +96,19 @@ export function parseDisplayDate(value?: string): Date | null {
   const year = Number(match[3]);
   const date = new Date(year, month - 1, day);
   return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/**
+ * Sorts day labels into the canonical Monday→Sunday order. The USAS backend
+ * returns days starting from the current day (e.g. Tuesday first), so this
+ * keeps the UI stable regardless of the week offset.
+ */
+export function sortDayLabels(days: string[]): string[] {
+  const rank = (value: string) => {
+    const index = WEEKDAY_ORDER.indexOf(extractDayName(value));
+    return index === -1 ? WEEKDAY_ORDER.length : index;
+  };
+  return [...days].sort((a, b) => rank(a) - rank(b));
 }
 
 /**

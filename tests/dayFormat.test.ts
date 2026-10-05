@@ -5,6 +5,7 @@ import {
   formatDayDisplay,
   isSameDay,
   normalizeDayLabel,
+  sortDayLabels,
   stripDayPrefix,
 } from '../src/shared/lib/dayFormat';
 
@@ -51,5 +52,19 @@ describe('day formatting', () => {
   it('compares day labels regardless of the embedded date', () => {
     expect(isSameDay('days.05-10-2026 (ISNIN)', 'ISNIN')).toBe(true);
     expect(isSameDay('days.05-10-2026 (ISNIN)', 'days.06-10-2026 (SELASA)')).toBe(false);
+  });
+
+  it('sorts day labels into Monday-first order', () => {
+    expect(sortDayLabels([
+      '06-10-2026 (SELASA)',
+      '07-10-2026 (RABU)',
+      '08-10-2026 (KHAMIS)',
+      '12-10-2026 (ISNIN)',
+    ])).toEqual([
+      '12-10-2026 (ISNIN)',
+      '06-10-2026 (SELASA)',
+      '07-10-2026 (RABU)',
+      '08-10-2026 (KHAMIS)',
+    ]);
   });
 });
