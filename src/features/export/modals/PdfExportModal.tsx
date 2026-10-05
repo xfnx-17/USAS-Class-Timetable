@@ -680,7 +680,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
 
     return (
       <div
-        className="w-full flex flex-col justify-center items-center text-center p-0.5 overflow-hidden"
+        className="w-full flex flex-col justify-center items-center text-center p-0.5"
         style={{ height: `${badgeHeightPx - 2}px` }}
       >
         {contentDetail === 'DETAILS' ? (
@@ -690,7 +690,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
             </div>
             <div className="w-full text-center">
               <span
-                className={`block w-full overflow-hidden whitespace-nowrap font-black leading-normal tracking-tight text-center ${isLightMode ? 'text-slate-800' : 'text-white'
+                className={`block w-full whitespace-nowrap font-black leading-normal tracking-tight text-center ${isLightMode ? 'text-slate-800' : 'text-white'
                   }`}
                 style={{ fontSize: `${fitFontSize}px` }}
                 title={code}
@@ -705,7 +705,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
         ) : (
           <div className="w-full flex items-center justify-center text-center">
             <span
-              className={`inline-block max-w-full overflow-hidden whitespace-nowrap leading-normal tracking-tight text-center font-black ${isLightMode ? 'text-slate-800' : 'text-white'}`}
+              className={`inline-block max-w-full whitespace-nowrap leading-normal tracking-tight text-center font-black ${isLightMode ? 'text-slate-800' : 'text-white'}`}
               style={{ fontSize: `${fitFontSize}px`, letterSpacing: '-0.03em' }}
               title={code}
             >
@@ -1069,13 +1069,13 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                     <div className="flex items-center gap-3">
                       <img src="/usas-logo.png" alt="USAS Crest" className="w-10 h-10 object-contain" />
                       <div>
-                        <h1 className="text-xs font-black tracking-tight text-slate-900 uppercase leading-none">
+                        <h1 className="text-xs font-black tracking-tight text-slate-900 uppercase leading-tight whitespace-nowrap">
                           UNIVERSITI SULTAN AZLAN SHAH (USAS)
                         </h1>
-                        <h2 className="text-[10px] font-bold text-amber-800 uppercase mt-1 leading-none">
+                        <h2 className="text-[10px] font-bold text-amber-800 uppercase mt-1 leading-tight whitespace-nowrap">
                           JADUAL WAKTU KULIAH PELAJAR
                         </h2>
-                        <p className="text-[9px] text-slate-500 font-semibold mt-1 leading-none">
+                        <p className="text-[9px] text-slate-500 font-semibold mt-1 leading-tight whitespace-nowrap">
                           {semesterStr}
                         </p>
                       </div>
