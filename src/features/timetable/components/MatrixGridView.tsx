@@ -45,8 +45,8 @@ const getDayColors = (day: string | undefined, isLight: boolean) => {
 };
 
 const ALL_TIME_SLOTS = [
-  '08:00 AM', '09:00 AM', '10:00 AM', '11:00 AM', 
-  '12:00 PM', '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM'
+  '08:00 AM', '09:00 AM', '10:00 AM', '11:00 AM',
+  '12:00 PM', '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM', '06:00 PM'
 ];
 
 const getDurationLabel = (startTime?: string, endTime?: string, lang?: string) => {
@@ -88,7 +88,8 @@ const getSlotLabel = (slot: string) => {
     '02:00 PM': '14-15',
     '03:00 PM': '15-16',
     '04:00 PM': '16-17',
-    '05:00 PM': '17-18'
+    '05:00 PM': '17-18',
+    '06:00 PM': '18-19'
   };
   return slotMap[slot] || slot;
 };
@@ -104,11 +105,13 @@ export default function MatrixGridView({
   
   const getCourseForSlot = (dayName: string, slotTime: string) => {
     const targetDay = extractDayName(dayName);
+    const slotHour = parseTo24hHour(slotTime);
+    if (slotHour === null) return undefined;
+
     return timetable.find(c => {
-      const isDay = extractDayName(c.day) === targetDay;
-      if (!isDay) return false;
-      const startTime = c.start_time || c.jadual || '';
-      return startTime.includes(slotTime.split(':')[0]);
+      if (extractDayName(c.day) !== targetDay) return false;
+      const startHour = parseTo24hHour(c.start_time || c.jadual || '');
+      return startHour !== null && startHour === slotHour;
     });
   };
 
