@@ -220,6 +220,18 @@ const getPresetStyle = (preset: WallpaperPreset, detail: ContentDetail = 'DETAIL
 
 const WALLPAPER_HOUR_STARTS = [8, 9, 10, 11, 12, 13, 14, 15, 16];
 
+// Measures the real rendered width of bold text so the wallpaper can shrink the
+// course code to exactly fit a narrow (single-period) cell.
+let codeMeasureCanvas: HTMLCanvasElement | null = null;
+const measureBoldTextWidth = (text: string, fontSizePx: number): number | null => {
+  if (typeof document === 'undefined' || !text) return null;
+  if (!codeMeasureCanvas) codeMeasureCanvas = document.createElement('canvas');
+  const ctx = codeMeasureCanvas.getContext('2d');
+  if (!ctx) return null;
+  ctx.font = `900 ${fontSizePx}px Inter, Arial, sans-serif`;
+  return ctx.measureText(text).width || null;
+};
+
 const parseTimeToMinutes = (timeStr?: string) => {
   if (!timeStr) return null;
   const raw = String(timeStr).trim();
@@ -670,12 +682,16 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
       return baseSize;
     })();
 
-    // Shrink the course code so a long code fits a single narrow period column
-    // instead of breaking into "RKS60 / 83".
+    // Shrink the course code so it always fits the cell width — critical for
+    // narrow single-period columns — using the measured glyph width.
     const fitFontSize = (() => {
       if (!cellWidthPx || cellWidthPx <= 0 || !code) return codeOnlyFontSize;
-      const maxByWidth = (cellWidthPx - 6) / (code.length * 0.62);
-      return Math.max(6, Math.min(codeOnlyFontSize, maxByWidth));
+      const availableWidth = Math.max(6, cellWidthPx - 6);
+      const measured = measureBoldTextWidth(code, codeOnlyFontSize);
+      const scaled = measured
+        ? (availableWidth / measured) * codeOnlyFontSize
+        : availableWidth / (code.length * 0.72);
+      return Math.max(5, Math.min(codeOnlyFontSize, scaled));
     })();
 
     return (
