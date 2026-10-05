@@ -37,10 +37,15 @@ describe('day formatting', () => {
     expect(extractDatePart('ISNIN')).toBeNull();
   });
 
-  it('renders the date with a translated weekday and never leaks the prefix', () => {
-    expect(formatDayDisplay('days.05-10-2026 (ISNIN)', t)).toBe('05-10-2026 (MONDAY)');
-    expect(formatDayDisplay('days.05-10-2026 (ISNIN)', t, { short: true })).toBe('05-10-2026 (Mon)');
-    expect(formatDayDisplay('days.05-10-2026 (ISNIN)')).toBe('05-10-2026 (ISNIN)');
+  it('renders only the translated weekday by default and never leaks the prefix', () => {
+    expect(formatDayDisplay('days.05-10-2026 (ISNIN)', t)).toBe('MONDAY');
+    expect(formatDayDisplay('days.05-10-2026 (ISNIN)', t, { short: true })).toBe('Mon');
+    expect(formatDayDisplay('days.05-10-2026 (ISNIN)')).toBe('ISNIN');
+  });
+
+  it('includes the embedded date only when withDate is requested', () => {
+    expect(formatDayDisplay('days.05-10-2026 (ISNIN)', t, { withDate: true })).toBe('05-10-2026 (MONDAY)');
+    expect(formatDayDisplay('days.05-10-2026 (ISNI)', t, { withDate: true })).toBe('05-10-2026 (MONDAY)');
   });
 
   it('compares day labels regardless of the embedded date', () => {

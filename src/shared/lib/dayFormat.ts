@@ -100,16 +100,19 @@ export function isSameDay(dayA?: string, dayB?: string): boolean {
  * Formats a day string for clean UI display, properly translating the day of week
  * and stripping any dangling 'days.' prefix.
  *
+ * By default only the weekday is shown (e.g. "MONDAY"). Pass
+ * `{ withDate: true }` to also include the embedded date.
+ *
  * Example:
- * - "05-10-2026 (ISNIN)" + EN -> "05-10-2026 (MONDAY)"
- * - "05-10-2026 (ISNIN)" + MS -> "05-10-2026 (ISNIN)"
- * - "days.05-10-2026 (ISNI)"  -> "05-10-2026 (ISNIN)"
- * - "ISNIN" + EN              -> "MONDAY"
+ * - "days.05-10-2026 (ISNIN)" + EN               -> "MONDAY"
+ * - "days.05-10-2026 (ISNIN)" + EN + withDate    -> "05-10-2026 (MONDAY)"
+ * - "days.05-10-2026 (ISNI)" + withDate          -> "05-10-2026 (ISNIN)"
+ * - "ISNIN" + EN                                 -> "MONDAY"
  */
 export function formatDayDisplay(
   dayStr: string | undefined,
   t?: (key: string) => string,
-  options?: { short?: boolean }
+  options?: { short?: boolean; withDate?: boolean }
 ): string {
   if (!dayStr) return '';
   const clean = stripDayPrefix(dayStr);
@@ -124,9 +127,14 @@ export function formatDayDisplay(
     translatedDay = result && !result.startsWith('days.') && !result.startsWith('shortDays.') ? result : dayName;
   }
 
-  // Only wrap the day name when it is a real weekday label, never when it is
-  // just the raw date echoed back for an unrecognised value.
-  if (datePart && translatedDay && translatedDay.toUpperCase() !== datePart.toUpperCase()) {
+  // Only wrap the day name when explicitly requested, when it is a real
+  // weekday label, and never when it is just the raw date echoed back.
+  if (
+    options?.withDate &&
+    datePart &&
+    translatedDay &&
+    translatedDay.toUpperCase() !== datePart.toUpperCase()
+  ) {
     return `${datePart} (${translatedDay})`;
   }
 
