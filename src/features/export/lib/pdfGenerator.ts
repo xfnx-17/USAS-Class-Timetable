@@ -94,9 +94,12 @@ async function captureElement(elementRef: ExportElement | null, scale = 2, backg
       // NOTE: We skip this on Apple devices as iOS Safari handles baselines differently and this hack breaks text kerning/alignment.
       const isApple = typeof navigator !== 'undefined' && (/Mac|iPod|iPhone|iPad/.test(navigator.platform) || (/MacIntel/.test(navigator.platform) && navigator.maxTouchPoints > 1) || /iPhone|iPad|iPod/i.test(navigator.userAgent));
 
-      // Only the formal document needs this baseline-shift workaround. Applying
-      // it to the wallpaper smears the small bold course codes after capture.
-      if (!isApple && exportRootId !== 'wallpaper-export-root') {
+      // Compensate for html2canvas's font-baseline offset by shifting text up
+      // proportionally to its font size. A fixed -4px over-shifts the tiny
+      // wallpaper labels (they dropped onto the grid lines); scaling keeps both
+      // the large formal document and the small wallpaper text correctly placed.
+      if (!isApple) {
+        const view = clonedDoc.defaultView || window;
         const textNodes = clonedRoot.querySelectorAll('span, h1, h2, p');
         textNodes.forEach((node) => {
           const el = node as HTMLElement;
@@ -107,7 +110,9 @@ async function captureElement(elementRef: ExportElement | null, scale = 2, backg
               el.style.verticalAlign = 'middle';
             }
           }
-          el.style.transform = 'translateY(-4px)';
+          const fontSize = parseFloat(view.getComputedStyle(el).fontSize) || 12;
+          const shift = Math.max(1, Math.round(fontSize * 0.36));
+          el.style.transform = `translateY(-${shift}px)`;
         });
       }
 
