@@ -101,7 +101,10 @@ export default function AttendanceHistoryModal({ isOpen, onClose, course, refres
               <CalendarCheck className="w-5 h-5" />
             </div>
             <div className="text-left min-w-0">
-              <h3 className={`text-sm sm:text-base font-bold truncate ${isLight ? 'text-slate-800' : 'text-white'}`}>Laporan Kehadiran Mingguan (Week 1 - 14)</h3>
+              <h3 className={`text-sm sm:text-base font-bold truncate ${isLight ? 'text-slate-800' : 'text-white'}`}>
+                <span className="sm:hidden">Laporan Kehadiran</span>
+                <span className="hidden sm:inline">Laporan Kehadiran Mingguan (Week 1 - 14)</span>
+              </h3>
               <p className={`text-[11px] sm:text-xs font-semibold truncate ${isLight ? 'text-slate-500' : 'text-white/40'}`}>
                 {course.course_id || course.kod_kursus} ({groupDisplay}): {course.course_name || course.kursus}
               </p>
@@ -145,20 +148,29 @@ export default function AttendanceHistoryModal({ isOpen, onClose, course, refres
                   const heldCount = heldRows.length;
                   const rate = heldCount > 0 ? Math.round((presentCount / heldCount) * 100) : null;
                   return (
-                    <div className={`p-2.5 px-3.5 mb-2 rounded-lg border text-xs flex items-center justify-between font-semibold ${
+                    <div className={`p-3 mb-2 rounded-lg border grid grid-cols-3 gap-2 text-center text-xs font-semibold ${
                       isLight ? 'bg-amber-50/70 border-amber-200 text-amber-900' : 'bg-amber-400/10 border-amber-400/20 text-amber-300'
                     }`}>
-                      <span>Sesi Berlalu: {heldCount}</span>
-                      <span>Hadir: {presentCount} / {heldCount}</span>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        rate === null
-                          ? (isLight ? 'bg-slate-100 text-slate-600' : 'bg-white/10 text-white/60')
-                          : rate >= 80
-                            ? (isLight ? 'bg-emerald-100 text-emerald-800' : 'bg-emerald-500/20 text-emerald-300')
-                            : (isLight ? 'bg-red-100 text-red-800' : 'bg-red-500/20 text-red-300')
-                      }`}>
-                        {rate === null ? '—' : `${rate}%`}
-                      </span>
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span className="text-[9px] font-bold uppercase tracking-wide opacity-60">Sesi Berlalu</span>
+                        <span className="font-bold tabular-nums">{heldCount}</span>
+                      </div>
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span className="text-[9px] font-bold uppercase tracking-wide opacity-60">Hadir</span>
+                        <span className="font-bold tabular-nums">{presentCount} / {heldCount}</span>
+                      </div>
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span className="text-[9px] font-bold uppercase tracking-wide opacity-60">Peratus</span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold tabular-nums ${
+                          rate === null
+                            ? (isLight ? 'bg-slate-100 text-slate-600' : 'bg-white/10 text-white/60')
+                            : rate >= 80
+                              ? (isLight ? 'bg-emerald-100 text-emerald-800' : 'bg-emerald-500/20 text-emerald-300')
+                              : (isLight ? 'bg-red-100 text-red-800' : 'bg-red-500/20 text-red-300')
+                        }`}>
+                          {rate === null ? '—' : `${rate}%`}
+                        </span>
+                      </div>
                     </div>
                   );
                 })()}
@@ -169,41 +181,45 @@ export default function AttendanceHistoryModal({ isOpen, onClose, course, refres
                 today.setHours(0, 0, 0, 0);
                 const isPresent = /hadir|present/i.test(status) && !/tidak/i.test(status);
                 const isUpcoming = !status && date !== null && date.getTime() >= today.getTime();
+                const note = (h.catatan || '').trim();
+                const hasNote = note.length > 0 && note !== '-' && !/^tiada maklumat$/i.test(note);
                 return (
-                  <div key={i} className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs transition-colors ${isLight
+                  <div key={i} className={`p-2.5 sm:p-3 rounded-xl border flex items-center justify-between gap-3 text-xs transition-colors ${isLight
                       ? 'bg-slate-50/50 border-slate-200 hover:bg-slate-50'
                       : 'bg-white/[0.02] border-white/[0.05] hover:bg-white/[0.04]'
                     }`}>
-                    <div className="flex items-center gap-3 text-left min-w-0">
-                      <span className={`font-bold w-20 shrink-0 ${isLight ? 'text-amber-700' : 'text-amber-400'}`}>{h.minggu || `Minggu ${i + 1}`}</span>
-                      <span className={`font-medium truncate ${isLight ? 'text-slate-500' : 'text-white/40'}`}>{h.tarikh || '-'}</span>
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 text-left sm:text-right min-w-0">
-                      <span className={`truncate max-w-[150px] sm:max-w-[180px] ${isLight ? 'text-slate-500' : 'text-white/30'}`}>{h.catatan || 'Scan QR App'}</span>
-                      {isPresent ? (
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border flex items-center gap-1 self-start sm:self-auto ${isLight
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
-                          }`}>
-                          <CheckCircle2 className="w-3 h-3" /> Hadir
-                        </span>
-                      ) : isUpcoming ? (
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border flex items-center gap-1 self-start sm:self-auto ${isLight
-                            ? 'bg-slate-100 text-slate-500 border-slate-200'
-                            : 'bg-white/[0.06] text-white/40 border-white/10'
-                          }`}>
-                          <Clock className="w-3 h-3" /> Belum
-                        </span>
-                      ) : (
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border flex items-center gap-1 self-start sm:self-auto ${isLight
-                            ? 'bg-red-50 text-red-700 border-red-200'
-                            : 'bg-red-500/15 text-red-400 border border-red-500/20'
-                          }`}>
-                          <XCircle className="w-3 h-3" /> Tidak Hadir
-                        </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`font-bold shrink-0 ${isLight ? 'text-amber-700' : 'text-amber-400'}`}>Minggu {h.minggu || i + 1}</span>
+                        <span className={`font-medium truncate ${isLight ? 'text-slate-500' : 'text-white/40'}`}>{h.tarikh || '-'}</span>
+                      </div>
+                      {hasNote && (
+                        <div className={`text-[10px] mt-0.5 truncate ${isLight ? 'text-slate-400' : 'text-white/30'}`}>{note}</div>
                       )}
                     </div>
+
+                    {isPresent ? (
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border flex items-center gap-1 shrink-0 ${isLight
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
+                        }`}>
+                        <CheckCircle2 className="w-3 h-3" /> Hadir
+                      </span>
+                    ) : isUpcoming ? (
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border flex items-center gap-1 shrink-0 ${isLight
+                          ? 'bg-slate-100 text-slate-500 border-slate-200'
+                          : 'bg-white/[0.06] text-white/40 border-white/10'
+                        }`}>
+                        <Clock className="w-3 h-3" /> Belum
+                      </span>
+                    ) : (
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border flex items-center gap-1 shrink-0 ${isLight
+                          ? 'bg-red-50 text-red-700 border-red-200'
+                          : 'bg-red-500/15 text-red-400 border border-red-500/20'
+                        }`}>
+                        <XCircle className="w-3 h-3" /> Tidak Hadir
+                      </span>
+                    )}
                   </div>
                 );
               })}
