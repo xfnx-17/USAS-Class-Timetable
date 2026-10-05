@@ -415,6 +415,43 @@ export async function fetchAttendanceHistoryAPI(
   return [];
 }
 
+// Resolves the numeric group_id for a course code via `senarai_kursus`.
+// Used as a fallback when a cached timetable item is missing group_id.
+export async function resolveGroupIdForCourseAPI(
+  session: StudentSession | null,
+  courseCode: string,
+): Promise<string | null> {
+  if (!session || session.isDemo) return null;
+
+  const code = sanitizeSingleLine(courseCode, 64).trim().toUpperCase();
+  if (!code) return null;
+
+  const payload = {
+    apiKey: API_KEY,
+    request_type: 'senarai_kursus',
+    user_id: session.user_id,
+    token: DUMMY_TOKEN,
+    sid_1: session.sid_1,
+    sid_2: session.sid_2,
+    sid_3: session.sid_3,
+    umc_platform: PLATFORM,
+    umc_version: UMC_VERSION,
+  };
+
+  try {
+    const res = await postUSAS('/student/get_kehadiran_kuliah.php', payload);
+    const rows = (res as { server_response?: Array<Record<string, unknown>> } | null)?.server_response;
+    if (!Array.isArray(rows)) return null;
+
+    const match = rows.find((row) => String(row.kod_kursus ?? '').trim().toUpperCase() === code);
+    const groupId = match?.group_id;
+    if (groupId === undefined || groupId === null) return null;
+    return String(groupId).trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 export type AttendanceScanResponse = {
   alert?: string;
   message?: string;

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { useTheme } from '@/app/providers/ThemeProvider';
-import { fetchAttendanceHistoryAPI } from '@/services/usas/Api';
+import { fetchAttendanceHistoryAPI, resolveGroupIdForCourseAPI } from '@/services/usas/Api';
 import { parseDisplayDate } from '@/shared/lib/dayFormat';
 import type { AttendanceHistoryItem, TimetableItem } from '@/shared/types/usas';
 import { X, CalendarCheck, CheckCircle2, XCircle, RotateCw, Clock } from 'lucide-react';
@@ -45,18 +45,31 @@ export default function AttendanceHistoryModal({ isOpen, onClose, course, refres
 
   useEffect(() => {
     let active = true;
+
+    const loadHistory = async () => {
+      // Prefer the real numeric group_id. If it's missing (e.g. a stale cached
+      // timetable), resolve it from senarai_kursus before calling the report.
+      let effectiveGroup = course?.group_id || '';
+      if (!effectiveGroup && course) {
+        effectiveGroup = (await resolveGroupIdForCourseAPI(
+          session,
+          course.course_id || course.kod_kursus || '',
+        )) || '';
+      }
+
+      const res = await fetchAttendanceHistoryAPI(session, effectiveGroup || course?.group || 'GRP01');
+      if (!active) return;
+      setHistory(res);
+      setLoading(false);
+    };
+
     if (isOpen && course) {
       setLoading(true);
-      // Pass the real group_id from senarai_kursus or fallback to course.group
-      const effectiveGroup = course.group_id || course.group || 'GRP01';
-      fetchAttendanceHistoryAPI(session, effectiveGroup).then(res => {
-        if (!active) return;
-        setHistory(res);
-        setLoading(false);
-      });
+      void loadHistory();
     } else {
       setLoading(false);
     }
+
     return () => {
       active = false;
     };

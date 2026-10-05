@@ -203,6 +203,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  // A restored session may come with a stale cached timetable (e.g. missing
+  // group_id or attendance data), so refresh once from the API on first load.
+  const didAutoRefreshRef = useRef(false);
+  useEffect(() => {
+    if (didAutoRefreshRef.current) return;
+    if (!sessionRef.current) return;
+    didAutoRefreshRef.current = true;
+    void refreshTimetable();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <AuthContext.Provider value={{
       session,
