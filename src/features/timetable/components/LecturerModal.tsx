@@ -157,17 +157,6 @@ export default function LecturerModal({ lecturerName, isOpen, onClose }: Lecture
 
         </div>
 
-        <button
-          onClick={onClose}
-          className={`w-full py-2.5 rounded-xl font-bold text-xs transition-colors border ${
-            isLight 
-              ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200' 
-              : 'bg-white/[0.04] hover:bg-white/[0.08] text-white/80 hover:text-white border-white/10'
-          }`}
-        >
-          Tutup
-        </button>
-
       </div>
 
     </div>

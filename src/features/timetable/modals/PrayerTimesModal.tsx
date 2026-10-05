@@ -286,16 +286,18 @@ export default function PrayerTimesModal({ isOpen, onClose }: PrayerTimesModalPr
             </div>
           </div>
           <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => window.dispatchEvent(new Event('test-prayer-toast'))}
-              className={`flex-shrink-0 px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-colors border ${
-                isLight 
-                  ? 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100' 
-                  : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
-              }`}
-            >
-              Test Toast
-            </button>
+            {session?.isDemo && (
+              <button
+                onClick={() => window.dispatchEvent(new Event('test-prayer-toast'))}
+                className={`flex-shrink-0 px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-colors border ${
+                  isLight 
+                    ? 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100' 
+                    : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
+                }`}
+              >
+                Test Toast
+              </button>
+            )}
             <button
               onClick={onClose}
               className={`flex-shrink-0 p-1.5 rounded-md transition-colors ${

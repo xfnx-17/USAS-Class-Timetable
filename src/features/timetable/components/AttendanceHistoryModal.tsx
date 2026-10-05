@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { useTheme } from '@/app/providers/ThemeProvider';
 import { fetchAttendanceHistoryAPI } from '@/services/usas/Api';
+import { parseDisplayDate } from '@/shared/lib/dayFormat';
 import type { AttendanceHistoryItem, TimetableItem } from '@/shared/types/usas';
-import { X, CalendarCheck, CheckCircle2, XCircle, RotateCw } from 'lucide-react';
+import { X, CalendarCheck, CheckCircle2, XCircle, RotateCw, Clock } from 'lucide-react';
 
 type AttendanceHistoryModalProps = {
   isOpen: boolean;
@@ -120,26 +121,41 @@ export default function AttendanceHistoryModal({ isOpen, onClose, course, refres
             ) : (
               <>
                 {(() => {
-                  const presentCount = history.filter(h => (h.status_hadir || '').toLowerCase().includes('present') || (h.status_hadir || '').toLowerCase().includes('hadir')).length;
-                  const rate = Math.round((presentCount / history.length) * 100);
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  const heldRows = history.filter(h => {
+                    const status = (h.status_hadir || '').trim();
+                    const date = parseDisplayDate(h.tarikh);
+                    return status.length > 0 || (date !== null && date.getTime() < today.getTime());
+                  });
+                  const presentCount = heldRows.filter(h => /hadir|present/i.test(h.status_hadir || '') && !/tidak/i.test(h.status_hadir || '')).length;
+                  const heldCount = heldRows.length;
+                  const rate = heldCount > 0 ? Math.round((presentCount / heldCount) * 100) : null;
                   return (
                     <div className={`p-2.5 px-3.5 mb-2 rounded-lg border text-xs flex items-center justify-between font-semibold ${
                       isLight ? 'bg-amber-50/70 border-amber-200 text-amber-900' : 'bg-amber-400/10 border-amber-400/20 text-amber-300'
                     }`}>
-                      <span>Jumlah Sesi: {history.length}</span>
-                      <span>Hadir: {presentCount} / {history.length}</span>
+                      <span>Sesi Berlalu: {heldCount}</span>
+                      <span>Hadir: {presentCount} / {heldCount}</span>
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        rate >= 80 
-                          ? (isLight ? 'bg-emerald-100 text-emerald-800' : 'bg-emerald-500/20 text-emerald-300')
-                          : (isLight ? 'bg-red-100 text-red-800' : 'bg-red-500/20 text-red-300')
+                        rate === null
+                          ? (isLight ? 'bg-slate-100 text-slate-600' : 'bg-white/10 text-white/60')
+                          : rate >= 80
+                            ? (isLight ? 'bg-emerald-100 text-emerald-800' : 'bg-emerald-500/20 text-emerald-300')
+                            : (isLight ? 'bg-red-100 text-red-800' : 'bg-red-500/20 text-red-300')
                       }`}>
-                        {rate}%
+                        {rate === null ? '—' : `${rate}%`}
                       </span>
                     </div>
                   );
                 })()}
               {history.map((h, i) => {
-                const isPresent = (h.status_hadir || '').toLowerCase().includes('present') || (h.status_hadir || '').toLowerCase().includes('hadir');
+                const status = (h.status_hadir || '').trim();
+                const date = parseDisplayDate(h.tarikh);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const isPresent = /hadir|present/i.test(status) && !/tidak/i.test(status);
+                const isUpcoming = !status && date !== null && date.getTime() >= today.getTime();
                 return (
                   <div key={i} className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs transition-colors ${isLight
                       ? 'bg-slate-50/50 border-slate-200 hover:bg-slate-50'
@@ -159,6 +175,13 @@ export default function AttendanceHistoryModal({ isOpen, onClose, course, refres
                           }`}>
                           <CheckCircle2 className="w-3 h-3" /> Hadir
                         </span>
+                      ) : isUpcoming ? (
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border flex items-center gap-1 self-start sm:self-auto ${isLight
+                            ? 'bg-slate-100 text-slate-500 border-slate-200'
+                            : 'bg-white/[0.06] text-white/40 border-white/10'
+                          }`}>
+                          <Clock className="w-3 h-3" /> Belum
+                        </span>
                       ) : (
                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border flex items-center gap-1 self-start sm:self-auto ${isLight
                             ? 'bg-red-50 text-red-700 border-red-200'
@@ -175,16 +198,6 @@ export default function AttendanceHistoryModal({ isOpen, onClose, course, refres
           )}
           </div>
         )}
-
-        <button
-          onClick={onClose}
-          className={`w-full py-2.5 rounded-xl font-bold text-xs transition-colors border ${isLight
-              ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
-              : 'bg-white/[0.04] hover:bg-white/[0.08] text-white/80 hover:text-white border-white/10'
-            }`}
-        >
-          Tutup
-        </button>
 
       </div>
 

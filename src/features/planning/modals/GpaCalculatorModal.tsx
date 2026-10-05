@@ -343,20 +343,6 @@ export default function GpaCalculatorModal({ isOpen, onClose, courses = [] }: Gp
 
         </div>
 
-        {/* Modal Footer */}
-        <div className={`p-4 border-t flex items-center justify-end ${isLight ? 'border-slate-200' : 'border-white/10'}`}>
-          <button
-            onClick={onClose}
-            className={`px-5 py-2.5 rounded-xl font-black text-xs shadow-md transition-all active:scale-95 ${
-              isLight 
-                ? 'bg-[#0B1E43] hover:bg-[#152e63] text-white shadow-slate-900/10' 
-                : 'bg-amber-400 hover:bg-amber-300 text-slate-950 shadow-amber-400/10'
-            }`}
-          >
-            {lang === 'ms' ? 'Tutup' : 'Close'}
-          </button>
-        </div>
-
       </div>
 
     </div>

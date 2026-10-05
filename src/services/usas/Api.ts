@@ -16,7 +16,7 @@ import {
   sanitizeTimetableItem,
   sanitizeTextForShare,
 } from '@/shared/lib/security';
-import { normalizeDayLabel } from '@/shared/lib/dayFormat';
+import { normalizeDayLabel, parseDisplayDate } from '@/shared/lib/dayFormat';
 
 // USAS API Service Layer
 // Dual JSON & Form-UrlEncoded transport layer with multi-endpoint fallback
@@ -485,6 +485,32 @@ export async function scanAttendanceQrAPI(
   };
 }
 
+// Computes the attendance percentage from real `laporan_kehadiran` rows.
+// Only sessions that have actually taken place count toward the total:
+// a row is "held" when it has a recorded status or its date is in the past.
+export function computeAttendancePercent(rows: AttendanceHistoryItem[] | null | undefined): number | null {
+  if (!rows || rows.length === 0) return null;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let held = 0;
+  let present = 0;
+
+  for (const row of rows) {
+    const status = String(row.status_hadir ?? '').trim();
+    const date = parseDisplayDate(row.tarikh);
+    const isHeld = status.length > 0 || (date !== null && date.getTime() < today.getTime());
+    if (!isHeld) continue;
+
+    held += 1;
+    if (/hadir|present/i.test(status) && !/tidak/i.test(status)) present += 1;
+  }
+
+  if (held === 0) return null;
+  return Math.round((present / held) * 100);
+}
+
 export async function fetchTimetableAPI(session: StudentSession): Promise<TimetableData> {
   if (session.isDemo) {
     return {
@@ -601,6 +627,44 @@ export async function fetchTimetableAPI(session: StudentSession): Promise<Timeta
         .map((item) => normalizeDayLabel(sanitizeSingleLine(item.day, 64)))
         .filter(Boolean)
     ));
+  }
+
+  // Resolve the real lecture-attendance percentage per course from the official
+  // `laporan_kehadiran` report, keyed by the group_id from `senarai_kursus`.
+  // The timetable `kehadiran` field is only a human status string, so it can't
+  // be parsed as a percentage.
+  const uniqueGroupIds = Array.from(new Set(
+    rawItems
+      .map((item) => sanitizeSingleLine(item.group_id, 32))
+      .filter((group): group is string => Boolean(group))
+  ));
+
+  if (uniqueGroupIds.length > 0) {
+    const percentByGroup = new Map<string, number | null>();
+
+    await Promise.all(uniqueGroupIds.map(async (groupId) => {
+      try {
+        const reportPayload = {
+          ...basePayload,
+          request_type: 'laporan_kehadiran',
+          group_id: groupId,
+        };
+        const reportRes = await postUSAS('/student/get_kehadiran_kuliah.php', reportPayload);
+        const rows = (reportRes as { server_response?: AttendanceHistoryItem[] } | null)?.server_response;
+        percentByGroup.set(groupId, computeAttendancePercent(rows));
+      } catch {
+        percentByGroup.set(groupId, null);
+      }
+    }));
+
+    rawItems = rawItems.map((item) => {
+      const groupId = sanitizeSingleLine(item.group_id, 32);
+      const percent = groupId ? percentByGroup.get(groupId) : null;
+      return {
+        ...item,
+        kehadiran: percent === null || percent === undefined ? '' : `${percent}%`,
+      };
+    });
   }
 
   const profile = await profilePromise;

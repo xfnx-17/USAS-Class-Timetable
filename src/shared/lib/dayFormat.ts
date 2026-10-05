@@ -82,6 +82,21 @@ export function extractDatePart(dayStr?: string): string | null {
 }
 
 /**
+ * Parses a display date such as "05-10-2026" (DD-MM-YYYY) into a local Date.
+ * Returns null for empty or unrecognised values.
+ */
+export function parseDisplayDate(value?: string): Date | null {
+  if (!value) return null;
+  const match = /^(\d{1,2})-(\d{1,2})-(\d{4})$/.exec(String(value).trim());
+  if (!match) return null;
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]);
+  const date = new Date(year, month - 1, day);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/**
  * Checks if two day strings represent the same day.
  * Matches whether they are identical or share the same extracted day name.
  */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseFallbackJadual, parseSafeJsonResponse, selectProfileText } from '../src/services/usas/Api';
+import { computeAttendancePercent, parseFallbackJadual, parseSafeJsonResponse, selectProfileText } from '../src/services/usas/Api';
 
 describe('usas api fallback timetable parsing', () => {
   it('coerces numeric jadual values safely', () => {
@@ -20,5 +20,29 @@ describe('usas api fallback timetable parsing', () => {
     expect(parseSafeJsonResponse('{"server_response":[{"user_id":"AI210042"}]}')).toEqual({
       server_response: [{ user_id: 'AI210042' }],
     });
+  });
+});
+
+describe('computeAttendancePercent', () => {
+  it('counts only held sessions and ignores future ones', () => {
+    expect(computeAttendancePercent([
+      { minggu: '1', tarikh: '05-10-2026', status_hadir: 'Hadir', catatan: '' },
+      { minggu: '2', tarikh: '01-01-2099', status_hadir: '', catatan: '' },
+    ])).toBe(100);
+  });
+
+  it('treats "Tidak Hadir" as absent, not present', () => {
+    expect(computeAttendancePercent([
+      { tarikh: '01-01-2020', status_hadir: 'Hadir' },
+      { tarikh: '02-01-2020', status_hadir: 'Tidak Hadir' },
+    ])).toBe(50);
+  });
+
+  it('returns null when no session has been held yet', () => {
+    expect(computeAttendancePercent([
+      { tarikh: '01-01-2099', status_hadir: '' },
+    ])).toBeNull();
+    expect(computeAttendancePercent([])).toBeNull();
+    expect(computeAttendancePercent(null)).toBeNull();
   });
 });
