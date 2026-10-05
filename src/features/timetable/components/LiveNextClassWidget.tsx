@@ -154,7 +154,7 @@ export default function LiveNextClassWidget({ timetable = [] }: LiveNextClassWid
           <CheckCircle2 className="w-3 h-3" />
         </div>
         <span className="font-semibold tracking-wide truncate flex-1 min-w-0">
-          {t('noClassRemaining')} ({t(`days.${currentDayName}`) || currentDayName}) — {t('restWell')}
+          {t('noClassRemaining')} ({t(`days.${currentDayName}`) || currentDayName})
         </span>
         <button
           onClick={toggleAutoNotify}
