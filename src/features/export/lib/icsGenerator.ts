@@ -1,4 +1,5 @@
 import type { TimetableItem } from '@/shared/types/usas';
+import { extractDayName } from '@/shared/lib/dayFormat';
 
 /**
  * Generates an iCalendar (.ics) file for Google Calendar, Apple iCal, and Outlook.
@@ -39,7 +40,7 @@ export function formatICSDatetime(dayName: string | undefined, timeStr: IcsTimeI
     'AHAD': 0, 'SUNDAY': 0, 'SUN': 0
   };
 
-  const dayIndex = dayOffsets[dayName?.toUpperCase()] ?? 1;
+  const dayIndex = dayOffsets[extractDayName(dayName)] ?? 1;
 
   // Calculate next occurrence of this day
   const now = new Date();

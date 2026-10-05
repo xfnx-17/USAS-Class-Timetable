@@ -1,15 +1,17 @@
 import type { TimetableItem } from '../types/usas';
+import { extractDayName } from './dayFormat';
 
 export type ActiveClassHighlights = {
   ongoingKey: string | null;
   upcomingKey: string | null;
 };
 
-export const parseTo24hHour = (timeStr?: string) => {
+export const parseTo24hHour = (timeStr?: string): number | null => {
   if (!timeStr) return null;
-  const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  const raw = String(timeStr).trim();
+  const match = raw.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
   if (!match) {
-    const numMatch = timeStr.match(/(\d+)/);
+    const numMatch = raw.match(/(\d{1,2})/);
     return numMatch ? parseInt(numMatch[1], 10) : null;
   }
   let hour = parseInt(match[1], 10);
@@ -22,19 +24,55 @@ export const parseTo24hHour = (timeStr?: string) => {
   return hour;
 };
 
-export const parseTimeToMinutes = (timeStr?: string) => {
+export const parseTimeToMinutes = (timeStr?: string): number | null => {
   if (!timeStr) return null;
   const raw = String(timeStr).trim();
-  const ampmMatch = raw.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-  const twentyFourMatch = raw.match(/^(\d{1,2}):(\d{2})$/);
-  const match = ampmMatch || twentyFourMatch;
-  if (!match) return null;
 
-  let hour = parseInt(match[1], 10);
-  const minute = parseInt(match[2], 10);
-  const suffix = ampmMatch ? ampmMatch[3].toUpperCase() : null;
-  const normalizedHour = suffix === 'PM' && hour < 12 ? hour + 12 : suffix === 'AM' && hour === 12 ? 0 : hour;
-  return normalizedHour * 60 + minute;
+  // "11:30 AM" or "02:30 PM"
+  const ampmMatch = raw.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (ampmMatch) {
+    let hour = parseInt(ampmMatch[1], 10);
+    const minute = parseInt(ampmMatch[2], 10);
+    const suffix = ampmMatch[3].toUpperCase();
+    if (suffix === 'PM' && hour < 12) hour += 12;
+    if (suffix === 'AM' && hour === 12) hour = 0;
+    return hour * 60 + minute;
+  }
+
+  // "11:30" (24-hour with minutes)
+  const twentyFourMatch = raw.match(/^(\d{1,2}):(\d{2})$/);
+  if (twentyFourMatch) {
+    const hour = parseInt(twentyFourMatch[1], 10);
+    const minute = parseInt(twentyFourMatch[2], 10);
+    return hour * 60 + minute;
+  }
+
+  // "11-13" or "14-17" (range)
+  const rangeMatch = raw.match(/^(\d{1,2})\s*-\s*(\d{1,2})$/);
+  if (rangeMatch) {
+    const hour = parseInt(rangeMatch[1], 10);
+    return hour * 60;
+  }
+
+  // "11" or "14" (plain hour)
+  const plainHourMatch = raw.match(/^(\d{1,2})$/);
+  if (plainHourMatch) {
+    const hour = parseInt(plainHourMatch[1], 10);
+    return hour * 60;
+  }
+
+  // General match for any string with hour
+  const generalMatch = raw.match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?/i);
+  if (generalMatch) {
+    let hour = parseInt(generalMatch[1], 10);
+    const minute = generalMatch[2] ? parseInt(generalMatch[2], 10) : 0;
+    const suffix = generalMatch[3]?.toUpperCase();
+    if (suffix === 'PM' && hour < 12) hour += 12;
+    if (suffix === 'AM' && hour === 12) hour = 0;
+    return hour * 60 + minute;
+  }
+
+  return null;
 };
 
 export const getShortTimeRange = (startTime?: string, endTime?: string) => {
@@ -67,8 +105,8 @@ export const getActiveCourseHighlights = (courses: TimetableItem[], now: Date): 
   let nextUpcomingStart: number | null = null;
 
   courses.forEach((course) => {
-    const courseDay = course.day?.toUpperCase();
-    if (!courseDay || courseDay !== todayKey) return;
+    const courseDayName = extractDayName(course.day);
+    if (!courseDayName || courseDayName !== todayKey) return;
 
     const startMin = parseTimeToMinutes(course.start_time || course.jadual || '');
     if (startMin === null) return;

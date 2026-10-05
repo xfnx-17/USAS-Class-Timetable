@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { useAuth } from './AuthProvider';
 import { getActiveCourseHighlights } from '@/shared/lib/timetableTime';
+import { extractDayName } from '@/shared/lib/dayFormat';
 
 type NotificationContextType = {
   isNotificationsEnabled: boolean;
@@ -36,7 +37,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       const currentDay = daysStrMap[now.getDay()];
 
       courses.forEach(course => {
-        if (course.day?.toUpperCase() !== currentDay) return;
+        if (extractDayName(course.day) !== currentDay) return;
         
         // Parse class start time
         const startStr = course.start_time;

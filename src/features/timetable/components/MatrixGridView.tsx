@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useTheme } from '@/app/providers/ThemeProvider';
 import { useLanguage } from '@/app/providers/LanguageProvider';
 import type { TimetableItem } from '@/shared/types/usas';
+import { extractDayName, formatDayDisplay } from '@/shared/lib/dayFormat';
 import { MapPin } from 'lucide-react';
 import {
   getCourseHighlightKey,
@@ -39,7 +40,8 @@ const getDayColors = (day: string | undefined, isLight: boolean) => {
     'AHAD':   { bg: 'bg-slate-200/70',   border: 'border-slate-300/80 border-l-2 border-l-slate-500',   text: 'text-slate-800 font-bold',   dot: 'bg-slate-500' },
   };
 
-  return (isLight ? lightColors[day || ''] : darkColors[day || '']) || (isLight ? lightColors['ISNIN'] : darkColors['ISNIN']);
+  const key = extractDayName(day) || 'ISNIN';
+  return (isLight ? lightColors[key] : darkColors[key]) || (isLight ? lightColors['ISNIN'] : darkColors['ISNIN']);
 };
 
 const ALL_TIME_SLOTS = [
@@ -101,8 +103,9 @@ export default function MatrixGridView({
   const isLight = theme === 'light';
   
   const getCourseForSlot = (dayName: string, slotTime: string) => {
+    const targetDay = extractDayName(dayName);
     return timetable.find(c => {
-      const isDay = c.day?.toUpperCase() === dayName.toUpperCase();
+      const isDay = extractDayName(c.day) === targetDay;
       if (!isDay) return false;
       const startTime = c.start_time || c.jadual || '';
       return startTime.includes(slotTime.split(':')[0]);
@@ -195,7 +198,7 @@ export default function MatrixGridView({
                     style={{ fontSize: `${autoScale * 10}px` }}
                   >
                     <span className="flex items-center justify-center gap-1.5 min-h-[42px] sm:min-h-[48px] whitespace-nowrap">
-                      <span className={color.text}>{t(`days.${d}`) || d}</span>
+                      <span className={color.text}>{formatDayDisplay(d, t)}</span>
                     </span>
                   </td>
                   {activeTimeSlots.map((slot) => {

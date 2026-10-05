@@ -14,6 +14,7 @@ import {
   getCourseHighlightKey,
   getShortTimeRange,
 } from '@/shared/lib/timetableTime';
+import { extractDayName, formatDayDisplay, isSameDay } from '@/shared/lib/dayFormat';
 import { restoreStringRecord } from '@/shared/lib/storage';
 import { 
   Clock, MapPin, User, BookOpen, Search, 
@@ -42,7 +43,8 @@ const getCardDayColor = (day: string | undefined, isLight: boolean) => {
     'SABTU':  { dot: 'bg-orange-500',  text: 'text-orange-800 font-bold',  accent: 'border-l-orange-500',  bg: 'bg-orange-100/70',  border: 'border-orange-300/80',  badge: 'bg-orange-600 text-white font-extrabold shadow-sm' },
     'AHAD':   { dot: 'bg-slate-500',   text: 'text-slate-800 font-bold',   accent: 'border-l-slate-500',   bg: 'bg-slate-200/70',   border: 'border-slate-300/80',   badge: 'bg-slate-600 text-white font-extrabold shadow-sm' },
   };
-  return (isLight ? lightColors[day] : darkColors[day]) || (isLight ? lightColors['ISNIN'] : darkColors['ISNIN']);
+  const key = extractDayName(day) || 'ISNIN';
+  return (isLight ? lightColors[key] : darkColors[key]) || (isLight ? lightColors['ISNIN'] : darkColors['ISNIN']);
 };
 
 type TimetableGridProps = {
@@ -83,18 +85,21 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
     return groupStr.replace(/^GRP/i, 'G');
   };
 
+  const timetableDays = timetableData?.days;
+  const timetableItems = timetableData?.timetable;
+
   const daysList = useMemo(() => {
-    if (timetableData?.days && timetableData.days.length > 0) {
-      return timetableData.days;
+    if (timetableDays && timetableDays.length > 0) {
+      return Array.from(new Set(timetableDays));
     }
     const defaultOrder = ['ISNIN', 'SELASA', 'RABU', 'KHAMIS', 'JUMAAT', 'SABTU', 'AHAD'];
-    const daysInCourses = new Set((timetableData?.timetable || []).map(c => c.day?.toUpperCase()).filter(Boolean));
+    const daysInCourses = new Set((timetableItems || []).map(c => extractDayName(c.day)).filter(Boolean));
     const baseDays = ['ISNIN', 'SELASA', 'RABU', 'KHAMIS', 'JUMAAT'];
     const extraDays = defaultOrder.filter(d => daysInCourses.has(d) && !baseDays.includes(d));
     return [...baseDays, ...extraDays];
-  }, [timetableData?.days, timetableData?.timetable]);
+  }, [timetableDays, timetableItems]);
 
-  const allCourses = useMemo(() => timetableData?.timetable || [], [timetableData?.timetable]);
+  const allCourses = useMemo(() => timetableItems || [], [timetableItems]);
 
   const handleSaveNote = (courseId) => {
     const updated = { ...courseNotes, [courseId]: noteInput };
@@ -106,7 +111,7 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
   // Detect clashes
   const filteredCourses = useMemo(() => {
     return allCourses.filter(item => {
-      const matchesDay = selectedDay === 'ALL' || item.day?.toUpperCase() === selectedDay.toUpperCase();
+      const matchesDay = selectedDay === 'ALL' || isSameDay(item.day, selectedDay);
       const q = searchQuery.toLowerCase();
       const matchesQuery = !q || 
         item.course_name?.toLowerCase().includes(q) ||
@@ -161,7 +166,7 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
     <div className="h-full flex flex-col min-h-0 overflow-hidden">
       
       {/* Exam Widget */}
-      <ExamCountdownWidget courses={allCourses} onOpenExam={onOpenExam || (() => {})} />
+      <ExamCountdownWidget courses={allCourses} isDemo={session?.isDemo} onOpenExam={onOpenExam || (() => {})} />
 
       {/* TOP FILTER BAR */}
       <div className={`flex-shrink-0 px-2.5 sm:px-6 pb-2 sm:pb-2.5 border-b transition-colors duration-150 ${
@@ -184,8 +189,8 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
           <div className="flex items-center gap-0.5 w-full sm:flex-1 overflow-x-auto no-scrollbar -mx-0.5 px-0.5">
             {daysList.map(day => {
               const color = getCardDayColor(day, isLight);
-              const count = allCourses.filter(c => c.day?.toUpperCase() === day).length;
-              const isActive = selectedDay === day;
+              const count = allCourses.filter(c => isSameDay(c.day, day)).length;
+              const isActive = selectedDay === day || (selectedDay !== 'ALL' && isSameDay(selectedDay, day));
               return (
                 <button
                   key={day}
@@ -201,7 +206,7 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
                   }`}
                 >
                   <span className={`w-1.5 h-1.5 rounded-full ${color.dot}`} />
-                  <span>{t(`days.${day}`) || day}</span>
+                  <span>{formatDayDisplay(day, t)}</span>
                   {count > 0 && <span className={`text-[9px] ${isLight ? 'text-slate-400' : 'text-white/20'}`}>{count}</span>}
                 </button>
               );
@@ -290,7 +295,7 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
               {filteredCourses.length === 0 ? (
                 <div className="py-16 text-center">
                   <BookOpen className={`w-8 h-8 mx-auto mb-3 ${isLight ? 'text-slate-300' : 'text-white/8'}`} />
-                  <p className={`text-xs font-medium ${isLight ? 'text-slate-500' : 'text-white/25'}`}>{t('noClassesOnDay')} {t(`days.${selectedDay}`) || selectedDay}</p>
+                  <p className={`text-xs font-medium ${isLight ? 'text-slate-500' : 'text-white/25'}`}>{t('noClassesOnDay')} {formatDayDisplay(selectedDay, t)}</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 items-start">
@@ -310,7 +315,7 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
                     return (
                       <div
                         key={cardKey}
-                        className={`rounded-lg border border-l-2 transition-all duration-300 ${dayColor.accent} ${dayColor.border} ${dayColor.bg} hover:brightness-105 shadow-sm ${
+                        className={`rounded-lg border border-l-2 transition-all duration-300 flex flex-col ${dayColor.accent} ${dayColor.border} ${dayColor.bg} hover:brightness-105 shadow-sm ${
                           courseStatus === 'ongoing'
                             ? 'ring-1 ring-emerald-400/70 shadow-[0_0_18px_rgba(52,211,153,0.22)]'
                             : courseStatus === 'upcoming'
@@ -332,23 +337,23 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
                             if (expandAll) setExpandAll(false);
                           }}
                         >
-                          <div className="flex flex-col gap-1.5">
+                          <div className="flex flex-col gap-1.5 min-h-[68px] justify-between">
                             {/* Card Header Top Row */}
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex flex-col gap-0.5">
                                 <span className={`text-[10px] font-black tracking-wider ${dayColor.text}`}>{courseId}</span>
                                 <div className={`flex items-center gap-1 text-[9.5px] leading-none ${isLight ? 'text-slate-500 font-semibold' : 'text-white/45'}`}>
-                                  <Clock className={`w-3 h-3 flex-shrink-0 self-center ${isLight ? 'text-amber-650' : 'text-amber-400/70'}`} />
+                                  <Clock className={`w-3 h-3 flex-shrink-0 self-center ${isLight ? 'text-amber-600' : 'text-amber-400/70'}`} />
                                   <span className="inline-flex items-center leading-none self-center">{getShortTimeRange(course.start_time, course.end_time)}</span>
                                 </div>
                               </div>
-                              <span className={`px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase shrink-0 ${dayColor.badge}`}>
-                                {t(`days.${course.day?.toUpperCase()}`) || course.day}
+                              <span className={`px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase shrink-0 whitespace-nowrap ${dayColor.badge}`}>
+                                {formatDayDisplay(course.day, t)}
                               </span>
                             </div>
 
                             {/* Course Name */}
-                            <h3 className={`text-[11.5px] font-bold leading-snug ${
+                            <h3 className={`text-[11.5px] font-bold leading-snug line-clamp-2 ${
                               isLight ? 'text-slate-800' : 'text-white/95'
                             }`}>
                               {course.course_name || course.kursus}
@@ -364,13 +369,13 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
                               </span>
                               <div className="flex items-center gap-1 flex-shrink-0">
                                 {currentNote && (
-                                  <span className={isLight ? 'text-amber-605' : 'text-amber-400/60'} title="Nota Wujud">
+                                  <span className={isLight ? 'text-amber-600' : 'text-amber-400/60'} title="Nota Wujud">
                                     <StickyNote className="w-2.5 h-2.5" />
                                   </span>
                                 )}
                                 <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${
                                   isExpanded 
-                                    ? (isLight ? 'rotate-180 text-amber-650 font-bold' : 'rotate-180 text-amber-400') 
+                                    ? (isLight ? 'rotate-180 text-amber-600 font-bold' : 'rotate-180 text-amber-400') 
                                     : (isLight ? 'text-slate-400' : 'text-white/20')
                                 }`} />
                               </div>

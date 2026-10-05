@@ -64,6 +64,16 @@ describe('security helpers', () => {
     expect(item.catatan).toBe('Line one Line two<script>');
   });
 
+  it('keeps the embedded date when stripping the raw USAS day prefix', () => {
+    const item = sanitizeTimetableItem({
+      id: '1',
+      day: 'days.05-10-2026 (ISNIN)',
+      course_id: 'RKS6093',
+    });
+
+    expect(item.day).toBe('05-10-2026 (ISNIN)');
+  });
+
   it('removes the clipboard fallback textarea even when copy fails', async () => {
     const writeText = vi.fn().mockRejectedValue(new Error('clipboard unavailable'));
     const select = vi.fn(() => {

@@ -269,7 +269,7 @@ export default function ToolsDrawer({
           <button
             onClick={onOpenLogout}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors text-left ${
-              isLight ? 'hover:bg-red-50 text-slate-700 hover:text-red-600' : 'hover:bg-red-955 bg-transparent text-white/70 hover:text-red-400'
+              isLight ? 'hover:bg-red-50 text-slate-700 hover:text-red-600' : 'hover:bg-red-950 bg-transparent text-white/70 hover:text-red-400'
             }`}
           >
             <LogOut className="w-4 h-4 text-red-500/80 flex-shrink-0" />

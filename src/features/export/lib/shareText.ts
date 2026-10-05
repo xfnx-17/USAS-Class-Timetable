@@ -1,5 +1,6 @@
 import type { TimetableItem } from '@/shared/types/usas';
 import { sanitizeSingleLine, sanitizeTextForShare } from '@/shared/lib/security';
+import { extractDayName } from '@/shared/lib/dayFormat';
 
 function parseTimeToMinutes(timeStr: string | undefined): number {
   if (!timeStr) return 0;
@@ -22,7 +23,7 @@ function buildDayGroups(timetable: TimetableItem[] = []): Record<string, Timetab
   const dayGroups: Record<string, TimetableItem[]> = {};
 
   timetable.forEach((item: TimetableItem) => {
-    const day = item.day?.toUpperCase() || 'LAIN';
+    const day = extractDayName(item.day) || 'LAIN';
     if (!dayGroups[day]) dayGroups[day] = [];
     dayGroups[day].push(item);
   });

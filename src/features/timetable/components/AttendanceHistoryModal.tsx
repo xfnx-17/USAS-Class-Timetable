@@ -46,8 +46,9 @@ export default function AttendanceHistoryModal({ isOpen, onClose, course, refres
     let active = true;
     if (isOpen && course) {
       setLoading(true);
-      // Pass the raw group to the backend API as it expects the database name (e.g. GRP01)
-      fetchAttendanceHistoryAPI(session, course.group || 'GRP01').then(res => {
+      // Pass the real group_id from senarai_kursus or fallback to course.group
+      const effectiveGroup = course.group_id || course.group || 'GRP01';
+      fetchAttendanceHistoryAPI(session, effectiveGroup).then(res => {
         if (!active) return;
         setHistory(res);
         setLoading(false);
@@ -110,9 +111,34 @@ export default function AttendanceHistoryModal({ isOpen, onClose, course, refres
         ) : (
           <div data-lenis-prevent className="space-y-2 overflow-y-auto flex-1 min-h-0 pr-1 usas-scrollbar touch-pan-y overscroll-contain">
             {history.length === 0 ? (
-              <div className={`p-6 text-center text-xs ${isLight ? 'text-slate-400' : 'text-slate-400'}`}>Tiada rekod mingguan dijumpai.</div>
+              <div className={`py-8 px-4 text-center text-xs rounded-xl border ${isLight ? 'bg-slate-50 border-slate-200 text-slate-500' : 'bg-white/[0.02] border-white/[0.06] text-white/40'}`}>
+                <p className="font-semibold text-sm mb-1">{isLight ? 'Tiada Rekod Kehadiran Direkodkan' : 'Tiada Rekod Kehadiran'}</p>
+                <p className="text-[11px] max-w-sm mx-auto opacity-75">
+                  Belum ada sesi kehadiran direkodkan untuk kursus ini bagi semester semasa. Rekod mingguan akan dikemaskini secara automatik setelah sesi kuliah bermula.
+                </p>
+              </div>
             ) : (
-              history.map((h, i) => {
+              <>
+                {(() => {
+                  const presentCount = history.filter(h => (h.status_hadir || '').toLowerCase().includes('present') || (h.status_hadir || '').toLowerCase().includes('hadir')).length;
+                  const rate = Math.round((presentCount / history.length) * 100);
+                  return (
+                    <div className={`p-2.5 px-3.5 mb-2 rounded-lg border text-xs flex items-center justify-between font-semibold ${
+                      isLight ? 'bg-amber-50/70 border-amber-200 text-amber-900' : 'bg-amber-400/10 border-amber-400/20 text-amber-300'
+                    }`}>
+                      <span>Jumlah Sesi: {history.length}</span>
+                      <span>Hadir: {presentCount} / {history.length}</span>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        rate >= 80 
+                          ? (isLight ? 'bg-emerald-100 text-emerald-800' : 'bg-emerald-500/20 text-emerald-300')
+                          : (isLight ? 'bg-red-100 text-red-800' : 'bg-red-500/20 text-red-300')
+                      }`}>
+                        {rate}%
+                      </span>
+                    </div>
+                  );
+                })()}
+              {history.map((h, i) => {
                 const isPresent = (h.status_hadir || '').toLowerCase().includes('present') || (h.status_hadir || '').toLowerCase().includes('hadir');
                 return (
                   <div key={i} className={`p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs transition-colors ${isLight
@@ -144,8 +170,9 @@ export default function AttendanceHistoryModal({ isOpen, onClose, course, refres
                     </div>
                   </div>
                 );
-              })
-            )}
+              })}
+            </>
+          )}
           </div>
         )}
 

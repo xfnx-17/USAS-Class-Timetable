@@ -16,6 +16,7 @@ import {
   sanitizeTimetableItem,
   sanitizeTextForShare,
 } from '@/shared/lib/security';
+import { normalizeDayLabel } from '@/shared/lib/dayFormat';
 
 // USAS API Service Layer
 // Dual JSON & Form-UrlEncoded transport layer with multi-endpoint fallback
@@ -510,10 +511,34 @@ export async function fetchTimetableAPI(session: StudentSession): Promise<Timeta
   };
 
   const timetablePayload = { ...basePayload, request_type: "jadual_kuliah" };
-  const timetableRes = await postUSAS('/student/get_timetable_stud.php', timetablePayload);
+  const kehadiranCoursePayload = { ...basePayload, request_type: "senarai_kursus" };
+
+  const [timetableRes, kehadiranCourseRes] = await Promise.all([
+    postUSAS('/student/get_timetable_stud.php', timetablePayload).catch(() => null),
+    postUSAS('/student/get_kehadiran_kuliah.php', kehadiranCoursePayload).catch(() => null),
+  ]);
 
   let rawItems: TimetableItem[] = [];
   let rawDays: string[] = [];
+
+  // Build course -> group_id map from senarai_kursus so attendance logs wire to real database group IDs
+  const courseGroupMap = new Map<string, { group_id: string; kumpulan?: string; semester?: string }>();
+  const kehadiranPayloadTyped = kehadiranCourseRes as {
+    server_response?: Array<Record<string, string | undefined>>;
+  } | null;
+
+  if (kehadiranPayloadTyped?.server_response && Array.isArray(kehadiranPayloadTyped.server_response)) {
+    for (const k of kehadiranPayloadTyped.server_response) {
+      const code = String(k.kod_kursus || '').trim().toUpperCase();
+      if (code && k.group_id) {
+        courseGroupMap.set(code, {
+          group_id: String(k.group_id).trim(),
+          kumpulan: k.kumpulan ? String(k.kumpulan).trim() : undefined,
+          semester: k.semester ? String(k.semester).trim() : undefined,
+        });
+      }
+    }
+  }
 
   const timetablePayloadRes = timetableRes as {
     server_response?: TimetableItem[];
@@ -521,36 +546,61 @@ export async function fetchTimetableAPI(session: StudentSession): Promise<Timeta
   } | null;
 
   if (timetablePayloadRes?.server_response && timetablePayloadRes.server_response.length > 0) {
-    rawItems = timetablePayloadRes.server_response.map(sanitizeTimetableItem);
-    rawDays = (timetablePayloadRes.server_response_day || []).map((day) => sanitizeSingleLine(day, 16).toUpperCase());
-  } else {
-    const kehadiranPayload = { ...basePayload, request_type: "senarai_kursus" };
-    const kehadiranRes = await postUSAS('/student/get_kehadiran_kuliah.php', kehadiranPayload);
-    
-    const kehadiranPayloadRes = kehadiranRes as { server_response?: Array<Partial<TimetableItem> & Record<string, string | number | undefined>> } | null;
+    rawItems = timetablePayloadRes.server_response.map((item) => {
+      const sanitized = sanitizeTimetableItem(item);
+      const code = String(sanitized.course_id || sanitized.kod_kursus || '').trim().toUpperCase();
+      const matched = courseGroupMap.get(code);
+      if (matched?.group_id) {
+        sanitized.group_id = matched.group_id;
+      }
+      if (matched?.kumpulan && !sanitized.group) {
+        sanitized.group = matched.kumpulan;
+      }
+      if (matched?.semester && !sanitized.semester) {
+        sanitized.semester = matched.semester;
+      }
+      return sanitized;
+    });
+    // Keep the formatted date + weekday label (e.g. "05-10-2026 (ISNIN)") so the
+    // UI can render the real date beside the translated weekday, while still
+    // de-duplicating repeated weekdays.
+    rawDays = Array.from(new Set(
+      (timetablePayloadRes.server_response_day || [])
+        .map((day) => normalizeDayLabel(sanitizeSingleLine(day, 64)))
+        .filter(Boolean)
+    ));
+  } else if (kehadiranPayloadTyped?.server_response && kehadiranPayloadTyped.server_response.length > 0) {
+    rawItems = kehadiranPayloadTyped.server_response.map((item, i) => {
+      const parsed = parseFallbackJadual(item.jadual);
 
-    if (kehadiranPayloadRes?.server_response && kehadiranPayloadRes.server_response.length > 0) {
-      rawItems = kehadiranPayloadRes.server_response.map((item, i) => {
-        const parsed = parseFallbackJadual(item.jadual);
+      return {
+        id: sanitizeSingleLine(item.id || String(i + 1), 32),
+        day: parsed.day,
+        course_id: sanitizeSingleLine(item.kod_kursus || `SUBJ${i + 1}`, 64),
+        course_name: sanitizeTextForShare(item.kursus || 'Kursus USAS', 160),
+        group: sanitizeSingleLine(item.kumpulan || item.group_id || 'GRP01', 32),
+        group_id: sanitizeSingleLine(item.group_id || '', 32),
+        start_time: parsed.time,
+        end_time: '',
+        location: 'Dewan / Makmal USAS',
+        lecturer: sanitizeTextForShare(item.pensyarah || 'Pensyarah USAS', 160),
+        pelajar: sanitizeTextForShare(item.pelajar, 160),
+        semester: sanitizeSingleLine(item.semester, 64),
+        kehadiran: item.kehadiran ? sanitizeSingleLine(item.kehadiran, 16) : '',
+        catatan: sanitizeSingleLine(item.semester || '', 64)
+      };
+    });
+    rawDays = ['ISNIN', 'SELASA', 'RABU', 'KHAMIS', 'JUMAAT'];
+  }
 
-        return {
-          id: sanitizeSingleLine(item.id || String(i + 1), 32),
-          day: parsed.day,
-          course_id: sanitizeSingleLine(item.kod_kursus || `SUBJ${i + 1}`, 64),
-          course_name: sanitizeTextForShare(item.kursus || 'Kursus USAS', 160),
-          group: sanitizeSingleLine(item.kumpulan || item.group_id || 'GRP01', 32),
-          start_time: parsed.time,
-          end_time: '',
-          location: 'Dewan / Makmal USAS',
-          lecturer: sanitizeTextForShare(item.pensyarah || 'Pensyarah USAS', 160),
-          pelajar: sanitizeTextForShare(item.pelajar, 160),
-          semester: sanitizeSingleLine(item.semester, 64),
-          kehadiran: '85%',
-          catatan: sanitizeSingleLine(item.semester || '', 64)
-        };
-      });
-      rawDays = ['ISNIN', 'SELASA', 'RABU', 'KHAMIS', 'JUMAAT'];
-    }
+  // If the backend did not return a day list, derive it from the timetable
+  // items themselves, preserving any embedded date labels.
+  if (rawDays.length === 0 && rawItems.length > 0) {
+    rawDays = Array.from(new Set(
+      rawItems
+        .map((item) => normalizeDayLabel(sanitizeSingleLine(item.day, 64)))
+        .filter(Boolean)
+    ));
   }
 
   const profile = await profilePromise;

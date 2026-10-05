@@ -3,6 +3,7 @@ import { useAuth } from '@/app/providers/AuthProvider';
 import { useLanguage } from '@/app/providers/LanguageProvider';
 import { useTheme } from '@/app/providers/ThemeProvider';
 import { generateTimetablePdf, generateElementPng, generateLockscreenImage } from '@/features/export/lib/pdfGenerator';
+import { extractDayName, formatDayDisplay } from '@/shared/lib/dayFormat';
 import type { TimetableItem } from '@/shared/types/usas';
 import {
   X, Download, Smartphone, RotateCw, ChevronDown, Plus, Minus, FileBadge
@@ -77,7 +78,8 @@ const getModalDayColors = (day: string | undefined, theme: ExportTheme) => {
           ? lightColors
           : darkColors;
 
-  return map[day as keyof typeof map] || map['ISNIN'];
+  const key = (extractDayName(day) || 'ISNIN') as keyof typeof map;
+  return map[key] || map['ISNIN'];
 };
 
 const getLockscreenThemeConfig = (theme: ExportTheme) => {
@@ -354,6 +356,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
   const exportSettledTimeoutRef = useRef<number | null>(null);
   const isMountedRef = useRef(true);
 
+  const timetableDays = timetableData?.days;
   const allCourses = useMemo(() => timetableData?.timetable || [], [timetableData?.timetable]);
   const studentName = timetableData?.studentName || session?.user_id || 'Pelajar USAS';
   const matricNo = session?.user_id || 'AI210042';
@@ -370,15 +373,15 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
   };
 
   const daysList = useMemo(() => {
-    if (timetableData?.days && timetableData.days.length > 0) {
-      return timetableData.days;
+    if (timetableDays && timetableDays.length > 0) {
+      return Array.from(new Set(timetableDays));
     }
     const defaultOrder = ['ISNIN', 'SELASA', 'RABU', 'KHAMIS', 'JUMAAT', 'SABTU', 'AHAD'];
-    const daysInCourses = new Set(allCourses.map(c => c.day?.toUpperCase()).filter(Boolean));
+    const daysInCourses = new Set(allCourses.map(c => extractDayName(c.day)).filter(Boolean));
     const baseDays = ['ISNIN', 'SELASA', 'RABU', 'KHAMIS', 'JUMAAT'];
     const extraDays = defaultOrder.filter(d => daysInCourses.has(d) && !baseDays.includes(d));
     return [...baseDays, ...extraDays];
-  }, [timetableData?.days, allCourses]);
+  }, [timetableDays, allCourses]);
 
   useEffect(() => {
     if (isOpen) {
@@ -456,8 +459,9 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
   }, [shouldRender, exportMode, contentDetail, wallpaperPreset, daysList, allCourses.length]);
 
   const getWallpaperCourseForHour = (dayName: string, hourStart: number): TimetableItem | null => {
+    const targetDay = extractDayName(dayName);
     return allCourses.find(c => {
-      const isDay = c.day?.toUpperCase() === dayName.toUpperCase();
+      const isDay = extractDayName(c.day) === targetDay;
       if (!isDay) return false;
       const startMinutes = parseTimeToMinutes(c.start_time || c.jadual || '');
       if (startMinutes == null) return false;
@@ -475,8 +479,9 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
   };
 
   const isWallpaperSlotCovered = (dayName: string, hourStart: number): boolean => {
+    const targetDay = extractDayName(dayName);
     return allCourses.some(c => {
-      if ((c.day?.toUpperCase() || '') !== dayName.toUpperCase()) return false;
+      if (extractDayName(c.day) !== targetDay) return false;
       const startMinutes = parseTimeToMinutes(c.start_time || c.jadual || '');
       const endMinutes = parseTimeToMinutes(c.end_time || '');
       if (startMinutes == null) return false;
@@ -1041,7 +1046,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                         <h1 className="text-xs font-black tracking-tight text-slate-900 uppercase leading-none">
                           UNIVERSITI SULTAN AZLAN SHAH (USAS)
                         </h1>
-                        <h2 className="text-[10px] font-bold text-amber-805 uppercase mt-1 leading-none">
+                        <h2 className="text-[10px] font-bold text-amber-800 uppercase mt-1 leading-none">
                           JADUAL WAKTU KULIAH PELAJAR
                         </h2>
                         <p className="text-[9px] text-slate-500 font-semibold mt-1 leading-none">
@@ -1094,8 +1099,8 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                     <tbody>
                       {allCourses.map((c, i) => (
                         <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50'} style={{ height: '30px' }}>
-                          <td className="border border-slate-300 px-2 py-1 text-center align-middle font-bold text-amber-805">
-                            <span>{t(`days.${c.day?.toUpperCase()}`) || c.day}</span>
+                          <td className="border border-slate-300 px-2 py-1 text-center align-middle font-bold text-amber-800">
+                            <span>{formatDayDisplay(c.day, t)}</span>
                           </td>
                           <td className="border border-slate-300 px-2 py-1 text-center align-middle font-medium">
                             <span>{formatDurationRange(c.start_time || c.jadual, c.end_time)}</span>
@@ -1236,7 +1241,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                           style={{ height: `${rowHeightPx}px` }}
                                         >
                                           <div className="w-full px-1 flex items-center justify-center text-center" style={{ height: `${rowHeightPx}px` }}>
-                                            <span className="text-[10px] break-words whitespace-pre-wrap">{t(`shortDays.${d?.toUpperCase()}`) || d}</span>
+                                            <span className="text-[10px] break-words whitespace-pre-wrap">{extractDayName(d) ? t(`shortDays.${extractDayName(d)}`) : formatDayDisplay(d, t, { short: true })}</span>
                                           </div>
                                         </td>
                                         {WALLPAPER_HOUR_STARTS.map((hourStart) => {

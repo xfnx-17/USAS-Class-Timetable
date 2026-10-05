@@ -48,7 +48,12 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
     if (activeValue) return activeValue;
 
     const fallbackValue = lookupTranslationValue(translations.en, key) || lookupTranslationValue(translations.ms, key);
-    return fallbackValue || key;
+    if (fallbackValue) return fallbackValue;
+
+    if (key.startsWith('days.')) return key.replace(/^days\./i, '');
+    if (key.startsWith('shortDays.')) return key.replace(/^shortDays\./i, '');
+
+    return key;
   };
 
   return (

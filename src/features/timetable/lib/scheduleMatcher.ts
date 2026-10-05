@@ -1,5 +1,6 @@
 import LZString from 'lz-string';
 import type { TimetableItem } from '@/shared/types/usas';
+import { extractDayName } from '@/shared/lib/dayFormat';
 
 export type FreeSlot = {
   dayStr: string;
@@ -39,7 +40,7 @@ export function parseTimeStr(timeStr: string | undefined): [number, number] | nu
  */
 export function compressTimetable(timetable: TimetableItem[], studentName: string): string {
   const minified = timetable.map(item => {
-    const dayInt = dayMap[item.day?.toUpperCase() || ''] ?? 1;
+    const dayInt = dayMap[extractDayName(item.day)] ?? 1;
     const times = parseTimeStr(`${item.start_time || ''} - ${item.end_time || ''}`);
     const code = item.course_id || item.kod_kursus || 'Class';
     return [dayInt, times?.[0] || 0, times?.[1] || 0, code];
@@ -102,7 +103,7 @@ export function calculateOverlappingFreeTime(myTimetable: TimetableItem[], frien
     
     // Get all busy blocks for this day
     const busyBlocks = allClasses
-      .filter(c => c.day?.toUpperCase() === dayStr)
+      .filter(c => extractDayName(c.day) === dayStr)
       .map(c => {
         const times = parseTimeStr(`${c.start_time || ''} - ${c.end_time || ''}`);
         return { start: times?.[0] || 0, end: times?.[1] || 0 };

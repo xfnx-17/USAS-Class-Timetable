@@ -6,6 +6,7 @@ import { playClassChime, sendPushNotification } from '@/shared/lib/audioNotifier
 import { buildDayScopedNotificationKey, getLocalDateStamp, pruneDayScopedNotificationKeys } from '@/shared/lib/notificationKeys';
 import { Clock, CheckCircle2, Bell, BellOff } from 'lucide-react';
 import type { TimetableItem } from '@/shared/types/usas';
+import { extractDayName } from '@/shared/lib/dayFormat';
 
 type LiveNextClassWidgetProps = {
   timetable?: TimetableItem[];
@@ -102,7 +103,7 @@ export default function LiveNextClassWidget({ timetable = [] }: LiveNextClassWid
 
   if (Array.isArray(timetable) && timetable.length > 0) {
     timetable.forEach((item) => {
-      const isToday = item.day?.toUpperCase() === currentDayName;
+      const isToday = extractDayName(item.day) === currentDayName || item.day?.toUpperCase() === currentDayName;
       if (!isToday) return;
 
       const startMin = parseTimeToMinutes(item.start_time);
