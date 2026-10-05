@@ -169,7 +169,7 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
       <ExamCountdownWidget courses={allCourses} isDemo={session?.isDemo} onOpenExam={onOpenExam || (() => {})} />
 
       {/* TOP FILTER BAR */}
-      <div className={`flex-shrink-0 px-2.5 sm:px-6 pb-2 sm:pb-2.5 border-b transition-colors duration-150 ${
+      <div className={`flex-shrink-0 px-2.5 sm:px-6 pt-2 pb-2 sm:pt-0 sm:pb-2.5 border-b transition-colors duration-150 ${
         isLight ? 'bg-white border-slate-200' : 'border-white/[0.06]'
       }`}>
         <div className="w-full flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
@@ -213,8 +213,9 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
             })}
           </div>
 
-          {/* Search */}
-          <div className="relative w-full sm:w-48 md:w-56 min-w-0 sm:ml-auto">
+          {/* Search + View controls (grouped on mobile) */}
+          <div className="flex items-center gap-2 w-full sm:w-auto sm:contents">
+          <div className="relative flex-1 sm:flex-none sm:w-48 md:w-56 min-w-0 sm:ml-auto">
             <Search className={`w-3 h-3 absolute left-2.5 top-1/2 -translate-y-1/2 ${isLight ? 'text-slate-400' : 'text-white/20'}`} />
             <input
               type="text"
@@ -230,7 +231,7 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
           </div>
 
           {/* View Toggle & Expand All */}
-          <div className={`flex items-center gap-0.5 border rounded-md p-0.5 self-start sm:self-auto ${
+          <div className={`flex items-center gap-0.5 border rounded-md p-0.5 shrink-0 ${
             isLight ? 'bg-slate-100/80 border-slate-200/80' : 'bg-white/[0.04] border-white/[0.06]'
           }`}>
             {viewMode === 'cards' && (
@@ -274,6 +275,7 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
             >
               <Grid className="w-3.5 h-3.5" />
             </button>
+          </div>
           </div>
         </div>
       </div>
@@ -337,7 +339,7 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
                             if (expandAll) setExpandAll(false);
                           }}
                         >
-                          <div className="flex flex-col gap-1.5 min-h-[68px] justify-between">
+                          <div className="flex flex-col gap-1.5">
                             {/* Card Header Top Row */}
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex flex-col gap-0.5">
@@ -353,7 +355,7 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
                             </div>
 
                             {/* Course Name */}
-                            <h3 className={`text-[11.5px] font-bold leading-snug line-clamp-2 ${
+                            <h3 className={`text-[11.5px] font-bold leading-snug line-clamp-2 min-h-[32px] ${
                               isLight ? 'text-slate-800' : 'text-white/95'
                             }`}>
                               {course.course_name || course.kursus}
