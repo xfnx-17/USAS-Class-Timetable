@@ -93,8 +93,10 @@ async function captureElement(elementRef: ExportElement | null, scale = 2, backg
       // so only the text shifts up, leaving background cards and borders in their exact grid positions.
       // NOTE: We skip this on Apple devices as iOS Safari handles baselines differently and this hack breaks text kerning/alignment.
       const isApple = typeof navigator !== 'undefined' && (/Mac|iPod|iPhone|iPad/.test(navigator.platform) || (/MacIntel/.test(navigator.platform) && navigator.maxTouchPoints > 1) || /iPhone|iPad|iPod/i.test(navigator.userAgent));
-      
-      if (!isApple) {
+
+      // Only the formal document needs this baseline-shift workaround. Applying
+      // it to the wallpaper smears the small bold course codes after capture.
+      if (!isApple && exportRootId !== 'wallpaper-export-root') {
         const textNodes = clonedRoot.querySelectorAll('span, h1, h2, p');
         textNodes.forEach((node) => {
           const el = node as HTMLElement;
