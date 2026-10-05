@@ -383,6 +383,18 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
     return [...baseDays, ...extraDays];
   }, [timetableDays, allCourses]);
 
+  // Courses sorted by weekday then start time, so the formal table can merge
+  // consecutive rows of the same day into a single day cell (rowSpan).
+  const pdfCourses = useMemo(() => {
+    const order = ['ISNIN', 'SELASA', 'RABU', 'KHAMIS', 'JUMAAT', 'SABTU', 'AHAD'];
+    return [...allCourses].sort((a, b) => {
+      const da = order.indexOf(extractDayName(a.day));
+      const db = order.indexOf(extractDayName(b.day));
+      if (da !== db) return da - db;
+      return (parseTimeToMinutes(a.start_time || a.jadual) ?? 0) - (parseTimeToMinutes(b.start_time || b.jadual) ?? 0);
+    });
+  }, [allCourses]);
+
   useEffect(() => {
     if (isOpen) {
       setAnimate(false);
@@ -1097,28 +1109,41 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                       </tr>
                     </thead>
                     <tbody>
-                      {allCourses.map((c, i) => (
-                        <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50'} style={{ height: '30px' }}>
-                          <td className="border border-slate-300 px-2 py-1 text-center align-middle font-bold text-amber-800">
-                            <span>{formatDayDisplay(c.day, t)}</span>
-                          </td>
-                          <td className="border border-slate-300 px-2 py-1 text-center align-middle font-medium">
-                            <span>{formatDurationRange(c.start_time || c.jadual, c.end_time)}</span>
-                          </td>
-                          <td className="border border-slate-300 px-2.5 py-1 text-left align-middle font-bold text-blue-900">
-                            <span>{c.course_id || c.kod_kursus}</span>
-                          </td>
-                          <td className="border border-slate-300 px-2.5 py-1 text-left align-middle font-semibold text-slate-900">
-                            <span>{c.course_name || c.kursus}</span>
-                          </td>
-                          <td className="border border-slate-300 px-2.5 py-1 text-center align-middle font-bold">
-                            <span>{normalizeGroup(c.group || c.kumpulan || 'A')}</span>
-                          </td>
-                          <td className="border border-slate-300 px-2.5 py-1 text-left align-middle text-slate-800">
-                            <span>{c.location || 'Dewan USAS'}</span>
-                          </td>
-                        </tr>
-                      ))}
+                      {pdfCourses.map((c, i) => {
+                        const dayName = extractDayName(c.day);
+                        const prevName = i > 0 ? extractDayName(pdfCourses[i - 1].day) : '';
+                        const isFirstOfDay = dayName !== prevName;
+                        let span = 1;
+                        if (isFirstOfDay) {
+                          for (let j = i + 1; j < pdfCourses.length && extractDayName(pdfCourses[j].day) === dayName; j += 1) {
+                            span += 1;
+                          }
+                        }
+                        return (
+                          <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50'} style={{ height: '30px' }}>
+                            {isFirstOfDay && (
+                              <td rowSpan={span} className="border border-slate-300 px-2 py-1 text-center align-middle font-bold text-amber-800">
+                                <span>{formatDayDisplay(c.day, t)}</span>
+                              </td>
+                            )}
+                            <td className="border border-slate-300 px-2 py-1 text-center align-middle font-medium">
+                              <span>{formatDurationRange(c.start_time || c.jadual, c.end_time)}</span>
+                            </td>
+                            <td className="border border-slate-300 px-2.5 py-1 text-left align-middle font-bold text-blue-900">
+                              <span>{c.course_id || c.kod_kursus}</span>
+                            </td>
+                            <td className="border border-slate-300 px-2.5 py-1 text-left align-middle font-semibold text-slate-900">
+                              <span>{c.course_name || c.kursus}</span>
+                            </td>
+                            <td className="border border-slate-300 px-2.5 py-1 text-center align-middle font-bold">
+                              <span>{normalizeGroup(c.group || c.kumpulan || 'A')}</span>
+                            </td>
+                            <td className="border border-slate-300 px-2.5 py-1 text-left align-middle text-slate-800">
+                              <span>{c.location || 'Dewan USAS'}</span>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
 
@@ -1193,13 +1218,33 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
 
                             const wallpaperPadding = wallpaperPreset === 'phone' ? 12 : wallpaperPreset === 'square' ? 14 : 16;
                             const gridInnerWidth = w - (wallpaperPadding * 2) - 2;
-                            const colWidth = (gridInnerWidth - 38) / 9;
+
+                            // Only render the hours that actually contain classes so the
+                            // wallpaper grid doesn't waste space on empty early slots.
+                            const hourStarts = (() => {
+                              let minH = Infinity;
+                              let maxH = -Infinity;
+                              allCourses.forEach((course) => {
+                                const start = parseTimeToMinutes(course.start_time || course.jadual || '');
+                                if (start == null) return;
+                                const end = parseTimeToMinutes(course.end_time || '');
+                                minH = Math.min(minH, Math.floor(start / 60));
+                                maxH = Math.max(maxH, Math.ceil((end != null && end > start ? end : start + 60) / 60));
+                              });
+                              if (!Number.isFinite(minH) || !Number.isFinite(maxH) || maxH <= minH) {
+                                return WALLPAPER_HOUR_STARTS;
+                              }
+                              const range: number[] = [];
+                              for (let h = minH; h < maxH; h += 1) range.push(h);
+                              return range;
+                            })();
+                            const colWidth = (gridInnerWidth - 38) / hourStarts.length;
 
                             return (
                               <table className={`w-full h-full table-fixed border-collapse ${style.tableFontSize}`}>
                                 <colgroup>
                                   <col style={{ width: '38px' }} />
-                                  {WALLPAPER_HOUR_STARTS.map((hourStart) => (
+                                  {hourStarts.map((hourStart) => (
                                     <col key={hourStart} style={{ width: `${colWidth}px` }} />
                                   ))}
                                 </colgroup>
@@ -1216,7 +1261,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                             <span>&nbsp;</span>
                                           </div>
                                         </th>
-                                        {WALLPAPER_HOUR_STARTS.map((hourStart) => (
+                                        {hourStarts.map((hourStart) => (
                                           <th
                                             key={hourStart}
                                             className={`p-0 font-black uppercase tracking-wider border-r ${lockscreenConfig.headerBorder} ${lockscreenConfig.headerText}`}
@@ -1244,7 +1289,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                             <span className="text-[10px] break-words whitespace-pre-wrap">{extractDayName(d) ? t(`shortDays.${extractDayName(d)}`) : formatDayDisplay(d, t, { short: true })}</span>
                                           </div>
                                         </td>
-                                        {WALLPAPER_HOUR_STARTS.map((hourStart) => {
+                                        {hourStarts.map((hourStart) => {
                                           const course = getWallpaperCourseForHour(d, hourStart);
                                           const covered = isWallpaperSlotCovered(d, hourStart);
                                           if (covered) return null;
