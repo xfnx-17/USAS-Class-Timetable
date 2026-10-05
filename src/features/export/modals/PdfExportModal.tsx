@@ -618,6 +618,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
   const renderWallpaperCourseContent = (
     course: TimetableItem,
     _span: number,
+    cellWidthPx: number,
     badgeHeightPx: number,
     isLightMode: boolean,
     style: {
@@ -664,6 +665,15 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
       if (contentDetail === 'CODE') return baseSize * 1.25;
       return baseSize;
     })();
+
+    // Shrink the course code so a long code fits a single narrow period column
+    // instead of breaking into "RKS60 / 83".
+    const fitFontSize = (() => {
+      if (!cellWidthPx || cellWidthPx <= 0 || !code) return codeOnlyFontSize;
+      const maxByWidth = (cellWidthPx - 6) / (code.length * 0.62);
+      return Math.max(6, Math.min(codeOnlyFontSize, maxByWidth));
+    })();
+
     return (
       <div
         className="w-full flex flex-col justify-center items-center text-center p-0.5 overflow-hidden"
@@ -676,9 +686,9 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
             </div>
             <div className="w-full text-center">
               <span
-                className={`block w-full break-words font-black leading-normal tracking-tight text-center ${isLightMode ? 'text-slate-800' : 'text-white'
+                className={`block w-full overflow-hidden whitespace-nowrap font-black leading-normal tracking-tight text-center ${isLightMode ? 'text-slate-800' : 'text-white'
                   }`}
-                style={{ fontSize: `${codeOnlyFontSize}px` }}
+                style={{ fontSize: `${fitFontSize}px` }}
                 title={code}
               >
                 {code}
@@ -691,8 +701,8 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
         ) : (
           <div className="w-full flex items-center justify-center text-center">
             <span
-              className={`inline-block break-words leading-normal tracking-tight text-center font-black ${isLightMode ? 'text-slate-800' : 'text-white'}`}
-              style={{ fontSize: `${codeOnlyFontSize}px`, letterSpacing: '-0.03em' }}
+              className={`inline-block max-w-full overflow-hidden whitespace-nowrap leading-normal tracking-tight text-center font-black ${isLightMode ? 'text-slate-800' : 'text-white'}`}
+              style={{ fontSize: `${fitFontSize}px`, letterSpacing: '-0.03em' }}
               title={code}
             >
               {code}
@@ -1302,7 +1312,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                                 className={`border-r align-middle p-0.5 overflow-visible ${lockscreenConfig.cellBorder} ${dayColor.bg} ${dayColor.border}`}
                                                 style={{ height: `${rowHeightPx}px` }}
                                               >
-                                                {renderWallpaperCourseContent(course, courseSpan, rowHeightPx, lockscreenConfig.isLight, style)}
+                                                {renderWallpaperCourseContent(course, courseSpan, colWidth * courseSpan, rowHeightPx, lockscreenConfig.isLight, style)}
                                               </td>
                                             );
                                           }

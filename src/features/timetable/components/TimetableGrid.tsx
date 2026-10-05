@@ -23,28 +23,61 @@ import {
   CalendarOff, RefreshCw, ChevronDown
 } from 'lucide-react';
 
-// Day color system
-const getCardDayColor = (day: string | undefined, isLight: boolean) => {
-  const darkColors = {
-    'ISNIN':  { dot: 'bg-emerald-400', text: 'text-emerald-400 font-bold', accent: 'border-l-emerald-400', bg: 'bg-emerald-500/[0.18]', border: 'border-emerald-500/40', badge: 'bg-emerald-500/30 text-emerald-300 border border-emerald-500/50 font-bold' },
-    'SELASA': { dot: 'bg-blue-400',    text: 'text-blue-400 font-bold',    accent: 'border-l-blue-400',    bg: 'bg-blue-500/[0.18]',    border: 'border-blue-500/40',    badge: 'bg-blue-500/30 text-blue-300 border border-blue-500/50 font-bold' },
-    'RABU':   { dot: 'bg-amber-400',   text: 'text-amber-400 font-bold',   accent: 'border-l-amber-400',   bg: 'bg-amber-500/[0.18]',   border: 'border-amber-500/40',   badge: 'bg-amber-500/30 text-amber-300 border border-amber-500/50 font-bold' },
-    'KHAMIS': { dot: 'bg-purple-400',  text: 'text-purple-400 font-bold',  accent: 'border-l-purple-400',  bg: 'bg-purple-500/[0.18]',  border: 'border-purple-500/40',  badge: 'bg-purple-500/30 text-purple-300 border border-purple-500/50 font-bold' },
-    'JUMAAT': { dot: 'bg-rose-400',    text: 'text-rose-400 font-bold',    accent: 'border-l-rose-400',    bg: 'bg-rose-500/[0.18]',    border: 'border-rose-500/40',    badge: 'bg-rose-500/30 text-rose-300 border border-rose-500/50 font-bold' },
-    'SABTU':  { dot: 'bg-orange-400',  text: 'text-orange-400 font-bold',  accent: 'border-l-orange-400',  bg: 'bg-orange-500/[0.18]',  border: 'border-orange-500/40',  badge: 'bg-orange-500/30 text-orange-300 border border-orange-500/50 font-bold' },
-    'AHAD':   { dot: 'bg-slate-400',   text: 'text-slate-400 font-bold',   accent: 'border-l-slate-400',   bg: 'bg-slate-500/[0.18]',   border: 'border-slate-500/40',   badge: 'bg-slate-500/30 text-slate-300 border border-slate-500/50 font-bold' },
-  };
-  const lightColors = {
-    'ISNIN':  { dot: 'bg-emerald-500', text: 'text-emerald-800 font-bold', accent: 'border-l-emerald-500', bg: 'bg-emerald-100/70', border: 'border-emerald-300/80', badge: 'bg-emerald-600 text-white font-extrabold shadow-sm' },
-    'SELASA': { dot: 'bg-blue-500',    text: 'text-blue-800 font-bold',    accent: 'border-l-blue-500',    bg: 'bg-blue-100/70',    border: 'border-blue-300/80',    badge: 'bg-blue-600 text-white font-extrabold shadow-sm' },
-    'RABU':   { dot: 'bg-amber-500',   text: 'text-amber-800 font-bold',   accent: 'border-l-amber-500',   bg: 'bg-amber-100/80',   border: 'border-amber-300/85',   badge: 'bg-amber-600 text-white font-extrabold shadow-sm' },
-    'KHAMIS': { dot: 'bg-purple-500',  text: 'text-purple-800 font-bold',  accent: 'border-l-purple-500',  bg: 'bg-purple-100/70',  border: 'border-purple-300/80',  badge: 'bg-purple-600 text-white font-extrabold shadow-sm' },
-    'JUMAAT': { dot: 'bg-rose-500',    text: 'text-rose-800 font-bold',    accent: 'border-l-rose-500',    bg: 'bg-rose-100/70',    border: 'border-rose-300/80',    badge: 'bg-rose-600 text-white font-extrabold shadow-sm' },
-    'SABTU':  { dot: 'bg-orange-500',  text: 'text-orange-800 font-bold',  accent: 'border-l-orange-500',  bg: 'bg-orange-100/70',  border: 'border-orange-300/80',  badge: 'bg-orange-600 text-white font-extrabold shadow-sm' },
-    'AHAD':   { dot: 'bg-slate-500',   text: 'text-slate-800 font-bold',   accent: 'border-l-slate-500',   bg: 'bg-slate-200/70',   border: 'border-slate-300/80',   badge: 'bg-slate-600 text-white font-extrabold shadow-sm' },
-  };
-  const key = extractDayName(day) || 'ISNIN';
-  return (isLight ? lightColors[key] : darkColors[key]) || (isLight ? lightColors['ISNIN'] : darkColors['ISNIN']);
+// Colour system: each course card gets its own colour (hashed by course code)
+// while the weekday filter chips keep a colour per weekday.
+type CardColorScheme = {
+  dot: string;
+  text: string;
+  accent: string;
+  bg: string;
+  border: string;
+  badge: string;
+};
+
+const CARD_DARK_COLORS: Record<string, CardColorScheme> = {
+  emerald: { dot: 'bg-emerald-400', text: 'text-emerald-400 font-bold', accent: 'border-l-emerald-400', bg: 'bg-emerald-500/[0.18]', border: 'border-emerald-500/40', badge: 'bg-emerald-500/30 text-emerald-300 border border-emerald-500/50 font-bold' },
+  blue:    { dot: 'bg-blue-400',    text: 'text-blue-400 font-bold',    accent: 'border-l-blue-400',    bg: 'bg-blue-500/[0.18]',    border: 'border-blue-500/40',    badge: 'bg-blue-500/30 text-blue-300 border border-blue-500/50 font-bold' },
+  amber:   { dot: 'bg-amber-400',   text: 'text-amber-400 font-bold',   accent: 'border-l-amber-400',   bg: 'bg-amber-500/[0.18]',   border: 'border-amber-500/40',   badge: 'bg-amber-500/30 text-amber-300 border border-amber-500/50 font-bold' },
+  purple:  { dot: 'bg-purple-400',  text: 'text-purple-400 font-bold',  accent: 'border-l-purple-400',  bg: 'bg-purple-500/[0.18]',  border: 'border-purple-500/40',  badge: 'bg-purple-500/30 text-purple-300 border border-purple-500/50 font-bold' },
+  rose:    { dot: 'bg-rose-400',    text: 'text-rose-400 font-bold',    accent: 'border-l-rose-400',    bg: 'bg-rose-500/[0.18]',    border: 'border-rose-500/40',    badge: 'bg-rose-500/30 text-rose-300 border border-rose-500/50 font-bold' },
+  orange:  { dot: 'bg-orange-400',  text: 'text-orange-400 font-bold',  accent: 'border-l-orange-400',  bg: 'bg-orange-500/[0.18]',  border: 'border-orange-500/40',  badge: 'bg-orange-500/30 text-orange-300 border border-orange-500/50 font-bold' },
+  slate:   { dot: 'bg-slate-400',   text: 'text-slate-400 font-bold',   accent: 'border-l-slate-400',   bg: 'bg-slate-500/[0.18]',   border: 'border-slate-500/40',   badge: 'bg-slate-500/30 text-slate-300 border border-slate-500/50 font-bold' },
+  teal:    { dot: 'bg-teal-400',    text: 'text-teal-400 font-bold',    accent: 'border-l-teal-400',    bg: 'bg-teal-500/[0.18]',    border: 'border-teal-500/40',    badge: 'bg-teal-500/30 text-teal-300 border border-teal-500/50 font-bold' },
+  indigo:  { dot: 'bg-indigo-400',  text: 'text-indigo-400 font-bold',  accent: 'border-l-indigo-400',  bg: 'bg-indigo-500/[0.18]',  border: 'border-indigo-500/40',  badge: 'bg-indigo-500/30 text-indigo-300 border border-indigo-500/50 font-bold' },
+  cyan:    { dot: 'bg-cyan-400',    text: 'text-cyan-400 font-bold',    accent: 'border-l-cyan-400',    bg: 'bg-cyan-500/[0.18]',    border: 'border-cyan-500/40',    badge: 'bg-cyan-500/30 text-cyan-300 border border-cyan-500/50 font-bold' },
+  fuchsia: { dot: 'bg-fuchsia-400', text: 'text-fuchsia-400 font-bold', accent: 'border-l-fuchsia-400', bg: 'bg-fuchsia-500/[0.18]', border: 'border-fuchsia-500/40', badge: 'bg-fuchsia-500/30 text-fuchsia-300 border border-fuchsia-500/50 font-bold' },
+  lime:    { dot: 'bg-lime-400',    text: 'text-lime-400 font-bold',    accent: 'border-l-lime-400',    bg: 'bg-lime-500/[0.18]',    border: 'border-lime-500/40',    badge: 'bg-lime-500/30 text-lime-300 border border-lime-500/50 font-bold' },
+};
+
+const CARD_LIGHT_COLORS: Record<string, CardColorScheme> = {
+  emerald: { dot: 'bg-emerald-500', text: 'text-emerald-800 font-bold', accent: 'border-l-emerald-500', bg: 'bg-emerald-100/70', border: 'border-emerald-300/80', badge: 'bg-emerald-600 text-white font-extrabold shadow-sm' },
+  blue:    { dot: 'bg-blue-500',    text: 'text-blue-800 font-bold',    accent: 'border-l-blue-500',    bg: 'bg-blue-100/70',    border: 'border-blue-300/80',    badge: 'bg-blue-600 text-white font-extrabold shadow-sm' },
+  amber:   { dot: 'bg-amber-500',   text: 'text-amber-800 font-bold',   accent: 'border-l-amber-500',   bg: 'bg-amber-100/80',   border: 'border-amber-300/85',   badge: 'bg-amber-600 text-white font-extrabold shadow-sm' },
+  purple:  { dot: 'bg-purple-500',  text: 'text-purple-800 font-bold',  accent: 'border-l-purple-500',  bg: 'bg-purple-100/70',  border: 'border-purple-300/80',  badge: 'bg-purple-600 text-white font-extrabold shadow-sm' },
+  rose:    { dot: 'bg-rose-500',    text: 'text-rose-800 font-bold',    accent: 'border-l-rose-500',    bg: 'bg-rose-100/70',    border: 'border-rose-300/80',    badge: 'bg-rose-600 text-white font-extrabold shadow-sm' },
+  orange:  { dot: 'bg-orange-500',  text: 'text-orange-800 font-bold',  accent: 'border-l-orange-500',  bg: 'bg-orange-100/70',  border: 'border-orange-300/80',  badge: 'bg-orange-600 text-white font-extrabold shadow-sm' },
+  slate:   { dot: 'bg-slate-500',   text: 'text-slate-800 font-bold',   accent: 'border-l-slate-500',   bg: 'bg-slate-200/70',   border: 'border-slate-300/80',   badge: 'bg-slate-600 text-white font-extrabold shadow-sm' },
+  teal:    { dot: 'bg-teal-500',    text: 'text-teal-800 font-bold',    accent: 'border-l-teal-500',    bg: 'bg-teal-100/70',    border: 'border-teal-300/80',    badge: 'bg-teal-600 text-white font-extrabold shadow-sm' },
+  indigo:  { dot: 'bg-indigo-500',  text: 'text-indigo-800 font-bold',  accent: 'border-l-indigo-500',  bg: 'bg-indigo-100/70',  border: 'border-indigo-300/80',  badge: 'bg-indigo-600 text-white font-extrabold shadow-sm' },
+  cyan:    { dot: 'bg-cyan-500',    text: 'text-cyan-800 font-bold',    accent: 'border-l-cyan-500',    bg: 'bg-cyan-100/70',    border: 'border-cyan-300/80',    badge: 'bg-cyan-600 text-white font-extrabold shadow-sm' },
+  fuchsia: { dot: 'bg-fuchsia-500', text: 'text-fuchsia-800 font-bold', accent: 'border-l-fuchsia-500', bg: 'bg-fuchsia-100/70', border: 'border-fuchsia-300/80', badge: 'bg-fuchsia-600 text-white font-extrabold shadow-sm' },
+  lime:    { dot: 'bg-lime-500',    text: 'text-lime-800 font-bold',    accent: 'border-l-lime-500',    bg: 'bg-lime-100/70',    border: 'border-lime-300/80',    badge: 'bg-lime-600 text-white font-extrabold shadow-sm' },
+};
+
+const DAY_COLOR_KEY: Record<string, string> = {
+  ISNIN: 'emerald', SELASA: 'blue', RABU: 'amber', KHAMIS: 'purple', JUMAAT: 'rose', SABTU: 'orange', AHAD: 'slate',
+};
+
+const COURSE_COLOR_ORDER = ['emerald', 'blue', 'amber', 'purple', 'rose', 'teal', 'indigo', 'cyan', 'orange', 'fuchsia', 'lime', 'slate'];
+
+const getCardDayColor = (day: string | undefined, isLight: boolean): CardColorScheme => {
+  const key = DAY_COLOR_KEY[extractDayName(day)] || 'emerald';
+  return (isLight ? CARD_LIGHT_COLORS[key] : CARD_DARK_COLORS[key]) || (isLight ? CARD_LIGHT_COLORS.emerald : CARD_DARK_COLORS.emerald);
+};
+
+const getCourseColorByIndex = (index: number, isLight: boolean): CardColorScheme => {
+  const color = COURSE_COLOR_ORDER[Math.abs(index) % COURSE_COLOR_ORDER.length];
+  return (isLight ? CARD_LIGHT_COLORS[color] : CARD_DARK_COLORS[color]) || (isLight ? CARD_LIGHT_COLORS.emerald : CARD_DARK_COLORS.emerald);
 };
 
 type TimetableGridProps = {
@@ -100,6 +133,20 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
   }, [timetableDays, timetableItems]);
 
   const allCourses = useMemo(() => timetableItems || [], [timetableItems]);
+
+  // Assign each distinct course a stable, unique colour slot.
+  const courseColorIndex = useMemo(() => {
+    const map = new Map<string, number>();
+    let index = 0;
+    allCourses.forEach((course) => {
+      const id = String(course.course_id || course.kod_kursus || '').toUpperCase();
+      if (id && !map.has(id)) {
+        map.set(id, index);
+        index += 1;
+      }
+    });
+    return map;
+  }, [allCourses]);
 
   const handleSaveNote = (courseId) => {
     const updated = { ...courseNotes, [courseId]: noteInput };
@@ -303,7 +350,7 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 items-start">
                   {filteredCourses.map((course) => {
                     const courseId = course.course_id || course.kod_kursus;
-                    const dayColor = getCardDayColor(course.day?.toUpperCase(), isLight);
+                    const cardColor = getCourseColorByIndex(courseColorIndex.get(String(courseId || '').toUpperCase()) ?? 0, isLight);
                     const cardKey = getCourseHighlightKey(course);
                     const isExpanded = expandAll ? true : !!expandedCards[cardKey];
                     const currentNote = courseNotes[courseId] || '';
@@ -317,7 +364,7 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
                     return (
                       <div
                         key={cardKey}
-                        className={`rounded-lg border border-l-2 transition-all duration-300 flex flex-col ${dayColor.accent} ${dayColor.border} ${dayColor.bg} hover:brightness-105 shadow-sm ${
+                        className={`rounded-lg border border-l-2 transition-all duration-300 flex flex-col ${cardColor.accent} ${cardColor.border} ${cardColor.bg} hover:brightness-105 shadow-sm ${
                           courseStatus === 'ongoing'
                             ? 'ring-1 ring-emerald-400/70 shadow-[0_0_18px_rgba(52,211,153,0.22)]'
                             : courseStatus === 'upcoming'
@@ -343,13 +390,13 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
                             {/* Card Header Top Row */}
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex flex-col gap-0.5">
-                                <span className={`text-[10px] font-black tracking-wider ${dayColor.text}`}>{courseId}</span>
+                                <span className={`text-[10px] font-black tracking-wider ${cardColor.text}`}>{courseId}</span>
                                 <div className={`flex items-center gap-1 text-[9.5px] leading-none ${isLight ? 'text-slate-500 font-semibold' : 'text-white/45'}`}>
                                   <Clock className={`w-3 h-3 flex-shrink-0 self-center ${isLight ? 'text-amber-600' : 'text-amber-400/70'}`} />
                                   <span className="inline-flex items-center leading-none self-center">{getShortTimeRange(course.start_time, course.end_time)}</span>
                                 </div>
                               </div>
-                              <span className={`px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase shrink-0 whitespace-nowrap ${dayColor.badge}`}>
+                              <span className={`px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase shrink-0 whitespace-nowrap ${cardColor.badge}`}>
                                 {formatDayDisplay(course.day, t)}
                               </span>
                             </div>
