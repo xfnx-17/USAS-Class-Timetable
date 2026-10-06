@@ -317,7 +317,7 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
           
           {/* View Content */}
           {viewMode === 'matrix' ? (
-            <MatrixGridView timetable={allCourses} days={daysList} activeHighlights={activeClassKeys} />
+            <MatrixGridView timetable={allCourses} days={daysList} activeDay={selectedDay} activeHighlights={activeClassKeys} />
           ) : (
             <div className="space-y-4">
               <LiveNextClassWidget timetable={allCourses} />

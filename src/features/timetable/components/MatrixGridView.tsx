@@ -1,10 +1,11 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@/app/providers/ThemeProvider';
 import { useLanguage } from '@/app/providers/LanguageProvider';
 import type { TimetableItem } from '@/shared/types/usas';
-import { extractDayName, formatDayDisplay } from '@/shared/lib/dayFormat';
+import { extractDayName, formatDayDisplay, isSameDay } from '@/shared/lib/dayFormat';
 import { buildCourseColorMap, getCourseColorSlot } from '@/shared/lib/courseColors';
-import { MapPin } from 'lucide-react';
+import { MapPin, User, GraduationCap } from 'lucide-react';
+import AttendanceMeter from './AttendanceMeter';
 import {
   getCourseHighlightKey,
   parseTo24hHour,
@@ -14,6 +15,7 @@ import {
 type MatrixGridViewProps = {
   timetable?: TimetableItem[];
   days?: string[];
+  activeDay?: string;
   activeHighlights?: {
     ongoingKey: string | null;
     upcomingKey: string | null;
@@ -54,11 +56,11 @@ const getDurationLabel = (startTime?: string, endTime?: string, lang?: string) =
   const startMin = parseTimeToMinutes(startTime);
   const endMin = parseTimeToMinutes(endTime);
   if (startMin === null || endMin === null || endMin <= startMin) return '';
-  
+
   const diff = endMin - startMin;
   const h = Math.floor(diff / 60);
   const m = diff % 60;
-  
+
   if (lang === 'en') {
     if (m === 0) {
       return `${h} hr${h > 1 ? 's' : ''}`;
@@ -98,11 +100,13 @@ const getSlotLabel = (slot: string) => {
 export default function MatrixGridView({
   timetable = [],
   days = ['ISNIN', 'SELASA', 'RABU', 'KHAMIS', 'JUMAAT'],
+  activeDay = 'ALL',
   activeHighlights,
 }: MatrixGridViewProps) {
   const { theme } = useTheme();
   const { t, lang } = useLanguage();
   const isLight = theme === 'light';
+  const [preview, setPreview] = useState<{ course: TimetableItem; x: number; y: number } | null>(null);
 
   // Stable unique colour per course (shared with the card and export views).
   const courseColorMap = useMemo(() => buildCourseColorMap(timetable), [timetable]);
@@ -117,6 +121,25 @@ export default function MatrixGridView({
       const startHour = parseTo24hHour(c.start_time || c.jadual || '');
       return startHour !== null && startHour === slotHour;
     });
+  };
+
+  useEffect(() => {
+    if (!preview) return;
+    const close = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target && target.closest('[data-preview-card]')) return;
+      setPreview(null);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [preview]);
+
+  const showPreview = (course: TimetableItem, element: HTMLElement) => {
+    const rect = element.getBoundingClientRect();
+    const cardWidth = 250;
+    const left = Math.min(Math.max(8, rect.left), Math.max(8, window.innerWidth - cardWidth - 8));
+    const top = rect.bottom + 8 + 180 > window.innerHeight ? Math.max(8, rect.top - 188) : rect.bottom + 8;
+    setPreview({ course, x: left, y: top });
   };
 
   // Filter out trailing empty time slots dynamically checking class end times
@@ -156,11 +179,16 @@ export default function MatrixGridView({
     return 1.0; // 7+ columns: keep at full base size, outer container scrolls horizontally
   }, [activeTimeSlots.length]);
 
+  const hasDayFilter = Boolean(activeDay) && activeDay.toUpperCase() !== 'ALL';
+
   return (
     <div className={`border rounded-lg overflow-auto flex-1 min-h-0 flex flex-col transition-colors duration-150 ${
       isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-white/[0.025] border-white/[0.06]'
     }`}>
-      <div className="min-w-[700px] flex-1 overflow-y-auto flex flex-col">
+      <div
+        className="min-w-[700px] flex-1 overflow-y-auto flex flex-col"
+        onScroll={() => { if (preview) setPreview(null); }}
+      >
         <table className="w-full table-fixed border-collapse flex-1 h-auto sm:h-full">
           {/* Head - Transposed: Waktu slots as columns */}
           <thead>
@@ -189,6 +217,7 @@ export default function MatrixGridView({
           {/* Body - Transposed: Days as rows, slots aligned using colSpan */}
           <tbody>
             {days.map((d) => {
+              const isDimmedRow = hasDayFilter && !isSameDay(d, activeDay);
               let skipCount = 0;
 
               return (
@@ -198,9 +227,9 @@ export default function MatrixGridView({
                     : 'border-white/[0.03] hover:bg-white/[0.015]'
                 }`}>
                   <td
-                    className={`px-2 sm:px-3 py-1.5 font-bold uppercase border-r text-center w-20 sm:w-24 ${
+                    className={`px-2 sm:px-3 py-1.5 font-bold uppercase border-r text-center w-20 sm:w-24 transition-all duration-300 ${
                       isLight ? 'border-slate-200' : 'border-white/[0.04]'
-                    }`}
+                    } ${isDimmedRow ? 'opacity-30 blur-[1px]' : ''}`}
                     style={{ fontSize: `${autoScale * 10}px` }}
                   >
                     <span className="flex items-center justify-center gap-1.5 min-h-[42px] sm:min-h-[48px] whitespace-nowrap">
@@ -243,6 +272,11 @@ export default function MatrixGridView({
                     
                     skipCount = colSpan - 1;
 
+                    // Narrower cells (single period) use smaller text so content
+                    // never spills outside the box.
+                    const spanFactor = colSpan <= 1 ? 0.76 : colSpan === 2 ? 0.92 : 1;
+                    const fs = (value: number) => `${Math.max(6, autoScale * spanFactor * value).toFixed(1)}px`;
+
                     return (
                       <td 
                         key={slot} 
@@ -252,38 +286,50 @@ export default function MatrixGridView({
                         }`}
                       >
                         {course ? (
-                          <div className={`px-2 py-2 rounded-md border h-full flex flex-col justify-between gap-0.5 transition-all duration-300 hover:brightness-105 ${courseColor?.bg} ${courseColor?.border} ${
-                            courseStatus === 'ongoing'
-                              ? 'ring-1 ring-emerald-400/70 shadow-[0_0_16px_rgba(52,211,153,0.20)]'
-                              : courseStatus === 'upcoming'
-                                ? 'ring-1 ring-amber-300/60 shadow-[0_0_14px_rgba(251,191,36,0.16)] animate-[pulse_4s_ease-in-out_infinite]'
-                                : ''
-                          }`}>
-                            <div className="flex items-center justify-between gap-2 mb-0.5">
-                              <div className={`font-bold truncate ${courseColor?.text}`} style={{ fontSize: `${autoScale * 12}px` }}>
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            onClick={(e) => { e.stopPropagation(); showPreview(course, e.currentTarget); }}
+                            onMouseEnter={(e) => showPreview(course, e.currentTarget)}
+                            onMouseLeave={() => setPreview(null)}
+                            onFocus={(e) => showPreview(course, e.currentTarget)}
+                            onBlur={() => setPreview(null)}
+                            className={`px-2 py-2 rounded-md border h-full flex flex-col justify-between gap-0.5 cursor-pointer outline-none transition-all duration-300 hover:brightness-105 overflow-hidden ${courseColor?.bg} ${courseColor?.border} ${
+                              isDimmedRow ? 'opacity-30 blur-[1.5px]' : ''
+                            } ${
+                              courseStatus === 'ongoing'
+                                ? 'ring-1 ring-emerald-400/70 shadow-[0_0_16px_rgba(52,211,153,0.20)]'
+                                : courseStatus === 'upcoming'
+                                  ? 'ring-1 ring-amber-300/60 shadow-[0_0_14px_rgba(251,191,36,0.16)] animate-[pulse_4s_ease-in-out_infinite]'
+                                  : ''
+                            }`}>
+                            <div className="flex items-center justify-between gap-1 mb-0.5 min-w-0">
+                              <div className={`font-bold truncate ${courseColor?.text}`} style={{ fontSize: fs(12) }}>
                                 {course.course_id || course.kod_kursus}
                               </div>
                               {durationText && (
-                                <div className={`text-[8.5px] font-extrabold uppercase shrink-0 flex items-center justify-center text-center px-1.5 py-0.5 rounded leading-none ${
+                                <div className={`font-extrabold uppercase shrink-0 flex items-center justify-center text-center px-1 py-0.5 rounded leading-none ${
                                   isLight 
                                     ? 'bg-slate-100 text-slate-600 border border-slate-200/50' 
                                     : 'bg-white/10 text-white/80 border border-white/5'
-                                }`} style={{ fontSize: `${autoScale * 8.5}px` }}>
+                                }`} style={{ fontSize: fs(8) }}>
                                   {durationText}
                                 </div>
                               )}
                             </div>
-                            <div className={`font-medium leading-snug break-words ${
+                            <div className={`font-medium leading-snug break-words line-clamp-2 ${
                               isLight ? 'text-slate-700' : 'text-white/80'
-                            }`} style={{ fontSize: `${autoScale * 10}px` }}>
+                            }`} style={{ fontSize: fs(10) }}>
                               {course.course_name || course.kursus}
                             </div>
-                            <div className={`break-words flex items-center gap-1 leading-none ${
-                              isLight ? 'text-slate-500' : 'text-white/50'
-                            }`} style={{ fontSize: `${autoScale * 10.5}px` }}>
-                              <MapPin style={{ width: `${autoScale * 10.5}px`, height: `${autoScale * 10.5}px`, color: '#ed4134' }} className="flex-shrink-0 self-center" />
-                              <span className="leading-none self-center">{course.location}</span>
-                            </div>
+                            {colSpan > 1 && (
+                              <div className={`flex items-center gap-1 leading-none min-w-0 ${
+                                isLight ? 'text-slate-500' : 'text-white/50'
+                              }`} style={{ fontSize: fs(10.5) }}>
+                                <MapPin style={{ width: fs(10.5), height: fs(10.5), color: '#ed4134' }} className="flex-shrink-0 self-center" />
+                                <span className="leading-none self-center truncate">{course.location}</span>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <div className="h-full w-full min-h-[48px]" />
@@ -297,11 +343,47 @@ export default function MatrixGridView({
           </tbody>
         </table>
       </div>
+
+      {/* Hover / tap detail card */}
+      {preview && (
+        <div
+          data-preview-card
+          onMouseEnter={() => setPreview((prev) => prev)}
+          className={`fixed z-[60] w-[250px] rounded-xl border p-3 space-y-1.5 shadow-2xl text-left ${
+            isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#0A1428] border-white/10 text-white'
+          }`}
+          style={{ left: preview.x, top: preview.y }}
+        >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className={`text-[10px] font-black tracking-wider ${getDayColors(getCourseColorSlot(courseColorMap, preview.course.course_id || preview.course.kod_kursus), isLight).text}`}>
+                  {preview.course.course_id || preview.course.kod_kursus}
+                </div>
+                <div className={`text-[11px] font-bold leading-snug ${isLight ? 'text-slate-800' : 'text-white/95'}`}>
+                  {preview.course.course_name || preview.course.kursus}
+                </div>
+              </div>
+            </div>
+            <div className={`text-[10px] font-semibold ${isLight ? 'text-slate-500' : 'text-white/50'}`}>
+              {formatDayDisplay(preview.course.day, t)} · {preview.course.start_time}{preview.course.end_time ? ` - ${preview.course.end_time}` : ''}
+            </div>
+            <div className={`flex items-center gap-1.5 text-[10.5px] ${isLight ? 'text-slate-600' : 'text-white/70'}`}>
+              <User className="w-3 h-3 flex-shrink-0 text-emerald-500" />
+              <span className="truncate">{preview.course.lecturer || preview.course.pensyarah || t('lecturers')}</span>
+            </div>
+            <div className={`flex items-center gap-1.5 text-[10.5px] ${isLight ? 'text-slate-500' : 'text-white/50'}`}>
+              <GraduationCap className="w-3 h-3 flex-shrink-0 text-amber-500" />
+              <span className="truncate">{t('group')}: {(preview.course.group || preview.course.kumpulan || 'A').replace(/^GRP/i, 'G')}</span>
+            </div>
+            <div className={`flex items-center gap-1.5 text-[10.5px] ${isLight ? 'text-slate-500' : 'text-white/50'}`}>
+              <MapPin className="w-3 h-3 flex-shrink-0" style={{ color: '#ed4134' }} />
+              <span className="truncate">{preview.course.location || 'TBA'}</span>
+            </div>
+            <div className="pt-0.5">
+              <AttendanceMeter percentStr={preview.course.kehadiran} />
+            </div>
+        </div>
+      )}
     </div>
   );
 }
-
-
-
-
-
