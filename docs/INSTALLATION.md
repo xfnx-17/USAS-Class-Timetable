@@ -147,3 +147,4 @@ If your domain is proxied through Cloudflare, you can add an additional edge lim
   1. Create a Sentry project (platform **React**) and copy its DSN.
   2. Set `VITE_SENTRY_DSN` in `.env` (local), Cloudflare Pages environment variables, and the GitHub Actions secret `VITE_SENTRY_DSN`.
   3. The Sentry ingest hosts are already allowed in the Content Security Policy.
+- **API schema monitor**: the scheduled workflow `.github/workflows/api-schema-check.yml` runs `scripts/check-usas-schema.mjs` daily to detect upstream schema drift or outages. Add repository secrets `USAS_MONITOR_USER` and `USAS_MONITOR_PASS` to also validate the authenticated timetable and course-list schemas; without them only the login endpoint shape is checked.

@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Lecturer directory lookup — official e-mail, position and extension fetched on demand.
 * Structured logging in the API proxy.
 * Optional Sentry client error tracking (`VITE_SENTRY_DSN`).
+* Friendly error handling with a cached-timetable fallback when the USAS API is unavailable.
+* Basic accessibility improvements (visible keyboard focus, dialog roles, live regions, reduced-motion support).
+* Scheduled USAS API schema monitor (`scripts/check-usas-schema.mjs`).
 * Complete project documentation suite following open-source repository standards.
 
 ### Fixed

@@ -73,7 +73,7 @@ Because the portal processes student academic schedules, security and privacy ar
 
 ## Getting Started
 
-> **Detailed Setup Guide**: For comprehensive environment configuration, proxy setups, and production deployments, see our [Installation Guide](INSTALLATION.md).
+> **Detailed Setup Guide**: For comprehensive environment configuration, proxy setups, and production deployments, see our [Installation Guide](docs/INSTALLATION.md).
 
 Follow these quick steps to get a local development copy running.
 
@@ -114,7 +114,9 @@ USAS Class Timetable/
 ├── .github/
 │   └── workflows/
 │       ├── ci.yml             # GitHub Actions CI workflow (lint, typecheck, unit, e2e)
-│       └── deploy.yml         # Cloudflare Pages deployment workflow
+│       ├── deploy.yml         # Cloudflare Pages deployment workflow
+│       └── api-schema-check.yml # Scheduled USAS API schema monitor
+├── docs/                      # Installation, architecture, API reference & policies
 ├── public/
 │   ├── 404.html               # Branded standalone 404 error page
 │   ├── 500.html               # Branded standalone 500 error page
@@ -154,13 +156,25 @@ USAS Class Timetable/
 └── package.json               # Dependencies and build scripts
 ```
 
+## Documentation
+
+| Document | Description |
+| :--- | :--- |
+| [Installation Guide](docs/INSTALLATION.md) | Local setup, environment variables, deployment & monitoring. |
+| [Architecture](docs/ARCHITECTURE.md) | How the SPA, proxy, auth and data layers fit together. |
+| [API Reference](docs/API.md) | Reverse-engineered USAS UMC endpoints & schemas. |
+| [Changelog](docs/CHANGELOG.md) | Release history. |
+| [Contributing](docs/CONTRIBUTING.md) | How to contribute. |
+| [Code of Conduct](docs/CODE_OF_CONDUCT.md) | Community expectations. |
+| [Security Policy](docs/SECURITY.md) | How to report vulnerabilities. |
+
 ## Contributing
 
-We welcome contributions from the community! Please read our [Contributing Guidelines](CONTRIBUTING.md) to get started. By participating in this project, you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md).
+We welcome contributions from the community! Please read our [Contributing Guidelines](docs/CONTRIBUTING.md) to get started. By participating in this project, you agree to abide by our [Code of Conduct](docs/CODE_OF_CONDUCT.md).
 
 ## Security
 
-If you discover any security-related issues, please refer to our [Security Policy](SECURITY.md) for information on how to responsibly disclose vulnerabilities.
+If you discover any security-related issues, please refer to our [Security Policy](docs/SECURITY.md) for information on how to responsibly disclose vulnerabilities.
 
 ## License
 
