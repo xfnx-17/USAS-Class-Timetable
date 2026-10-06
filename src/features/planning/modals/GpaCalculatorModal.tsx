@@ -97,7 +97,7 @@ function GpaCustomDropdown<T extends string | number>({
 
 export default function GpaCalculatorModal({ isOpen, onClose, courses = [] }: GpaCalculatorModalProps) {
   const modalRef = useModalA11y(isOpen, onClose);
-  const { lang, t } = useLanguage();
+  const { t } = useLanguage();
   const { theme } = useTheme();
   const isLight = theme === 'light';
 
@@ -204,7 +204,7 @@ export default function GpaCalculatorModal({ isOpen, onClose, courses = [] }: Gp
             <div className="text-left min-w-0 flex-1">
               <h3 className={`text-sm sm:text-base font-bold truncate ${isLight ? 'text-slate-800' : 'text-white'}`}>{t('gpaBtn')}</h3>
               <p className={`text-[11px] sm:text-xs font-semibold truncate ${isLight ? 'text-slate-500' : 'text-white/40'}`}>
-                {lang === 'ms' ? 'Kira anggaran GPA semester berdasarkan sasaran gred subjek anda' : 'Estimate your semester GPA based on target subject grades'}
+                {t('gpaSubtitle')}
               </p>
             </div>
           </div>
@@ -239,7 +239,7 @@ export default function GpaCalculatorModal({ isOpen, onClose, courses = [] }: Gp
                     ? 'bg-amber-100 border-amber-300 text-amber-850' 
                     : 'bg-amber-400/10 border-amber-400/30 text-amber-300'
                 }`}>
-                  <Award className="w-3.5 h-3.5 text-amber-500" /> Target Anugerah Dekan
+                  <Award className="w-3.5 h-3.5 text-amber-500" /> {t('gpaDeanList')}
                 </span>
               ) : parseFloat(estGpa) >= 3.0 ? (
                 <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border inline-flex items-center ${
@@ -247,7 +247,7 @@ export default function GpaCalculatorModal({ isOpen, onClose, courses = [] }: Gp
                     ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
                     : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
                 }`}>
-                  {lang === 'ms' ? 'Kepujian Baik' : 'Good Standing'}
+                  {t('gpaGoodStanding')}
                 </span>
               ) : (
                 <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border inline-flex items-center ${
@@ -255,11 +255,11 @@ export default function GpaCalculatorModal({ isOpen, onClose, courses = [] }: Gp
                     ? 'bg-slate-100 border-slate-200 text-slate-700' 
                     : 'bg-slate-800 border-slate-700 text-slate-300'
                 }`}>
-                  {lang === 'ms' ? 'Status Memuaskan' : 'Satisfactory Status'}
+                  {t('gpaSatisfactory')}
                 </span>
               )}
               <div className={`text-[10px] font-semibold mt-1.5 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                {lang === 'ms' ? 'Jumlah Kredit:' : 'Total Credits:'} {totalCredits}
+                {t('gpaTotalCredits')} {totalCredits}
               </div>
             </div>
           </div>
@@ -267,7 +267,7 @@ export default function GpaCalculatorModal({ isOpen, onClose, courses = [] }: Gp
           <div className={`flex items-center gap-2 text-[10px] px-1 ${isLight ? 'text-slate-500' : 'text-white/45'}`}>
             <BadgeInfo className={`w-3.5 h-3.5 flex-shrink-0 ${isLight ? 'text-sky-600' : 'text-sky-400'}`} />
             <span className="font-medium">
-              {lang === 'ms' ? 'Rujukan gred:' : 'Grade source:'}
+              {t('gpaGradeSource')}
             </span>
             <a
               href="https://www.instagram.com/p/DAcy0xzSUqG/"
@@ -303,7 +303,7 @@ export default function GpaCalculatorModal({ isOpen, onClose, courses = [] }: Gp
                     {/* Credit Selector */}
                     <div className="flex items-center gap-1.5">
                       <span className={`text-[10px] font-medium break-words ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                        {lang === 'ms' ? 'Kredit:' : 'Credits:'}
+                        {t('gpaCredits')}
                       </span>
                       <GpaCustomDropdown
                         value={target.credits}
@@ -323,7 +323,7 @@ export default function GpaCalculatorModal({ isOpen, onClose, courses = [] }: Gp
                     {/* Target Grade Selector */}
                     <div className="flex items-center gap-1.5">
                       <span className={`text-[10px] font-medium break-words ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                        {lang === 'ms' ? 'Sasaran:' : 'Target:'}
+                        {t('gpaTarget')}
                       </span>
                       <GpaCustomDropdown
                         value={target.grade}

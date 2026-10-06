@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Friendly error handling with a cached-timetable fallback when the USAS API is unavailable.
 * Basic accessibility improvements (visible keyboard focus, dialog roles, live regions, reduced-motion support).
 * Dialog accessibility: Escape-to-close and focus management for all modals via `useModalA11y`.
-* Full localisation of the lecturer, prayer times, attendance and exam modals (ms/en/zh/ta).
+* Full localisation of the lecturer, prayer times, attendance, exam, compare and GPA modals (ms/en/zh/ta).
 * Unit tests for API error/outcome handling and the lecturer directory.
 * JavaScript bundle-size budget check (`npm run size`).
 * Scheduled USAS API schema monitor (`scripts/check-usas-schema.mjs`).

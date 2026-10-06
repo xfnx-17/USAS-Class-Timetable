@@ -23,7 +23,7 @@ type ScanState = 'idle' | 'scanning' | 'processing' | 'success' | 'error';
 export default function CompareScheduleModal({ isOpen, onClose, initialSharedData }: CompareScheduleModalProps) {
   const modalRef = useModalA11y(isOpen, onClose);
   const { timetableData, session } = useAuth();
-  const { lang } = useLanguage();
+  const { t } = useLanguage();
   const { theme } = useTheme();
 
   const isLight = theme === 'light';
@@ -36,7 +36,7 @@ export default function CompareScheduleModal({ isOpen, onClose, initialSharedDat
   const [copiedText, setCopiedText] = useState(false);
   const [myQrUrl, setMyQrUrl] = useState('');
   const [scanState, setScanState] = useState<ScanState>('idle');
-  const [statusMessage, setStatusMessage] = useState('Open camera and scan a friend\'s Timetable QR code.');
+  const [statusMessage, setStatusMessage] = useState(t('compareScanIdle'));
   const [friendData, setFriendData] = useState<{ studentName: string; timetable: TimetableItem[] } | null>(null);
   const [freeSlots, setFreeSlots] = useState<FreeSlot[]>([]);
 
@@ -100,7 +100,7 @@ export default function CompareScheduleModal({ isOpen, onClose, initialSharedDat
 
   function processSharedData(compressedData: string) {
     setScanState('processing');
-    setStatusMessage('Analyzing timetable data...');
+    setStatusMessage(t('compareScanAnalyzingData'));
     setTimeout(() => {
       if (!mountedRef.current) return;
       const data = decompressTimetable(compressedData);
@@ -111,7 +111,7 @@ export default function CompareScheduleModal({ isOpen, onClose, initialSharedDat
         stopCamera();
       } else {
         setScanState('error');
-        setStatusMessage('Invalid or corrupted timetable QR code.');
+        setStatusMessage(t('compareScanInvalidQr'));
       }
     }, 400);
   };
@@ -120,7 +120,7 @@ export default function CompareScheduleModal({ isOpen, onClose, initialSharedDat
     if (scanState === 'success') return;
     try {
       setScanState('scanning');
-      setStatusMessage('Camera ready. Point it at the QR code.');
+      setStatusMessage(t('compareScanReady'));
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
       if (!mountedRef.current) {
         stream.getTracks().forEach(t => t.stop());
@@ -135,7 +135,7 @@ export default function CompareScheduleModal({ isOpen, onClose, initialSharedDat
       }
     } catch (err) {
       setScanState('error');
-      setStatusMessage('Camera access denied or unavailable.');
+      setStatusMessage(t('compareScanDenied'));
     }
   };
 
@@ -188,7 +188,7 @@ export default function CompareScheduleModal({ isOpen, onClose, initialSharedDat
     stopCamera();
     try {
       setScanState('processing');
-      setStatusMessage('Analyzing image...');
+      setStatusMessage(t('compareScanAnalyzingImg'));
       const img = new Image();
       const objUrl = URL.createObjectURL(file);
       await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; img.src = objUrl; });
@@ -214,10 +214,10 @@ export default function CompareScheduleModal({ isOpen, onClose, initialSharedDat
         } catch {} // Not a valid URL
       }
       setScanState('error');
-      setStatusMessage('No valid Timetable QR code found in image.');
+      setStatusMessage(t('compareScanNoQr'));
     } catch (err) {
       setScanState('error');
-      setStatusMessage('Failed to read image.');
+      setStatusMessage(t('compareScanReadFail'));
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
@@ -291,10 +291,10 @@ export default function CompareScheduleModal({ isOpen, onClose, initialSharedDat
             </div>
             <div className="text-left min-w-0">
               <h3 className={`text-sm sm:text-base font-bold truncate ${isLight ? 'text-slate-800' : 'text-white'}`}>
-                {lang === 'ms' ? 'Banding / Kongsi Jadual' : 'Compare / Share Schedule'}
+                {t('compareTitle')}
               </h3>
               <p className={`text-[11px] sm:text-xs font-semibold truncate ${isLight ? 'text-slate-500' : 'text-white/40'}`}>
-                {lang === 'ms' ? 'Imbas QR kawan atau kongsi jadual anda' : 'Scan friend\'s QR or share your schedule'}
+                {t('compareDesc')}
               </p>
             </div>
           </div>
@@ -314,7 +314,7 @@ export default function CompareScheduleModal({ isOpen, onClose, initialSharedDat
                     : isLight ? 'text-slate-500 hover:text-slate-700' : 'text-white/40 hover:text-white/70'
                 }`}
               >
-                Scan Friend
+                {t('compareTabScan')}
               </button>
               <button
                 onClick={() => setActiveTab('share')}
@@ -324,7 +324,7 @@ export default function CompareScheduleModal({ isOpen, onClose, initialSharedDat
                     : isLight ? 'text-slate-500 hover:text-slate-700' : 'text-white/40 hover:text-white/70'
                 }`}
               >
-                My QR Code
+                {t('compareTabShare')}
               </button>
               <button
                 onClick={() => setActiveTab('whatsapp')}
@@ -334,7 +334,7 @@ export default function CompareScheduleModal({ isOpen, onClose, initialSharedDat
                     : isLight ? 'text-slate-500 hover:text-slate-700' : 'text-white/40 hover:text-white/70'
                 }`}
               >
-                Share Text
+                {t('compareTabText')}
               </button>
             </div>
           </div>
@@ -399,7 +399,7 @@ export default function CompareScheduleModal({ isOpen, onClose, initialSharedDat
                 </div>
                 <div className="mt-4">
                   <h3 className={`text-sm font-bold truncate ${isLight ? 'text-slate-800' : 'text-white'}`}>{timetableData?.studentName || 'Pelajar'}</h3>
-                  <p className={`text-xs font-semibold truncate mt-1 ${isLight ? 'text-blue-600' : 'text-blue-400'}`}>Show this to a friend to compare schedules</p>
+                  <p className={`text-xs font-semibold truncate mt-1 ${isLight ? 'text-blue-600' : 'text-blue-400'}`}>{t('compareShowFriend')}</p>
                 </div>
               </div>
               <button
@@ -411,7 +411,7 @@ export default function CompareScheduleModal({ isOpen, onClose, initialSharedDat
                 }`}
               >
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                {copied ? 'Link Copied!' : 'Copy Link Instead'}
+                {copied ? t('compareLinkCopied') : t('compareCopyLink')}
               </button>
             </div>
           ) : scanState !== 'success' ? (
@@ -437,7 +437,7 @@ export default function CompareScheduleModal({ isOpen, onClose, initialSharedDat
                 {(scanState === 'error' || scanState === 'idle') && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-white/50 bg-[#0a1428]">
                     {scanState === 'error' ? <AlertTriangle className="w-10 h-10 mb-2 text-red-400" /> : <Camera className="w-10 h-10 mb-2" />}
-                    <p className="text-sm font-medium">{scanState === 'error' ? 'Scan Failed' : 'Camera Ready'}</p>
+                    <p className="text-sm font-medium">{scanState === 'error' ? t('compareScanFailed') : t('compareCameraReady')}</p>
                   </div>
                 )}
               </div>
@@ -446,10 +446,10 @@ export default function CompareScheduleModal({ isOpen, onClose, initialSharedDat
                 <p className={`text-sm font-medium ${scanState === 'error' ? 'text-red-500' : isLight ? 'text-slate-600' : 'text-white/60'}`}>{statusMessage}</p>
                 <div className="flex items-center justify-center gap-3 pt-2">
                   <button onClick={startCamera} className={`px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-700' : 'bg-white/10 hover:bg-white/20 text-white'}`}>
-                    <ScanLine className="w-4 h-4 inline-block mr-1.5" /> Scan QR Code
+                    <ScanLine className="w-4 h-4 inline-block mr-1.5" /> {t('compareScanBtn')}
                   </button>
                   <label className={`px-4 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${isLight ? 'bg-blue-50 hover:bg-blue-100 text-blue-700' : 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-300'}`}>
-                    <Upload className="w-4 h-4 inline-block mr-1.5" /> Upload Image
+                    <Upload className="w-4 h-4 inline-block mr-1.5" /> {t('compareUploadBtn')}
                     <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
                   </label>
                 </div>
@@ -463,15 +463,15 @@ export default function CompareScheduleModal({ isOpen, onClose, initialSharedDat
                   <Users className="w-6 h-6 text-emerald-500" />
                 </div>
                 <div>
-                  <div className="font-bold text-base">Timetables Merged Successfully</div>
-                  <div className="text-sm opacity-80 mt-0.5">Comparing your schedule with <span className="font-bold text-emerald-600 dark:text-emerald-400">{friendData?.studentName}</span></div>
+                  <div className="font-bold text-base">{t('compareMerged')}</div>
+                  <div className="text-sm opacity-80 mt-0.5">{t('compareWith')} <span className="font-bold text-emerald-600 dark:text-emerald-400">{friendData?.studentName}</span></div>
                 </div>
               </div>
 
               {/* Free Time Grid */}
               <div className="space-y-4">
                 <h3 className="font-bold flex items-center gap-2 text-lg">
-                  <Calendar className="w-5 h-5 text-blue-500" /> Common Free Time
+                  <Calendar className="w-5 h-5 text-blue-500" /> {t('compareCommonFree')}
                 </h3>
                 
                 <div className="space-y-3">
@@ -504,7 +504,7 @@ export default function CompareScheduleModal({ isOpen, onClose, initialSharedDat
                   })}
                   {freeSlots.length === 0 && (
                     <div className="text-center py-8 text-sm opacity-50 italic">
-                      No overlapping free time found during standard hours (8am - 5pm).
+                      {t('compareNoFree')}
                     </div>
                   )}
                 </div>
