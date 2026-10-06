@@ -72,9 +72,8 @@ export default function ExamScheduleModal({ isOpen, onClose, courses = [], isDem
         date: validDate
           ? examDate.toLocaleDateString('ms-MY', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })
           : String(fields.exam_date),
-        time: fields.exam_time
-          || (c.start_time && c.end_time ? `${c.start_time} - ${c.end_time}` : ''),
-        venue: fields.exam_venue || c.location || 'Dewan Peperiksaan USAS',
+        time: fields.exam_time || '',
+        venue: fields.exam_venue || '',
         seatNo: seatText,
         countdownDays: validDate ? countdownFrom(examDate) : 0,
         isDemoSample: false,

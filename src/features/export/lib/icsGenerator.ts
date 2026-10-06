@@ -103,12 +103,22 @@ export async function exportTimetableICS(timetable: TimetableItem[] = [], studen
   ];
 
   timetable.forEach((course, idx) => {
-    const startIso = formatICSDatetime(course.day, course.start_time || '09:00 AM');
-    const endIso = formatICSDatetime(course.day, course.end_time || '11:00 AM');
+    // A valid calendar event needs a start time; skip rows without one rather
+    // than inventing a default time.
+    if (!course.start_time) return;
+
+    const startIso = formatICSDatetime(course.day, course.start_time);
+    const endIso = formatICSDatetime(course.day, course.end_time || course.start_time);
 
     const summary = escapeIcsText(`${course.course_id || course.kod_kursus}: ${course.course_name || course.kursus}`);
-    const location = escapeIcsText(course.location || 'Dewan Kuliah USAS');
-    const description = escapeIcsText(`Pensyarah: ${course.lecturer || 'Pensyarah USAS'}\nKumpulan: ${course.group || 'GRP01'}\nLokasi: ${course.location || 'Dewan Kuliah USAS'}`);
+    const location = escapeIcsText(course.location || '');
+
+    const descriptionLines = [
+      course.lecturer ? `Pensyarah: ${course.lecturer}` : '',
+      course.group ? `Kumpulan: ${course.group}` : '',
+      course.location ? `Lokasi: ${course.location}` : '',
+    ].filter(Boolean);
+    const description = escapeIcsText(descriptionLines.join('\n'));
 
     icsContent.push(
       'BEGIN:VEVENT',
@@ -116,13 +126,12 @@ export async function exportTimetableICS(timetable: TimetableItem[] = [], studen
       `DTSTAMP:${startIso}`,
       `DTSTART:${startIso}`,
       `DTEND:${endIso}`,
-      'RRULE:FREQ=WEEKLY;COUNT=14', // 14 weeks semester
-      `SUMMARY:${summary}`,
-      `LOCATION:${location}`,
-      `DESCRIPTION:${description}`,
-      'STATUS:CONFIRMED',
-      'END:VEVENT'
+      'RRULE:FREQ=WEEKLY;COUNT=14', // assumes a 14-week semester
+      `SUMMARY:${summary}`
     );
+    if (location) icsContent.push(`LOCATION:${location}`);
+    if (description) icsContent.push(`DESCRIPTION:${description}`);
+    icsContent.push('STATUS:CONFIRMED', 'END:VEVENT');
   });
 
   icsContent.push('END:VCALENDAR');

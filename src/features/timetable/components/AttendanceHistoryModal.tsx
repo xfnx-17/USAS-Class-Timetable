@@ -57,7 +57,16 @@ export default function AttendanceHistoryModal({ isOpen, onClose, course, refres
         )) || '';
       }
 
-      const res = await fetchAttendanceHistoryAPI(session, effectiveGroup || course?.group || 'GRP01');
+      // Never fall back to another group: only query the report when a real
+      // group_id was resolved, otherwise show the empty state.
+      if (!effectiveGroup) {
+        if (!active) return;
+        setHistory([]);
+        setLoading(false);
+        return;
+      }
+
+      const res = await fetchAttendanceHistoryAPI(session, effectiveGroup);
       if (!active) return;
       setHistory(res);
       setLoading(false);
@@ -78,11 +87,11 @@ export default function AttendanceHistoryModal({ isOpen, onClose, course, refres
   if (!shouldRender || !course) return null;
 
   const normalizeGroup = (groupStr?: string) => {
-    if (!groupStr) return 'G1';
+    if (!groupStr) return '';
     return groupStr.replace(/^GRP/i, 'G');
   };
 
-  const groupDisplay = normalizeGroup(course.group || course.kumpulan || 'A');
+  const groupDisplay = normalizeGroup(course.group || course.kumpulan) || '—';
 
   return (
     <div data-lenis-prevent className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md transition-all duration-200 touch-pan-y overscroll-contain ${animate ? 'bg-slate-900/30 opacity-100' : 'bg-slate-900/0 opacity-0 pointer-events-none'
@@ -190,7 +199,7 @@ export default function AttendanceHistoryModal({ isOpen, onClose, course, refres
                     }`}>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className={`font-bold shrink-0 ${isLight ? 'text-amber-700' : 'text-amber-400'}`}>Minggu {h.minggu || i + 1}</span>
+                        <span className={`font-bold shrink-0 ${isLight ? 'text-amber-700' : 'text-amber-400'}`}>Minggu {h.minggu || '—'}</span>
                         <span className={`font-medium truncate ${isLight ? 'text-slate-500' : 'text-white/40'}`}>{h.tarikh || '-'}</span>
                       </div>
                       {hasNote && (

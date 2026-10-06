@@ -15,7 +15,7 @@ function parseTimeToMinutes(timeStr: string | undefined): number {
 }
 
 function normalizeGroup(groupStr: string | undefined): string {
-  if (!groupStr) return 'G1';
+  if (!groupStr) return '';
   return sanitizeSingleLine(groupStr, 32).replace(/^GRP/i, 'G');
 }
 
@@ -57,9 +57,9 @@ function buildFullShareText(timetable: TimetableItem[] = [], studentName = '', m
       const time = c.start_time ? `${sanitizeSingleLine(c.start_time, 32)}${c.end_time ? ' - ' + sanitizeSingleLine(c.end_time, 32) : ''}` : 'TBA';
       const code = sanitizeSingleLine(c.course_id || c.kod_kursus || '', 64);
       const name = sanitizeTextForShare(c.course_name || c.kursus || '', 160);
-      const group = normalizeGroup(c.group || c.kumpulan || 'A');
+      const group = normalizeGroup(c.group || c.kumpulan);
       const loc = sanitizeTextForShare(c.location || '', 160);
-      text += `  ${code} (${group}): ${name}\n`;
+      text += `  ${code}${group ? ` (${group})` : ''}: ${name}\n`;
       text += `  Time: ${time}\n`;
       if (loc) text += `  Location: ${loc}\n`;
       text += '\n';
@@ -86,8 +86,8 @@ function buildCompactShareText(timetable: TimetableItem[] = [], matricNo = '') {
         sanitizeSingleLine(c.end_time, 32),
       );
       const code = sanitizeSingleLine(c.course_id || '', 64);
-      const group = normalizeGroup(c.group || c.kumpulan || 'A');
-      return `${code}-${group} ${time}`;
+      const group = normalizeGroup(c.group || c.kumpulan);
+      return group ? `${code}-${group} ${time}` : `${code} ${time}`;
     }).join(', ');
     parts.push(`${day}: ${items}`);
   });

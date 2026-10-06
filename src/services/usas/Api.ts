@@ -1,9 +1,6 @@
 import type {
-  AcademicCalendarItem,
   ApiResponse,
   AttendanceHistoryItem,
-  CampusNewsItem,
-  PrayerTimeItem,
   StudentProfile,
   StudentSession,
   TimetableData,
@@ -392,7 +389,7 @@ export async function fetchStudentProfileAPI(session: StudentSession): Promise<S
 
 export async function fetchAttendanceHistoryAPI(
   session: StudentSession | null,
-  groupId = 'GRP01',
+  groupId = '',
 ): Promise<AttendanceHistoryItem[]> {
   if (session?.isDemo) {
     return [
@@ -405,6 +402,8 @@ export async function fetchAttendanceHistoryAPI(
       { minggu: 'Minggu 7', tarikh: '21-Nov-2024', status_hadir: 'Present', catatan: 'Scan QR App' }
     ];
   }
+
+  if (!groupId) return [];
 
   const payload = {
     apiKey: API_KEY,
@@ -565,6 +564,59 @@ export function computeAttendancePercent(rows: AttendanceHistoryItem[] | null | 
   return Math.round((present / held) * 100);
 }
 
+export type LecturerDirectoryEntry = {
+  id: string;
+  name: string;
+  position: string;
+  email: string;
+  ext: string;
+  staffNo: string;
+};
+
+function stripHtmlTags(value: unknown): string {
+  return sanitizeSingleLine(String(value ?? '').replace(/<[^>]*>/g, ' '), 160);
+}
+
+export async function searchLecturerDirectoryAPI(
+  session: StudentSession | null,
+  keyword: string,
+): Promise<LecturerDirectoryEntry[]> {
+  if (!session || session.isDemo) return [];
+
+  const cleanKeyword = sanitizeSingleLine(keyword, 120);
+  if (!cleanKeyword) return [];
+
+  const payload = {
+    apiKey: API_KEY,
+    request_type: 'search_dir',
+    keyword: cleanKeyword,
+    user_id: session.user_id,
+    token: DUMMY_TOKEN,
+    sid_1: session.sid_1,
+    sid_2: session.sid_2,
+    sid_3: session.sid_3,
+    umc_platform: PLATFORM,
+    umc_version: UMC_VERSION,
+  };
+
+  const result = await postUSAS('/student/get_directory_staff_v2.php', payload);
+  const typed = result as { server_response_directory?: Array<Record<string, unknown>> } | null;
+  const rows = typed?.server_response_directory;
+  if (!Array.isArray(rows)) return [];
+
+  return rows
+    .filter((row) => Number(row.id) !== 0)
+    .map((row, index) => ({
+      id: sanitizeSingleLine(row.id ?? String(index + 1), 32),
+      name: stripHtmlTags(row.nama),
+      position: stripHtmlTags(row.jawatan),
+      email: sanitizeSingleLine(row.email, 160).toLowerCase(),
+      ext: stripHtmlTags(row.ext),
+      staffNo: sanitizeSingleLine(row.no_staff, 32),
+    }))
+    .filter((entry) => entry.name.length > 0);
+}
+
 export async function fetchTimetableAPI(session: StudentSession): Promise<TimetableData> {
   if (session.isDemo) {
     return {
@@ -656,21 +708,21 @@ export async function fetchTimetableAPI(session: StudentSession): Promise<Timeta
       return {
         id: sanitizeSingleLine(item.id || String(i + 1), 32),
         day: parsed.day,
-        course_id: sanitizeSingleLine(item.kod_kursus || `SUBJ${i + 1}`, 64),
-        course_name: sanitizeTextForShare(item.kursus || 'Kursus USAS', 160),
-        group: sanitizeSingleLine(item.kumpulan || item.group_id || 'GRP01', 32),
+        course_id: sanitizeSingleLine(item.kod_kursus || '', 64),
+        course_name: sanitizeTextForShare(item.kursus || '', 160),
+        group: sanitizeSingleLine(item.kumpulan || item.group_id || '', 32),
         group_id: sanitizeSingleLine(item.group_id || '', 32),
         start_time: parsed.time,
         end_time: '',
-        location: 'Dewan / Makmal USAS',
-        lecturer: sanitizeTextForShare(item.pensyarah || 'Pensyarah USAS', 160),
+        location: sanitizeSingleLine(item.tempat || item.lokasi || item.location || '', 160),
+        lecturer: sanitizeTextForShare(item.pensyarah || '', 160),
         pelajar: sanitizeTextForShare(item.pelajar, 160),
         semester: sanitizeSingleLine(item.semester, 64),
         kehadiran: item.kehadiran ? sanitizeSingleLine(item.kehadiran, 16) : '',
-        catatan: sanitizeSingleLine(item.semester || '', 64)
+        catatan: sanitizeSingleLine(item.catatan || '', 64)
       };
     });
-    rawDays = ['ISNIN', 'SELASA', 'RABU', 'KHAMIS', 'JUMAAT'];
+    rawDays = [];
   }
 
   // If the backend did not return a day list, derive it from the timetable
@@ -737,12 +789,12 @@ export async function fetchTimetableAPI(session: StudentSession): Promise<Timeta
   }
 
   const resultName = finalName || `Pelajar USAS (${sanitizeLoginUserId(session.user_id)})`;
-  const resultProgram = finalProgram || 'Program Pengajian USAS';
-  const resultSemester = rawItems[0]?.semester || 'Semester Semasa';
+  const resultProgram = finalProgram || '';
+  const resultSemester = rawItems[0]?.semester || '';
 
   return {
     success: true,
-    days: rawDays.length > 0 ? rawDays : ['ISNIN', 'SELASA', 'RABU', 'KHAMIS', 'JUMAAT'],
+    days: rawDays,
     timetable: rawItems
       .map(sanitizeTimetableItem)
       .filter((item) => (item.course_name?.trim() || item.course_id?.trim()) && item.day?.trim()),
@@ -751,17 +803,6 @@ export async function fetchTimetableAPI(session: StudentSession): Promise<Timeta
     semester: resultSemester
   };
 }
-
-export const MOCK_PRAYER_TIMES: PrayerTimeItem[] = [
-  { label: 'Subuh', content: '05:56' },
-  { label: 'Syuruk', content: '07:09' },
-  { label: 'Zohor', content: '01:19' },
-  { label: 'Asar', content: '04:43' },
-  { label: 'Maghrib', content: '07:24' },
-  { label: 'Isyak', content: '08:36' },
-];
-
-
 
 export function selectProfileText(value: unknown, maxLength: number): string | null {
   if (typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean') {
@@ -773,8 +814,8 @@ export function selectProfileText(value: unknown, maxLength: number): string | n
 }
 
 export function parseFallbackJadual(jadual: unknown): { day: string; time: string } {
-  const jadualText = sanitizeSingleLine(jadual || 'Waktu ditetapkan', 64);
-  let day = 'ISNIN';
+  const jadualText = sanitizeSingleLine(jadual || '', 64);
+  let day = '';
   let time = jadualText;
 
   if (jadualText) {
@@ -792,44 +833,6 @@ export function parseFallbackJadual(jadual: unknown): { day: string; time: strin
   }
 
   return { day, time };
-}
-
-export async function fetchAcademicCalendarAPI(_session: StudentSession | null): Promise<AcademicCalendarItem[]> {
-  return [
-    { acara: 'Pendaftaran Pelajar Baharu', tarikh: '01-Sep-2026', status: 'Akan Datang' },
-    { acara: 'Minggu Kuliah Pertama', tarikh: '08-Sep-2026', status: 'Akan Datang' },
-    { acara: 'Peperiksaan Pertengahan Semester', tarikh: '20-Oct-2026', status: 'Akan Datang' },
-    { acara: 'Peperiksaan Akhir Semester', tarikh: '10-Dec-2026', status: 'Akan Datang' },
-  ];
-}
-
-export async function fetchCampusNewsAPI(_session: StudentSession | null): Promise<CampusNewsItem[]> {
-  return [
-    { tajuk: 'Taklimat keselamatan makmal', tarikh: '02-Aug-2026', ringkasan: 'Semua pelajar diminta hadir ke taklimat keselamatan makmal minggu ini.' },
-    { tajuk: 'Permohonan kolej kediaman', tarikh: '03-Aug-2026', ringkasan: 'Permohonan kolej dibuka semula untuk semester baharu.' },
-  ];
-}
-
-export async function submitFacilityComplaintAPI(
-  _session: StudentSession | null,
-  _payload: unknown,
-): Promise<{ success: true; ticketNo: string }> {
-  const makeTicketSuffix = () => {
-    const cryptoObj = globalThis.crypto;
-    if (cryptoObj?.getRandomValues) {
-      const bytes = new Uint8Array(2);
-      cryptoObj.getRandomValues(bytes);
-      const value = (bytes[0] << 8) | bytes[1];
-      return String(1000 + (value % 9000));
-    }
-
-    return String(1000 + (Date.now() % 9000));
-  };
-
-  return {
-    success: true,
-    ticketNo: `USAS-${makeTicketSuffix()}`,
-  };
 }
 
 

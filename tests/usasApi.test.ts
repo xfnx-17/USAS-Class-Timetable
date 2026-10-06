@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { computeAttendancePercent, parseFallbackJadual, parseSafeJsonResponse, selectProfileText } from '../src/services/usas/Api';
 
 describe('usas api fallback timetable parsing', () => {
-  it('coerces numeric jadual values safely', () => {
-    expect(parseFallbackJadual(12345)).toEqual({ day: 'ISNIN', time: '12345' });
+  it('coerces numeric jadual values safely without inventing a day', () => {
+    expect(parseFallbackJadual(12345)).toEqual({ day: '', time: '12345' });
   });
 
   it('splits day and time for valid fallback values', () => {

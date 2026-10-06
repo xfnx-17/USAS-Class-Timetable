@@ -72,23 +72,6 @@ export interface AttendanceHistoryItem {
   catatan?: string;
 }
 
-export interface AcademicCalendarItem {
-  acara: string;
-  tarikh: string;
-  status: string;
-}
-
-export interface CampusNewsItem {
-  tajuk: string;
-  tarikh: string;
-  ringkasan: string;
-}
-
-export interface PrayerTimeItem {
-  label: string;
-  content: string;
-}
-
 export interface WaktuSolatPrayer {
   day: number;
   hijri: string;

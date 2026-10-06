@@ -4,6 +4,7 @@ const ALLOWED_USAS_ENDPOINTS = new Set([
   '/student/get_timetable_stud.php',
   '/student/get_kehadiran_kuliah.php',
   '/student/get_scan_qr_v2.php',
+  '/student/get_directory_staff_v2.php',
 ]);
 
 export function getUsasProxyPath(pathname: string): string | null {

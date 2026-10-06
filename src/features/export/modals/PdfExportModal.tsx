@@ -371,13 +371,13 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
 
   const timetableDays = timetableData?.days;
   const allCourses = useMemo(() => timetableData?.timetable || [], [timetableData?.timetable]);
-  const studentName = timetableData?.studentName || session?.user_id || 'Pelajar USAS';
-  const matricNo = session?.user_id || 'AI210042';
-  const programName = timetableData?.program || 'FAKULTI TEKNOLOGI & SAINS MAKLUMAT';
-  const semesterStr = timetableData?.semester || 'Semester Semasa';
+  const studentName = timetableData?.studentName || session?.user_id || '';
+  const matricNo = session?.user_id || '';
+  const programName = timetableData?.program || '';
+  const semesterStr = timetableData?.semester || '';
 
   const normalizeGroup = (groupStr?: string) => {
-    if (!groupStr) return 'Group 1';
+    if (!groupStr) return '';
     const raw = String(groupStr).trim();
     const match = raw.match(/^(?:GRP|G)\s*0*(\d+)$/i);
     if (match) return `Group ${match[1]}`;
@@ -556,13 +556,13 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
       await new Promise((resolve) => setTimeout(resolve, 80));
 
       if (exportMode === 'WALLPAPER') {
-        const filename = `USAS_Lockscreen_${wallpaperPreset.toUpperCase()}_${exportTheme.toUpperCase()}_${matricNo}.png`;
+        const filename = `USAS_Lockscreen_${wallpaperPreset.toUpperCase()}_${exportTheme.toUpperCase()}_${matricNo || 'USAS'}.png`;
         await generateLockscreenImage(wallpaperRef.current, filename);
       } else if (exportFileType === 'PNG') {
-        const filename = `Jadual_USAS_Formal_${matricNo}_LANDSCAPE.png`;
+        const filename = `Jadual_USAS_Formal_${matricNo || 'USAS'}_LANDSCAPE.png`;
         await generateElementPng(pdfRef.current, filename, 4, '#FFFFFF');
       } else {
-        const filename = `Jadual_USAS_Formal_${matricNo}_LANDSCAPE.pdf`;
+        const filename = `Jadual_USAS_Formal_${matricNo || 'USAS'}_LANDSCAPE.pdf`;
         await generateTimetablePdf(pdfRef.current, 'landscape', filename);
       }
 
@@ -650,7 +650,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
     }
   ) => {
     const code = course.course_id || course.kod_kursus || '';
-    const loc = course.location || 'Dewan USAS';
+    const loc = course.location || '';
     const duration = formatDurationRange(course.start_time || course.jadual, course.end_time);
     const shortDuration = formatShortDurationLabel(course.start_time || course.jadual, course.end_time);
     const codeOnlyFontSize = (() => {
@@ -1092,7 +1092,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                           JADUAL WAKTU KULIAH PELAJAR
                         </h2>
                         <p className="text-[9px] text-slate-500 font-semibold mt-1 leading-tight whitespace-nowrap">
-                          {semesterStr}
+                          {semesterStr || '—'}
                         </p>
                       </div>
                     </div>
@@ -1105,13 +1105,13 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                   {/* Student Identity Block */}
                   <div className="bg-slate-50 p-2 rounded border border-slate-200 mb-3 flex flex-wrap items-center gap-x-6 gap-y-1.5 text-[9.5px]">
                     <div>
-                      <span className="font-bold text-slate-600">NAMA PELAJAR:</span> <span className="font-extrabold text-slate-900">{studentName}</span>
+                      <span className="font-bold text-slate-600">NAMA PELAJAR:</span> <span className="font-extrabold text-slate-900">{studentName || '—'}</span>
                     </div>
                     <div>
-                      <span className="font-bold text-slate-600">NO. MATRIK:</span> <span className="font-extrabold text-slate-900">{matricNo}</span>
+                      <span className="font-bold text-slate-600">NO. MATRIK:</span> <span className="font-extrabold text-slate-900">{matricNo || '—'}</span>
                     </div>
                     <div>
-                      <span className="font-bold text-slate-600">PROGRAM:</span> <span className="font-extrabold text-slate-900">{programName}</span>
+                      <span className="font-bold text-slate-600">PROGRAM:</span> <span className="font-extrabold text-slate-900">{programName || '—'}</span>
                     </div>
                   </div>
 
@@ -1166,10 +1166,10 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                               <span>{c.course_name || c.kursus}</span>
                             </td>
                             <td className="border border-slate-300 px-2.5 py-1 text-center align-middle font-bold">
-                              <span>{normalizeGroup(c.group || c.kumpulan || 'A')}</span>
+                              <span>{normalizeGroup(c.group || c.kumpulan) || '—'}</span>
                             </td>
                             <td className="border border-slate-300 px-2.5 py-1 text-left align-middle text-slate-800">
-                              <span>{c.location || 'Dewan USAS'}</span>
+                              <span>{c.location || ''}</span>
                             </td>
                           </tr>
                         );
