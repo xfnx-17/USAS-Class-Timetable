@@ -271,9 +271,9 @@ const formatDurationRange = (startTime?: string, endTime?: string) => {
   return `${start} - ${end}`;
 };
 
-const formatWallpaperSlotLabel = (hour: number) => {
+const formatWallpaperSlotLabel = (hour: number, size = 1) => {
   const start = String(hour).padStart(2, '0');
-  const end = String(hour + 1).padStart(2, '0');
+  const end = String(hour + size).padStart(2, '0');
   return `${start}-${end}`;
 };
 
@@ -487,41 +487,6 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
       window.removeEventListener('resize', updateScale);
     };
   }, [shouldRender, exportMode, contentDetail, wallpaperPreset, daysList, allCourses.length]);
-
-  const getWallpaperCourseForHour = (dayName: string, hourStart: number): TimetableItem | null => {
-    const targetDay = extractDayName(dayName);
-    return allCourses.find(c => {
-      const isDay = extractDayName(c.day) === targetDay;
-      if (!isDay) return false;
-      const startMinutes = parseTimeToMinutes(c.start_time || c.jadual || '');
-      if (startMinutes == null) return false;
-      const courseStartHour = Math.floor(startMinutes / 60);
-      return courseStartHour === hourStart;
-    }) || null;
-  };
-
-  const getWallpaperCourseSpan = (course: TimetableItem): number => {
-    const startMinutes = parseTimeToMinutes(course.start_time || course.jadual || '');
-    const endMinutes = parseTimeToMinutes(course.end_time || '');
-    if (startMinutes == null) return 1;
-    const safeEnd = endMinutes != null && endMinutes > startMinutes ? endMinutes : startMinutes + 60;
-    return Math.max(1, Math.ceil((safeEnd - startMinutes) / 60));
-  };
-
-  const isWallpaperSlotCovered = (dayName: string, hourStart: number): boolean => {
-    const targetDay = extractDayName(dayName);
-    return allCourses.some(c => {
-      if (extractDayName(c.day) !== targetDay) return false;
-      const startMinutes = parseTimeToMinutes(c.start_time || c.jadual || '');
-      const endMinutes = parseTimeToMinutes(c.end_time || '');
-      if (startMinutes == null) return false;
-      const courseStartHour = Math.floor(startMinutes / 60);
-      const safeEnd = endMinutes != null && endMinutes > startMinutes ? endMinutes : startMinutes + 60;
-      const span = Math.max(1, Math.ceil((safeEnd - startMinutes) / 60));
-      const courseEndHour = courseStartHour + span;
-      return hourStart > courseStartHour && hourStart < courseEndHour;
-    });
-  };
 
   if (!shouldRender) return null;
 
@@ -1251,9 +1216,10 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                             const wallpaperPadding = wallpaperPreset === 'phone' ? 12 : wallpaperPreset === 'square' ? 14 : 16;
                             const gridInnerWidth = w - (wallpaperPadding * 2) - 2;
 
-                            // Only render the hours that actually contain classes so the
-                            // wallpaper grid doesn't waste space on empty early slots.
-                            const hourStarts = (() => {
+                            // Only render the hours that contain classes. When the
+                            // range is wide, widen each column (slot) so the grid
+                            // stays readable instead of squeezing many thin columns.
+                            const { hourStarts, slotSize } = (() => {
                               let minH = Infinity;
                               let maxH = -Infinity;
                               allCourses.forEach((course) => {
@@ -1264,12 +1230,52 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                 maxH = Math.max(maxH, Math.ceil((end != null && end > start ? end : start + 60) / 60));
                               });
                               if (!Number.isFinite(minH) || !Number.isFinite(maxH) || maxH <= minH) {
-                                return WALLPAPER_HOUR_STARTS;
+                                return { hourStarts: WALLPAPER_HOUR_STARTS, slotSize: 1 };
                               }
-                              const range: number[] = [];
-                              for (let h = minH; h < maxH; h += 1) range.push(h);
-                              return range;
+                              const maxColumns =
+                                wallpaperPreset === 'phone' ? 8
+                                  : wallpaperPreset === 'square' ? 9
+                                    : wallpaperPreset === 'tablet' ? 10
+                                      : 12;
+                              const size = Math.max(1, Math.ceil((maxH - minH) / maxColumns));
+                              const starts: number[] = [];
+                              for (let h = minH; h < maxH; h += size) starts.push(h);
+                              return { hourStarts: starts, slotSize: size };
                             })();
+                            const baseMinutes = hourStarts[0] * 60;
+                            const stepMinutes = slotSize * 60;
+                            const colIndexOf = (minutes: number) => Math.floor((minutes - baseMinutes) / stepMinutes);
+                            const findCourseForSlot = (day: string, hourStart: number): TimetableItem | null => {
+                              const targetDay = extractDayName(day);
+                              const col = (hourStart * 60 - baseMinutes) / stepMinutes;
+                              return allCourses.find((c) => {
+                                if (extractDayName(c.day) !== targetDay) return false;
+                                const startMinutes = parseTimeToMinutes(c.start_time || c.jadual || '');
+                                if (startMinutes == null) return false;
+                                return colIndexOf(startMinutes) === col;
+                              }) || null;
+                            };
+                            const slotSpanFor = (course: TimetableItem): number => {
+                              const startMinutes = parseTimeToMinutes(course.start_time || course.jadual || '');
+                              const endMinutes = parseTimeToMinutes(course.end_time || '');
+                              if (startMinutes == null) return 1;
+                              const safeEnd = endMinutes != null && endMinutes > startMinutes ? endMinutes : startMinutes + 60;
+                              return Math.max(1, Math.ceil((safeEnd - baseMinutes) / stepMinutes) - colIndexOf(startMinutes));
+                            };
+                            const isSlotCovered = (day: string, hourStart: number): boolean => {
+                              const targetDay = extractDayName(day);
+                              const col = (hourStart * 60 - baseMinutes) / stepMinutes;
+                              return allCourses.some((c) => {
+                                if (extractDayName(c.day) !== targetDay) return false;
+                                const startMinutes = parseTimeToMinutes(c.start_time || c.jadual || '');
+                                const endMinutes = parseTimeToMinutes(c.end_time || '');
+                                if (startMinutes == null) return false;
+                                const safeEnd = endMinutes != null && endMinutes > startMinutes ? endMinutes : startMinutes + 60;
+                                const startCol = colIndexOf(startMinutes);
+                                const endCol = Math.ceil((safeEnd - baseMinutes) / stepMinutes);
+                                return col > startCol && col < endCol;
+                              });
+                            };
                             const colWidth = (gridInnerWidth - 38) / hourStarts.length;
 
                             return (
@@ -1300,7 +1306,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                             style={{ height: `${headerHeightPx}px` }}
                                           >
                                             <div className="w-full flex items-center justify-center text-center" style={{ height: `${headerHeightPx}px` }}>
-                                              <span>{formatWallpaperSlotLabel(hourStart)}</span>
+                                              <span>{formatWallpaperSlotLabel(hourStart, slotSize)}</span>
                                             </div>
                                           </th>
                                         ))}
@@ -1321,11 +1327,11 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                           </div>
                                         </td>
                                         {hourStarts.map((hourStart) => {
-                                          const course = getWallpaperCourseForHour(d, hourStart);
-                                          const covered = isWallpaperSlotCovered(d, hourStart);
+                                          const course = findCourseForSlot(d, hourStart);
+                                          const covered = isSlotCovered(d, hourStart);
                                           if (covered) return null;
                                           if (course) {
-                                            const courseSpan = getWallpaperCourseSpan(course);
+                                            const courseSpan = slotSpanFor(course);
                                             const courseColor = getModalDayColors(
                                               getCourseColorSlot(courseColorMap, course.course_id || course.kod_kursus),
                                               exportTheme,
