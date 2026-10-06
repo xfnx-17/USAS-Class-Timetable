@@ -62,7 +62,6 @@ async function captureElement(elementRef: ExportElement | null, scale = 2, backg
 
   return html2canvas(elementRef, {
     scale,
-    foreignObjectRendering: isWallpaper,
     useCORS: true,
     logging: false,
     backgroundColor,
@@ -91,7 +90,7 @@ async function captureElement(elementRef: ExportElement | null, scale = 2, backg
       clonedRoot.style.filter = 'none';
 
       // Compensate for html2canvas's font-baseline offset in formal exports.
-      // Wallpaper uses browser-native foreign-object rendering and needs no text shift.
+      // Wallpaper skips this correction because it displaces its small labels.
       const isApple = typeof navigator !== 'undefined' && (/Mac|iPod|iPhone|iPad/.test(navigator.platform) || (/MacIntel/.test(navigator.platform) && navigator.maxTouchPoints > 1) || /iPhone|iPad|iPod/i.test(navigator.userAgent));
 
       if (!isApple && !isWallpaper) {
