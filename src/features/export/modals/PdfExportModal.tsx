@@ -673,6 +673,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
             </div>
             <div className="w-full text-center">
               <span
+                data-export-course-code
                 className={`block w-full whitespace-nowrap font-black leading-normal tracking-tight text-center ${isLightMode ? 'text-slate-800' : 'text-white'
                   }`}
                 style={{ fontSize: `${fitFontSize}px` }}
@@ -688,6 +689,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
         ) : (
           <div className="w-full flex items-center justify-center text-center">
             <span
+              data-export-course-code
               className={`inline-block max-w-full whitespace-nowrap leading-normal tracking-tight text-center font-black ${isLightMode ? 'text-slate-800' : 'text-white'}`}
               style={{ fontSize: `${fitFontSize}px`, letterSpacing: '-0.03em' }}
               title={code}

@@ -42,13 +42,9 @@ async function captureElement(elementRef: ExportElement | null, scale = 2, backg
     throw new Error('Element template not found for export.');
   }
 
-  // Ensure all fonts are fully loaded before capturing so metrics match the browser preview
-  // Use a 2-second timeout race to prevent hanging in headless or offline environments
+  // Ensure all fonts are loaded before capturing so metrics match the browser preview.
   if (typeof document !== 'undefined' && document.fonts && document.fonts.ready) {
-    await Promise.race([
-      document.fonts.ready,
-      new Promise((resolve) => setTimeout(resolve, 2000))
-    ]);
+    await document.fonts.ready;
   }
 
   const exportRootId = elementRef.getAttribute?.('data-export-root');
@@ -92,7 +88,13 @@ async function captureElement(elementRef: ExportElement | null, scale = 2, backg
       // Compensate for html2canvas's font-baseline offset. Wallpaper only needs it on time labels.
       const isApple = typeof navigator !== 'undefined' && (/Mac|iPod|iPhone|iPad/.test(navigator.platform) || (/MacIntel/.test(navigator.platform) && navigator.maxTouchPoints > 1) || /iPhone|iPad|iPod/i.test(navigator.userAgent));
 
-      if (!isApple) {
+      if (isApple && isWallpaper) {
+        clonedRoot.querySelectorAll('[data-export-time-label], [data-export-course-code]').forEach((node) => {
+          (node as HTMLElement).style.letterSpacing = 'normal';
+        });
+      }
+
+      if (!isApple || isWallpaper) {
         const view = clonedDoc.defaultView || window;
         const textNodes = clonedRoot.querySelectorAll(isWallpaper ? '[data-export-time-label]' : 'span, h1, h2, p');
         textNodes.forEach((node) => {
