@@ -4,6 +4,7 @@ import { Camera, AlertTriangle, QrCode, ScanLine, X, Upload, Square, Info, Maxim
 import { useAuth } from '@/app/providers/AuthProvider';
 import { useLanguage } from '@/app/providers/LanguageProvider';
 import { useTheme } from '@/app/providers/ThemeProvider';
+import { useModalA11y } from '@/shared/lib/useModalA11y';
 import { scanAttendanceQrAPI } from '@/services/usas/Api';
 import { sanitizeSingleLine } from '@/shared/lib/security';
 
@@ -161,6 +162,8 @@ export default function AttendanceScanModal({ isOpen, onClose, onSuccessfulScan 
       streamRef.current = null;
     }
   };
+
+  const modalRef = useModalA11y(isOpen, () => { stopCamera(); onClose(); });
 
   const scheduleLoop = () => {
     if (!activeRef.current) return;
@@ -371,7 +374,7 @@ export default function AttendanceScanModal({ isOpen, onClose, onSuccessfulScan 
   const showCamera = scanState !== 'unsupported';
 
   return (
-    <div data-testid="attendance-scan-modal" role="dialog" aria-modal="true" aria-label="Imbas Kehadiran QR" className={`fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-md transition-all duration-200 touch-pan-y overscroll-contain ${animate ? 'bg-slate-900/35 opacity-100' : 'bg-slate-900/0 opacity-0 pointer-events-none'
+    <div ref={modalRef} data-testid="attendance-scan-modal" role="dialog" aria-modal="true" aria-label="Imbas Kehadiran QR" className={`fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-md transition-all duration-200 touch-pan-y overscroll-contain ${animate ? 'bg-slate-900/35 opacity-100' : 'bg-slate-900/0 opacity-0 pointer-events-none'
       }`}>
       <div className={`flex flex-col w-full rounded-2xl border transition-all duration-300 shadow-2xl overflow-hidden min-h-0 ${isFullscreen ? '' : 'max-w-[96vw] sm:max-w-md max-h-[92dvh] transform backdrop-blur-xl'} ${isFullscreen ? '' : animate ? 'scale-100 opacity-100' : 'scale-[0.98] opacity-0'
         } ${isLight ? 'bg-white/95 border-slate-200 text-slate-800' : 'bg-[#0A1428]/95 border-white/[0.08] shadow-black/40 text-white'

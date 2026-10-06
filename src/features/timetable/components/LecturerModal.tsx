@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@/app/providers/ThemeProvider';
+import { useModalA11y } from '@/shared/lib/useModalA11y';
 import { useAuth } from '@/app/providers/AuthProvider';
+import { useLanguage } from '@/app/providers/LanguageProvider';
 import { X, User, Mail, Phone, Briefcase, Copy, Check, Loader2 } from 'lucide-react';
 import { copyTextToClipboard, sanitizeTextForShare } from '@/shared/lib/security';
 import { searchLecturerDirectoryAPI, type LecturerDirectoryEntry } from '@/services/usas/Api';
@@ -58,9 +60,11 @@ function pickBestMatch(list: LecturerDirectoryEntry[], targetName: string): Lect
 }
 
 export default function LecturerModal({ lecturerName, isOpen, onClose }: LecturerModalProps) {
+  const modalRef = useModalA11y(isOpen, onClose);
   const [copied, setCopied] = useState(false);
   const { theme } = useTheme();
   const { session } = useAuth();
+  const { t } = useLanguage();
 
   const isLight = theme === 'light';
   const copiedTimerRef = useRef<number | null>(null);
@@ -168,7 +172,7 @@ export default function LecturerModal({ lecturerName, isOpen, onClose }: Lecture
   };
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Maklumat Pensyarah" className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md transition-all duration-200 ${
+    <div ref={modalRef} role="dialog" aria-modal="true" aria-label="Maklumat Pensyarah" className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md transition-all duration-200 ${
       animate ? 'bg-slate-900/30 opacity-100' : 'bg-slate-900/0 opacity-0 pointer-events-none'
     }`}>
       
@@ -190,7 +194,7 @@ export default function LecturerModal({ lecturerName, isOpen, onClose }: Lecture
             <div className="text-left min-w-0">
               <h3 className={`text-sm sm:text-base font-bold leading-tight truncate ${isLight ? 'text-slate-800' : 'text-white'}`}>{sanitizeTextForShare(cachedName, 160)}</h3>
               <p className={`text-[11px] sm:text-xs font-semibold truncate ${isLight ? 'text-slate-500' : 'text-white/40'}`}>
-                {hasPosition ? entry?.position : 'Pensyarah Universiti Sultan Azlan Shah'}
+                {hasPosition ? entry?.position : t('lecturerGenericRole')}
               </p>
             </div>
           </div>
@@ -212,7 +216,7 @@ export default function LecturerModal({ lecturerName, isOpen, onClose }: Lecture
             <div className="flex items-start gap-3">
               <Briefcase className="w-4 h-4 text-sky-500 flex-shrink-0" />
               <div className="text-left min-w-0">
-                <div className={`text-[10px] font-semibold ${isLight ? 'text-slate-400' : 'text-white/40'}`}>Jawatan</div>
+                <div className={`text-[10px] font-semibold ${isLight ? 'text-slate-400' : 'text-white/40'}`}>{t('lecturerRole')}</div>
                 <div className={`font-semibold break-words ${isLight ? 'text-slate-700' : 'text-white'}`}>{entry?.position}</div>
               </div>
             </div>
@@ -222,7 +226,7 @@ export default function LecturerModal({ lecturerName, isOpen, onClose }: Lecture
             <div className={`flex items-start gap-3 ${hasPosition ? 'pt-2 border-t' : ''} text-left ${isLight ? 'border-slate-200' : 'border-white/[0.05]'}`}>
               <Phone className="w-4 h-4 text-emerald-500 flex-shrink-0" />
               <div className="min-w-0">
-                <div className={`text-[10px] font-semibold ${isLight ? 'text-slate-400' : 'text-white/40'}`}>No. Telefon (Sambungan)</div>
+                <div className={`text-[10px] font-semibold ${isLight ? 'text-slate-400' : 'text-white/40'}`}>{t('lecturerPhone')}</div>
                 <div className={`font-semibold break-words ${isLight ? 'text-slate-700' : 'text-white'}`}>{entry?.ext}</div>
               </div>
             </div>
@@ -232,17 +236,17 @@ export default function LecturerModal({ lecturerName, isOpen, onClose }: Lecture
             <div className="flex items-center gap-3 min-w-0 truncate text-left">
               <Mail className="w-4 h-4 text-amber-500 flex-shrink-0" />
               <div className="min-w-0 truncate">
-                <div className={`text-[10px] font-semibold ${isLight ? 'text-slate-400' : 'text-white/40'}`}>E-mel Rasmi</div>
+                <div className={`text-[10px] font-semibold ${isLight ? 'text-slate-400' : 'text-white/40'}`}>{t('lecturerEmail')}</div>
                 {lookupStatus === 'loading' ? (
                   <div className={`font-semibold flex items-center gap-1.5 ${isLight ? 'text-slate-500' : 'text-white/60'}`}>
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>Mencari e-mel pensyarah...</span>
+                    <span>{t('lecturerEmailLoading')}</span>
                   </div>
                 ) : email ? (
                   <div className={`font-semibold truncate ${isLight ? 'text-slate-600' : 'text-white/80'}`}>{email}</div>
                 ) : (
                   <div className={`font-semibold ${isLight ? 'text-slate-400' : 'text-white/40'}`}>
-                    {lookupStatus === 'unavailable' ? 'Tidak tersedia dalam mod demo.' : 'Tiada e-mel rasmi dijumpai dalam direktori.'}
+                    {lookupStatus === 'unavailable' ? t('lecturerEmailDemo') : t('lecturerEmailNotFound')}
                   </div>
                 )}
               </div>
@@ -258,7 +262,7 @@ export default function LecturerModal({ lecturerName, isOpen, onClose }: Lecture
                 }`}
               >
                 {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copied ? 'Disalin' : 'Salin'}</span>
+                <span>{copied ? t('copiedLabel') : t('copyLabel')}</span>
               </button>
             )}
           </div>
@@ -267,7 +271,7 @@ export default function LecturerModal({ lecturerName, isOpen, onClose }: Lecture
             <div className={`flex items-start gap-3 pt-2 border-t text-left ${isLight ? 'border-slate-200' : 'border-white/[0.05]'}`}>
               <User className="w-4 h-4 text-violet-500 flex-shrink-0" />
               <div className="min-w-0">
-                <div className={`text-[10px] font-semibold ${isLight ? 'text-slate-400' : 'text-white/40'}`}>No. Staf</div>
+                <div className={`text-[10px] font-semibold ${isLight ? 'text-slate-400' : 'text-white/40'}`}>{t('lecturerStaffNo')}</div>
                 <div className={`font-semibold break-words ${isLight ? 'text-slate-700' : 'text-white'}`}>{entry?.staffNo}</div>
               </div>
             </div>

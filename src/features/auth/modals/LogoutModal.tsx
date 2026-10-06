@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLanguage } from '@/app/providers/LanguageProvider';
 import { useTheme } from '@/app/providers/ThemeProvider';
+import { useModalA11y } from '@/shared/lib/useModalA11y';
 import { LogOut } from 'lucide-react';
 
 type LogoutModalProps = {
@@ -10,6 +11,7 @@ type LogoutModalProps = {
 };
 
 export default function LogoutModal({ isOpen, onClose, onConfirm }: LogoutModalProps) {
+  const modalRef = useModalA11y(isOpen, onClose);
   const { lang } = useLanguage();
   const { theme } = useTheme();
   const [animate, setAnimate] = useState(false);
@@ -52,7 +54,7 @@ export default function LogoutModal({ isOpen, onClose, onConfirm }: LogoutModalP
   };
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Log Keluar" className={`fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-md transition-all duration-200 touch-none ${
+    <div ref={modalRef} role="dialog" aria-modal="true" aria-label="Log Keluar" className={`fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-md transition-all duration-200 touch-none ${
       animate ? 'bg-slate-900/30 opacity-100' : 'bg-slate-900/0 opacity-0 pointer-events-none'
     }`}>
       <div 

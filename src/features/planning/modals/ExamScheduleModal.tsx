@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTheme } from '@/app/providers/ThemeProvider';
+import { useModalA11y } from '@/shared/lib/useModalA11y';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { X, FileText, MapPin, Calendar, Clock, AlertCircle } from 'lucide-react';
 import type { TimetableItem } from '@/shared/types/usas';
@@ -12,6 +13,7 @@ type ExamScheduleModalProps = {
 };
 
 export default function ExamScheduleModal({ isOpen, onClose, courses = [], isDemo: propIsDemo }: ExamScheduleModalProps) {
+  const modalRef = useModalA11y(isOpen, onClose);
   const { theme } = useTheme();
   const { session } = useAuth();
   const isLight = theme === 'light';
@@ -106,7 +108,7 @@ export default function ExamScheduleModal({ isOpen, onClose, courses = [], isDem
   const hasExams = examList.length > 0;
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Jadual Peperiksaan" className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md transition-all duration-200 ${
+    <div ref={modalRef} role="dialog" aria-modal="true" aria-label="Jadual Peperiksaan" className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md transition-all duration-200 ${
       animate ? 'bg-slate-900/30 opacity-100' : 'bg-slate-900/0 opacity-0 pointer-events-none'
     }`}>
       

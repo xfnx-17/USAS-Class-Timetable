@@ -2,6 +2,7 @@ import { useState, useRef, useMemo, useEffect } from 'react';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { useLanguage } from '@/app/providers/LanguageProvider';
 import { useTheme } from '@/app/providers/ThemeProvider';
+import { useModalA11y } from '@/shared/lib/useModalA11y';
 import { generateTimetablePdf, generateElementPng, generateLockscreenImage } from '@/features/export/lib/pdfGenerator';
 import { extractDayName, formatDayDisplay, sortDayLabels } from '@/shared/lib/dayFormat';
 import { buildCourseColorMap, getCourseColorSlot } from '@/shared/lib/courseColors';
@@ -285,6 +286,7 @@ const formatShortDurationLabel = (startTime?: string, endTime?: string) => {
 };
 
 export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps) {
+  const modalRef = useModalA11y(isOpen, onClose);
   const { timetableData, session } = useAuth();
   const { lang, t } = useLanguage();
   const { theme } = useTheme();
@@ -748,7 +750,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
   const lockscreenConfig = getLockscreenThemeConfig(exportTheme);
 
   return (
-    <div data-lenis-prevent role="dialog" aria-modal="true" aria-label="Eksport Jadual" className={`fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-md transition-all duration-200 touch-pan-y overscroll-contain ${animate ? 'bg-slate-900/30 opacity-100' : 'bg-slate-900/0 opacity-0 pointer-events-none'
+    <div ref={modalRef} data-lenis-prevent role="dialog" aria-modal="true" aria-label="Eksport Jadual" className={`fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-md transition-all duration-200 touch-pan-y overscroll-contain ${animate ? 'bg-slate-900/30 opacity-100' : 'bg-slate-900/0 opacity-0 pointer-events-none'
       }`}>
 
       {/* Spacious Modal Frame */}

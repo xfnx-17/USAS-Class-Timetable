@@ -3,6 +3,7 @@ import { X, Moon, Clock, Calendar as CalendarIcon, MapPin, ChevronDown } from 'l
 import { useAuth } from '@/app/providers/AuthProvider';
 import { useLanguage } from '@/app/providers/LanguageProvider';
 import { useTheme } from '@/app/providers/ThemeProvider';
+import { useModalA11y } from '@/shared/lib/useModalA11y';
 import { fetchPrayerTimesAPI } from '@/services/jakim/JakimApi';
 import type { WaktuSolatPrayer } from '@/shared/types/usas';
 import { formatCountdown } from '../components/PrayerTimesWidget';
@@ -109,6 +110,7 @@ function PrayerZoneDropdown({
 }
 
 export default function PrayerTimesModal({ isOpen, onClose }: PrayerTimesModalProps) {
+  const modalRef = useModalA11y(isOpen, onClose);
   const { session } = useAuth();
   const { theme } = useTheme();
   const { lang } = useLanguage();
@@ -221,7 +223,7 @@ export default function PrayerTimesModal({ isOpen, onClose }: PrayerTimesModalPr
   if (!shouldRender) return null;
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Waktu Solat" className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md transition-all duration-200 ${
+    <div ref={modalRef} role="dialog" aria-modal="true" aria-label="Waktu Solat" className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md transition-all duration-200 ${
       animate ? 'bg-slate-900/30 opacity-100' : 'bg-slate-900/0 opacity-0 pointer-events-none'
     }`}>
       <div 

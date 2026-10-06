@@ -8,6 +8,7 @@ import { Camera, ScanLine, X, Upload, FileText, Calendar, AlertTriangle, ArrowLe
 import { useAuth } from '@/app/providers/AuthProvider';
 import { useLanguage } from '@/app/providers/LanguageProvider';
 import { useTheme } from '@/app/providers/ThemeProvider';
+import { useModalA11y } from '@/shared/lib/useModalA11y';
 import { decompressTimetable, calculateOverlappingFreeTime, reverseDayMap, type FreeSlot } from '@/features/timetable/lib/scheduleMatcher';
 import type { TimetableItem } from '@/shared/types/usas';
 
@@ -20,6 +21,7 @@ type CompareScheduleModalProps = {
 type ScanState = 'idle' | 'scanning' | 'processing' | 'success' | 'error';
 
 export default function CompareScheduleModal({ isOpen, onClose, initialSharedData }: CompareScheduleModalProps) {
+  const modalRef = useModalA11y(isOpen, onClose);
   const { timetableData, session } = useAuth();
   const { lang } = useLanguage();
   const { theme } = useTheme();
@@ -259,7 +261,7 @@ export default function CompareScheduleModal({ isOpen, onClose, initialSharedDat
   if (!shouldRender) return null;
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Banding Jadual" className={`fixed inset-0 z-[60] flex items-center justify-center p-4 backdrop-blur-md transition-all duration-200 touch-none ${
+    <div ref={modalRef} role="dialog" aria-modal="true" aria-label="Banding Jadual" className={`fixed inset-0 z-[60] flex items-center justify-center p-4 backdrop-blur-md transition-all duration-200 touch-none ${
       animate ? 'bg-slate-900/30 opacity-100' : 'bg-slate-900/0 opacity-0 pointer-events-none'
     }`}>
       <div className="absolute inset-0" onClick={onClose} />
