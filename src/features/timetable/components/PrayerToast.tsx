@@ -10,10 +10,12 @@ export default function PrayerToast() {
   const isLight = theme === 'light';
   const { lang } = useLanguage();
   
-  const { nextPrayer, diffSeconds } = useNextPrayer();
+  const { nextPrayer, diffSeconds, currentPrayer, secondsSinceCurrent } = useNextPrayer();
 
-  const [dismissedPrayerId, setDismissedPrayerId] = useState<string | null>(null);
-  const [completedPrayerId, setCompletedPrayerId] = useState<string | null>(null);
+  const [dismissedKey, setDismissedKey] = useState<number | null>(null);
+  const [handledKey, setHandledKey] = useState<number | null>(null);
+  const [completedKey, setCompletedKey] = useState<number | null>(null);
+  const [completedLabel, setCompletedLabel] = useState<string | null>(null);
   const [isCompleted, setIsCompleted] = useState(false);
 
   // TEST MODE
@@ -25,26 +27,27 @@ export default function PrayerToast() {
       setTestMode(true);
       setTestSeconds(10);
       setIsCompleted(false);
-      setDismissedPrayerId(null);
-      setCompletedPrayerId(null);
+      setDismissedKey(null);
+      setHandledKey(null);
+      setCompletedKey(null);
+      setCompletedLabel(null);
     };
     window.addEventListener('test-prayer-toast', handleTest);
     return () => window.removeEventListener('test-prayer-toast', handleTest);
   }, []);
 
-  // Normal mode: detect when to start the completed state
+  // Normal mode: detect the moment a prayer time is reached
   useEffect(() => {
-    if (testMode || !nextPrayer) return;
+    if (testMode || !currentPrayer) return;
+    if (secondsSinceCurrent < 0 || secondsSinceCurrent > 5) return;
+    if (currentPrayer.timestamp === handledKey || currentPrayer.timestamp === dismissedKey) return;
+    if (isCompleted && completedKey === currentPrayer.timestamp) return;
 
-    if (nextPrayer.label !== completedPrayerId) {
-      setIsCompleted(false);
-    }
-
-    if (diffSeconds === 0 && !isCompleted && nextPrayer.label !== completedPrayerId) {
-      setIsCompleted(true);
-      playPrayerChime();
-    }
-  }, [diffSeconds, nextPrayer, isCompleted, completedPrayerId, testMode]);
+    setCompletedKey(currentPrayer.timestamp);
+    setCompletedLabel(currentPrayer.label);
+    setIsCompleted(true);
+    playPrayerChime();
+  }, [currentPrayer, secondsSinceCurrent, testMode, handledKey, dismissedKey, isCompleted, completedKey]);
 
   const [isHiding, setIsHiding] = useState(false);
 
@@ -55,10 +58,19 @@ export default function PrayerToast() {
       if (testMode) {
         setTestMode(false);
         setIsCompleted(false);
+        setCompletedKey(null);
+        setCompletedLabel(null);
+        return;
+      }
+      if (isCompleted && completedKey !== null) {
+        setHandledKey(completedKey);
+        setIsCompleted(false);
+        setCompletedKey(null);
+        setCompletedLabel(null);
+        return;
       }
       if (nextPrayer) {
-        setCompletedPrayerId(nextPrayer.label);
-        setDismissedPrayerId(nextPrayer.label);
+        setDismissedKey(nextPrayer.timestamp);
       }
     }, 500);
   };
@@ -80,32 +92,42 @@ export default function PrayerToast() {
 
   // Auto-close after 5 seconds of being completed
   useEffect(() => {
-    if (isCompleted) {
-      const timer = setTimeout(() => {
+    if (!isCompleted) return;
+    const timer = setTimeout(() => {
+      setIsHiding(true);
+      setTimeout(() => {
+        setIsHiding(false);
         if (testMode) {
-          closeToast();
-        } else if (nextPrayer) {
-          setCompletedPrayerId(nextPrayer.label);
+          setTestMode(false);
           setIsCompleted(false);
+          setCompletedKey(null);
+          setCompletedLabel(null);
+        } else {
+          setHandledKey(completedKey);
+          setIsCompleted(false);
+          setCompletedKey(null);
+          setCompletedLabel(null);
         }
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [isCompleted, testMode, nextPrayer]);
+      }, 500);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [isCompleted, testMode, completedKey]);
 
 
   const isVisible = !isHiding && (testMode || Boolean(
-    nextPrayer && 
-    nextPrayer.label !== dismissedPrayerId && 
-    nextPrayer.label !== completedPrayerId && 
-    ((diffSeconds <= 300 && diffSeconds > 0) || isCompleted)
+    (isCompleted && completedLabel !== null && completedKey !== handledKey)
+    || (nextPrayer &&
+      nextPrayer.timestamp !== dismissedKey &&
+      nextPrayer.timestamp !== handledKey &&
+      diffSeconds <= 300 &&
+      diffSeconds > 0)
   ));
 
   const handleDismiss = () => {
     closeToast();
   };
 
-  const currentPrayerLabel = testMode ? 'Maghrib (Test)' : nextPrayer?.label;
+  const currentPrayerLabel = testMode ? 'Maghrib (Test)' : (isCompleted ? completedLabel : nextPrayer?.label);
   const currentDiffSeconds = testMode ? testSeconds : diffSeconds;
 
   const progressPercent = currentDiffSeconds > 0 && currentDiffSeconds <= 300 

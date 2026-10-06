@@ -152,23 +152,30 @@ export function useNextPrayer() {
 
   const currentUnix = Math.floor(now.getTime() / 1000);
 
+  const formatTime = (ts: number) => {
+    const date = new Date(ts * 1000);
+    const hours = date.getHours();
+    const mins = date.getMinutes();
+    return `${hours % 12 || 12}:${mins.toString().padStart(2, '0')} ${hours >= 12 ? 'PM' : 'AM'}`;
+  };
+
   let nextPrayer = null;
   let diffSeconds = 0;
+  let currentPrayer = null;
+  let secondsSinceCurrent = 0;
 
   for (const p of prayerData.times) {
     if (p.timestamp > currentUnix) {
-      const date = new Date(p.timestamp * 1000);
-      const hours = date.getHours();
-      const mins = date.getMinutes();
-      const content = `${hours % 12 || 12}:${mins.toString().padStart(2, '0')} ${hours >= 12 ? 'PM' : 'AM'}`;
-
-      nextPrayer = { label: p.label, content };
+      nextPrayer = { label: p.label, content: formatTime(p.timestamp), timestamp: p.timestamp };
       diffSeconds = p.timestamp - currentUnix;
       break;
     }
+
+    currentPrayer = { label: p.label, content: formatTime(p.timestamp), timestamp: p.timestamp };
+    secondsSinceCurrent = currentUnix - p.timestamp;
   }
 
-  return { nextPrayer, diffSeconds, location: prayerData.location };
+  return { nextPrayer, diffSeconds, currentPrayer, secondsSinceCurrent, location: prayerData.location };
 }
 
 export function PrayerTimesNotifier() {
