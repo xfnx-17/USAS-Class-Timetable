@@ -12,6 +12,7 @@ import TimetableGrid from '@/features/timetable/components/TimetableGrid';
 import { PrayerTimesNotifier } from '@/features/timetable/components/PrayerTimesWidget';
 import ErrorScreen from '@/app/shell/ErrorScreen';
 import ErrorBoundary from '@/app/shell/ErrorBoundary';
+import { AlertTriangle, RefreshCw, X } from 'lucide-react';
 const LogoutModal = lazy(() => import('@/features/auth/modals/LogoutModal'));
 import PwaInstallPrompt from '@/features/pwa/components/PwaInstallPrompt';
 const PdfExportModal = lazy(() => import('@/features/export/modals/PdfExportModal'));
@@ -68,7 +69,7 @@ function removeStructuredData(id: string) {
 }
 
 function MainContent() {
-  const { session, timetableData, login, logout } = useAuth();
+  const { session, timetableData, login, logout, error, setError, refreshTimetable } = useAuth();
   const { theme } = useTheme();
   const { lang } = useLanguage();
   const [pathname, setPathname] = useState(() => window.location.pathname || '/');
@@ -271,6 +272,36 @@ function MainContent() {
         onNavigateHome={() => navigateTo('/')}
         onNavigateLogin={() => navigateTo('/login')}
       />
+      {session && error && (
+        <div
+          role="alert"
+          aria-live="polite"
+          className={`flex items-center gap-3 px-3 sm:px-6 py-2 text-xs font-semibold border-b flex-shrink-0 ${
+            theme === THEMES.LIGHT
+              ? 'bg-amber-50 border-amber-200 text-amber-800'
+              : 'bg-amber-400/10 border-amber-400/20 text-amber-200'
+          }`}
+        >
+          <AlertTriangle className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+          <span className="flex-1 min-w-0">{error}</span>
+          <button
+            type="button"
+            onClick={() => { setError(null); void refreshTimetable(); }}
+            className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 border border-current/30 hover:bg-black/5"
+          >
+            <RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />
+            <span>{lang === 'ms' ? 'Cuba lagi' : 'Retry'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setError(null)}
+            aria-label={lang === 'ms' ? 'Tutup' : 'Dismiss'}
+            className="p-1 rounded-md hover:bg-black/5"
+          >
+            <X className="w-3.5 h-3.5" aria-hidden="true" />
+          </button>
+        </div>
+      )}
       {session && <PrayerTimesNotifier />}
       
       <main className={view === 'app' ? 'flex-1 min-h-0 overflow-hidden relative' : 'flex-1 relative'}>

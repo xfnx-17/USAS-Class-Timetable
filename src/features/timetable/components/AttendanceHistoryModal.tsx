@@ -94,7 +94,7 @@ export default function AttendanceHistoryModal({ isOpen, onClose, course, refres
   const groupDisplay = normalizeGroup(course.group || course.kumpulan) || '—';
 
   return (
-    <div data-lenis-prevent className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md transition-all duration-200 touch-pan-y overscroll-contain ${animate ? 'bg-slate-900/30 opacity-100' : 'bg-slate-900/0 opacity-0 pointer-events-none'
+    <div data-lenis-prevent role="dialog" aria-modal="true" aria-label="Laporan Kehadiran" className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md transition-all duration-200 touch-pan-y overscroll-contain ${animate ? 'bg-slate-900/30 opacity-100' : 'bg-slate-900/0 opacity-0 pointer-events-none'
       }`}>
 
       <div className={`rounded-xl w-full max-w-[92vw] sm:max-w-2xl border pt-4 px-4 sm:px-6 pb-6 relative transition-all duration-200 transform flex flex-col gap-5 min-h-0 max-h-[85dvh] sm:max-h-[90dvh] ${animate ? 'scale-100 opacity-100' : 'scale-95 opacity-0'

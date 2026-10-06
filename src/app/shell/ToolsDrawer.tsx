@@ -74,7 +74,7 @@ export default function ToolsDrawer({
       />
 
       {/* Drawer Panel */}
-      <div className={`fixed top-0 right-0 h-full w-[min(20rem,85vw)] sm:w-80 border-l z-50 flex flex-col shadow-2xl transition-all duration-250 ease-in-out ${animate ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'} ${
+      <div role="dialog" aria-modal="true" aria-label="Menu Alat" className={`fixed top-0 right-0 h-full w-[min(20rem,85vw)] sm:w-80 border-l z-50 flex flex-col shadow-2xl transition-all duration-250 ease-in-out ${animate ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'} ${
         isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#0A1428] border-white/[0.06] text-white/80'
       }`}>
         

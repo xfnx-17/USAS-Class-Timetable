@@ -179,11 +179,24 @@ export function parseSafeJsonResponse(text: string): unknown | null {
   }
 }
 
-async function postUSAS(
+export class UsasUnavailableError extends Error {
+  constructor() {
+    super('USAS service unavailable');
+    this.name = 'UsasUnavailableError';
+  }
+}
+
+type UsasFetchOutcome = {
+  ok: boolean;
+  data?: unknown;
+  reason?: 'network' | 'invalid';
+};
+
+async function postUSASOutcome(
   endpoint: string,
   payload: UsasPayload,
   extraHeaders: Record<string, string> = {},
-): Promise<unknown> {
+): Promise<UsasFetchOutcome> {
   const fetchWithTimeout = async (input: RequestInfo | URL, init: RequestInit) => {
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -197,6 +210,8 @@ async function postUSAS(
     }
   };
 
+  let networkError = false;
+
   // 1. Try application/json
   try {
     const jsonRes = await fetchWithTimeout(`${BASE_URL}${endpoint}`, {
@@ -208,10 +223,12 @@ async function postUSAS(
       const text = await jsonRes.text();
       if (text && !text.startsWith('Access Denied') && text.includes('{')) {
         const data = parseSafeJsonResponse(text);
-        if (data) return data;
+        if (data) return { ok: true, data };
       }
     }
-  } catch (err) {}
+  } catch {
+    networkError = true;
+  }
 
   // 2. Fallback to application/x-www-form-urlencoded
   try {
@@ -232,12 +249,23 @@ async function postUSAS(
       const formText = await formRes.text();
       if (formText && !formText.startsWith('Access Denied') && formText.includes('{')) {
         const data = parseSafeJsonResponse(formText);
-        if (data) return data;
+        if (data) return { ok: true, data };
       }
     }
-  } catch (err) {}
+  } catch {
+    networkError = true;
+  }
 
-  return null;
+  return { ok: false, reason: networkError ? 'network' : 'invalid' };
+}
+
+async function postUSAS(
+  endpoint: string,
+  payload: UsasPayload,
+  extraHeaders: Record<string, string> = {},
+): Promise<unknown> {
+  const outcome = await postUSASOutcome(endpoint, payload, extraHeaders);
+  return outcome.ok ? outcome.data : null;
 }
 
 export async function loginStudentAPI(
@@ -277,11 +305,22 @@ export async function loginStudentAPI(
     platform: PLATFORM
   };
 
-  const result = await postUSAS(
+  const outcome = await postUSASOutcome(
     '/student/login_student.php',
     payload,
     captchaToken ? { 'x-turnstile-token': captchaToken } : {},
   );
+
+  if (!outcome.ok) {
+    return {
+      success: false,
+      error: outcome.reason === 'network'
+        ? 'Tidak dapat hubungi pelayan USAS. Sila semak sambungan anda dan cuba lagi.'
+        : 'Pelayan USAS tidak memberi respons yang sah. Sila cuba lagi sebentar.',
+    };
+  }
+
+  const result = outcome.data;
 
   const gateResult = result as { success?: boolean; error?: string } | null;
   if (gateResult && gateResult.success === false && typeof gateResult.error === 'string' && gateResult.error.trim()) {
@@ -645,10 +684,18 @@ export async function fetchTimetableAPI(session: StudentSession): Promise<Timeta
   const timetablePayload = { ...basePayload, request_type: "jadual_kuliah" };
   const kehadiranCoursePayload = { ...basePayload, request_type: "senarai_kursus" };
 
-  const [timetableRes, kehadiranCourseRes] = await Promise.all([
-    postUSAS('/student/get_timetable_stud.php', timetablePayload).catch(() => null),
-    postUSAS('/student/get_kehadiran_kuliah.php', kehadiranCoursePayload).catch(() => null),
+  const [timetableOutcome, kehadiranCourseOutcome] = await Promise.all([
+    postUSASOutcome('/student/get_timetable_stud.php', timetablePayload),
+    postUSASOutcome('/student/get_kehadiran_kuliah.php', kehadiranCoursePayload),
   ]);
+
+  // If neither endpoint returns usable data, the USAS API is unreachable/broken.
+  if (!timetableOutcome.ok && !kehadiranCourseOutcome.ok) {
+    throw new UsasUnavailableError();
+  }
+
+  const timetableRes = timetableOutcome.ok ? timetableOutcome.data : null;
+  const kehadiranCourseRes = kehadiranCourseOutcome.ok ? kehadiranCourseOutcome.data : null;
 
   let rawItems: TimetableItem[] = [];
   let rawDays: string[] = [];

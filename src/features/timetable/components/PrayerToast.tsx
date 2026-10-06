@@ -139,7 +139,7 @@ export default function PrayerToast() {
   const timeStr = `${String(minsLeft).padStart(2, '0')}:${String(secsLeft).padStart(2, '0')}`;
 
   return (
-    <div className={`fixed bottom-4 right-4 z-[9999] transition-all duration-500 w-[260px] sm:w-[280px] rounded-2xl shadow-2xl border overflow-hidden backdrop-blur-2xl ${
+    <div role="status" aria-live="polite" className={`fixed bottom-4 right-4 z-[9999] transition-all duration-500 w-[260px] sm:w-[280px] rounded-2xl shadow-2xl border overflow-hidden backdrop-blur-2xl ${
       !isVisible 
         ? 'opacity-0 translate-y-8 scale-95 pointer-events-none'
         : 'opacity-100 translate-y-0 scale-100'

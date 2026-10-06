@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { loginStudentAPI, fetchTimetableAPI } from '@/services/usas/Api';
+import { loginStudentAPI, fetchTimetableAPI, UsasUnavailableError } from '@/services/usas/Api';
 import type { AuthContextValue, StudentSession, TimetableData } from '@/shared/types/usas';
 import {
   evaluateLoginThrottle,
@@ -133,10 +133,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
           } catch {
             // ignore storage failures
           }
-        } catch {
+        } catch (err) {
           if (loginRequestRef.current !== requestId) return false;
-          setTimetableData(null);
-          setError('Gagal memuat jadual.');
+          setError(err instanceof UsasUnavailableError
+            ? 'Pelayan USAS tidak dapat dihubungi. Sila cuba lagi sebentar.'
+            : 'Gagal memuat jadual. Sila cuba lagi.');
         }
         return true;
       } else {
@@ -193,9 +194,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       } catch {
         // ignore storage failures
       }
-    } catch {
+    } catch (err) {
       if (refreshRequestRef.current !== requestId || getSessionKey(sessionRef.current) !== sessionKey) return;
-      setError('Gagal memuat jadual.');
+      setError(err instanceof UsasUnavailableError
+        ? 'Pelayan USAS tidak dapat dihubungi. Memaparkan jadual tersimpan.'
+        : 'Gagal memuat jadual. Sila cuba lagi.');
     } finally {
       if (refreshRequestRef.current === requestId && getSessionKey(sessionRef.current) === sessionKey) {
         setLoading(false);

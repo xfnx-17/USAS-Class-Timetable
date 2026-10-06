@@ -1,0 +1,25 @@
+name: API Schema Check
+
+on:
+  schedule:
+    # Daily at 02:00 UTC.
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Check USAS API schema
+        env:
+          USAS_MONITOR_USER: ${{ secrets.USAS_MONITOR_USER }}
+          USAS_MONITOR_PASS: ${{ secrets.USAS_MONITOR_PASS }}
+        run: node scripts/check-usas-schema.mjs

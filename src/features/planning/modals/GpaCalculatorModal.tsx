@@ -177,7 +177,7 @@ export default function GpaCalculatorModal({ isOpen, onClose, courses = [] }: Gp
   const estGpa = totalCredits > 0 ? (totalPoints / totalCredits).toFixed(2) : '4.00';
 
   return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md transition-all duration-200 ${
+    <div role="dialog" aria-modal="true" aria-label="Kalkulator GPA" className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md transition-all duration-200 ${
       animate ? 'bg-slate-900/30 opacity-100' : 'bg-slate-900/0 opacity-0 pointer-events-none'
     }`}>
       

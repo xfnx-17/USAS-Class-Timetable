@@ -259,7 +259,7 @@ export default function CompareScheduleModal({ isOpen, onClose, initialSharedDat
   if (!shouldRender) return null;
 
   return (
-    <div className={`fixed inset-0 z-[60] flex items-center justify-center p-4 backdrop-blur-md transition-all duration-200 touch-none ${
+    <div role="dialog" aria-modal="true" aria-label="Banding Jadual" className={`fixed inset-0 z-[60] flex items-center justify-center p-4 backdrop-blur-md transition-all duration-200 touch-none ${
       animate ? 'bg-slate-900/30 opacity-100' : 'bg-slate-900/0 opacity-0 pointer-events-none'
     }`}>
       <div className="absolute inset-0" onClick={onClose} />

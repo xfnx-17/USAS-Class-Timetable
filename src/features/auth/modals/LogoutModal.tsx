@@ -52,7 +52,7 @@ export default function LogoutModal({ isOpen, onClose, onConfirm }: LogoutModalP
   };
 
   return (
-    <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-md transition-all duration-200 touch-none ${
+    <div role="dialog" aria-modal="true" aria-label="Log Keluar" className={`fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-md transition-all duration-200 touch-none ${
       animate ? 'bg-slate-900/30 opacity-100' : 'bg-slate-900/0 opacity-0 pointer-events-none'
     }`}>
       <div 
