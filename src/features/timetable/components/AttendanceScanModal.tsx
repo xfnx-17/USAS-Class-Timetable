@@ -42,6 +42,52 @@ const getCopy = (lang: string) => {
     };
   }
 
+  if (lang === 'zh') {
+    return {
+      title: '扫描考勤二维码',
+      desc: '打开摄像头扫描讲师的考勤二维码。',
+      ready: '摄像头就绪。对准考勤二维码。',
+      starting: '正在打开摄像头...',
+      processing: '正在将二维码发送到 UMC 服务器...',
+      success: '已接收二维码。',
+      error: '扫描失败。',
+      unsupported: '此浏览器不支持自动二维码摄像头扫描。请在下方手动粘贴二维码值。',
+      manualLabel: '手动二维码值',
+      manualHint: '摄像头不可用或检测失败时使用。',
+      startCamera: '开启摄像头',
+      uploadImg: '上传图片',
+      scanAgain: '重新扫描',
+      submit: '提交二维码',
+      close: '关闭',
+      stop: '停止摄像头',
+      empty: '请先输入二维码值。',
+      qrBotHintTitle: '没有二维码值？',
+    };
+  }
+
+  if (lang === 'ta') {
+    return {
+      title: 'வருகை QR ஸ்கேன்',
+      desc: 'கேமராவைத் திறந்து விரிவுரையாளரின் வருகை QR-ஐ ஸ்கேன் செய்யவும்.',
+      ready: 'கேமரா தயார். வருகை QR-ஐ நோக்கி வைக்கவும்.',
+      starting: 'கேமராவைத் திறக்கிறது...',
+      processing: 'QR-ஐ UMC சேவையகத்திற்கு அனுப்புகிறது...',
+      success: 'QR பெறப்பட்டது.',
+      error: 'ஸ்கேன் தோல்வி.',
+      unsupported: 'இந்த உலாவி தானியங்கி QR கேமரா ஸ்கேனை ஆதரிக்கவில்லை. QR மதிப்பை கீழே கைமுறையாக ஒட்டவும்.',
+      manualLabel: 'கைமுறை QR மதிப்பு',
+      manualHint: 'கேமரா கிடைக்காதபோது அல்லது கண்டறிதல் தோல்வியடையும்போது இதைப் பயன்படுத்தவும்.',
+      startCamera: 'கேமராவைத் தொடங்கு',
+      uploadImg: 'படத்தை பதிவேற்று',
+      scanAgain: 'மீண்டும் ஸ்கேன்',
+      submit: 'QR அனுப்பு',
+      close: 'மூடு',
+      stop: 'கேமராவை நிறுத்து',
+      empty: 'முதலில் QR மதிப்பை உள்ளிடவும்.',
+      qrBotHintTitle: 'QR மதிப்பு இல்லையா?',
+    };
+  }
+
   return {
     title: 'Scan Attendance QR',
     desc: 'Open the camera and scan the attendance QR from the lecturer.',

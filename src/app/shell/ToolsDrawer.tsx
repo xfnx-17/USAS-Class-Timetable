@@ -163,9 +163,9 @@ export default function ToolsDrawer({
           >
             <Users className={`w-4 h-4 ${isLight ? 'text-blue-600' : 'text-blue-400/70'}`} />
             <div>
-              <div className="text-xs font-semibold">{lang === 'ms' ? 'Kongsi / Banding Jadual' : 'Share / Compare Schedule'}</div>
+              <div className="text-xs font-semibold">{t('compareTitle')}</div>
               <div className={`text-[10px] ${isLight ? 'text-slate-400' : 'text-white/25'}`}>
-                {lang === 'ms' ? 'Kongsi QR anda atau imbas QR kawan' : 'Share your QR or scan a friend\'s QR'}
+                {t('compareDesc')}
               </div>
             </div>
           </button>
@@ -226,9 +226,9 @@ export default function ToolsDrawer({
           >
             <Moon className={`w-4 h-4 ${isLight ? 'text-amber-600' : 'text-amber-400/60'}`} />
             <div>
-              <div className="text-xs font-semibold">Waktu Solat</div>
+              <div className="text-xs font-semibold">{t('prayerTitle')}</div>
               <div className={`text-[10px] ${isLight ? 'text-slate-400' : 'text-white/25'}`}>
-                {lang === 'ms' ? 'Jadual waktu solat harian' : 'Daily prayer times schedule'}
+                {t('prayerSubtitle')}
               </div>
             </div>
           </button>
@@ -236,7 +236,7 @@ export default function ToolsDrawer({
           {/* Account Section */}
           <p className={`text-[9px] font-semibold uppercase tracking-widest px-2 pt-3 pb-1 ${
             isLight ? 'text-slate-400' : 'text-white/20'
-          }`}>{lang === 'ms' ? 'AKAUN & TETAPAN' : 'ACCOUNT & SETTINGS'}</p>
+          }`}>{t('accountSection')}</p>
 
           <button
             onClick={toggleNotifications}
@@ -247,9 +247,9 @@ export default function ToolsDrawer({
             <div className="flex items-center gap-3">
               <Bell className={`w-4 h-4 ${isLight ? 'text-indigo-500' : 'text-indigo-400/80'}`} />
               <div>
-                <div className="text-xs font-semibold">{lang === 'ms' ? 'Peringatan Kelas' : 'Class Alerts'}</div>
+                <div className="text-xs font-semibold">{t('classAlertsTitle')}</div>
                 <div className={`text-[10px] ${isLight ? 'text-slate-400' : 'text-white/25'}`}>
-                  {lang === 'ms' ? 'Pemberitahuan 15 minit awal' : '15-min early notifications'}
+                  {t('classAlertsDesc')}
                 </div>
               </div>
             </div>
