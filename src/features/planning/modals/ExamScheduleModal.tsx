@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTheme } from '@/app/providers/ThemeProvider';
 import { useModalA11y } from '@/shared/lib/useModalA11y';
 import { useAuth } from '@/app/providers/AuthProvider';
+import { useLanguage } from '@/app/providers/LanguageProvider';
 import { X, FileText, MapPin, Calendar, Clock, AlertCircle } from 'lucide-react';
 import type { TimetableItem } from '@/shared/types/usas';
 
@@ -16,6 +17,7 @@ export default function ExamScheduleModal({ isOpen, onClose, courses = [], isDem
   const modalRef = useModalA11y(isOpen, onClose);
   const { theme } = useTheme();
   const { session } = useAuth();
+  const { t } = useLanguage();
   const isLight = theme === 'light';
   const isDemo = propIsDemo ?? session?.isDemo ?? false;
 
@@ -130,16 +132,16 @@ export default function ExamScheduleModal({ isOpen, onClose, courses = [], isDem
             <div className="text-left min-w-0">
               <div className="flex items-center gap-2">
                 <h3 className={`text-sm sm:text-base font-bold truncate ${isLight ? 'text-slate-800' : 'text-white'}`}>
-                  Jadual Peperiksaan Akhir USAS
+                  {t('examModalTitle')}
                 </h3>
                 {isDemo && (
                   <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                    Mod Demo
+                    {t('demoMode')}
                   </span>
                 )}
               </div>
               <p className={`text-[11px] sm:text-xs font-semibold truncate ${isLight ? 'text-slate-500' : 'text-white/40'}`}>
-                Semakan Tarikh, Dewan Peperiksaan & Nombor Meja
+                {t('examModalDesc')}
               </p>
             </div>
           </div>
@@ -166,13 +168,13 @@ export default function ExamScheduleModal({ isOpen, onClose, courses = [], isDem
               </div>
               <div className="max-w-md space-y-1.5">
                 <h4 className={`text-sm font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>
-                  Jadual Peperiksaan Belum Dikeluarkan
+                  {t('examNotPublishedTitle')}
                 </h4>
                 <p className="text-xs leading-relaxed opacity-80">
-                  Pihak Unit Peperiksaan & Pengijazahan USAS belum menerbitkan jadual waktu, dewan, dan nombor meja peperiksaan akhir bagi semester ini.
+                  {t('examNotPublishedDesc1')}
                 </p>
                 <p className="text-[11px] leading-relaxed opacity-60">
-                  Jadual rasmi kebiasaannya akan diumumkan dan diselaraskan pada penghujung semester (Minggu 12–14). Sila rujuk Kalendar Akademik untuk tarikh minggu peperiksaan rasmi.
+                  {t('examNotPublishedDesc2')}
                 </p>
               </div>
             </div>
@@ -214,7 +216,7 @@ export default function ExamScheduleModal({ isOpen, onClose, courses = [], isDem
                       ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
                       : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                   }`}>
-                    {e.countdownDays} Hari Lagi
+                    {e.countdownDays} {t('examDaysLeft')}
                   </span>
                   <div className="flex flex-col text-right">
                     <span className={`text-[11px] font-semibold flex items-center md:justify-end gap-1 ${

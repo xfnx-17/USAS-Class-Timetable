@@ -113,7 +113,7 @@ export default function PrayerTimesModal({ isOpen, onClose }: PrayerTimesModalPr
   const modalRef = useModalA11y(isOpen, onClose);
   const { session } = useAuth();
   const { theme } = useTheme();
-  const { lang } = useLanguage();
+  const { t } = useLanguage();
   const isLight = theme === 'light';
 
   const [prayers, setPrayers] = useState<FormattedPrayer[]>([]);
@@ -246,9 +246,9 @@ export default function PrayerTimesModal({ isOpen, onClose }: PrayerTimesModalPr
               <Moon className="w-5 h-5" />
             </div>
             <div className="text-left min-w-0 flex-1">
-              <h3 className={`text-sm sm:text-base font-bold truncate ${isLight ? 'text-slate-800' : 'text-white'}`}>Waktu Solat</h3>
+              <h3 className={`text-sm sm:text-base font-bold truncate ${isLight ? 'text-slate-800' : 'text-white'}`}>{t('prayerTitle')}</h3>
               <p className={`text-[11px] sm:text-xs font-semibold truncate ${isLight ? 'text-slate-500' : 'text-white/40'}`}>
-                {lang === 'ms' ? 'Jadual waktu solat harian' : 'Daily prayer times schedule'}
+                {t('prayerSubtitle')}
               </p>
             </div>
           </div>
@@ -262,7 +262,7 @@ export default function PrayerTimesModal({ isOpen, onClose }: PrayerTimesModalPr
                     : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
                 }`}
               >
-                Test Toast
+                {t('prayerTestToast')}
               </button>
             )}
             <button
@@ -289,7 +289,7 @@ export default function PrayerTimesModal({ isOpen, onClose }: PrayerTimesModalPr
           {loading ? (
             <div className="flex flex-col items-center justify-center py-12 gap-3 opacity-50">
               <Clock className={`w-8 h-8 animate-spin ${isLight ? 'text-amber-500' : 'text-amber-400'}`} />
-              <span className={`text-sm ${isLight ? 'text-slate-500' : 'text-white/50'}`}>Loading...</span>
+              <span className={`text-sm ${isLight ? 'text-slate-500' : 'text-white/50'}`}>{t('prayerLoading')}</span>
             </div>
           ) : (
             <div className="space-y-4">
@@ -301,7 +301,7 @@ export default function PrayerTimesModal({ isOpen, onClose }: PrayerTimesModalPr
                   : 'bg-gradient-to-br from-amber-500/[0.04] to-orange-500/[0.02] border-amber-500/15'
               }`}>
                 <div className={`text-[10px] font-bold uppercase tracking-wider mb-0.5 ${isLight ? 'text-amber-600/80' : 'text-amber-400/70'}`}>
-                  {nextPrayer ? `Next Prayer: ${nextPrayer.label}` : 'All Prayers Completed'}
+                  {nextPrayer ? `${t('prayerNextPrefix')}: ${nextPrayer.label}` : t('prayerAllDone')}
                 </div>
                 <div className={`text-4xl font-black tabular-nums tracking-tight ${isLight ? 'text-amber-600' : 'text-amber-400'}`}>
                   {nextPrayer ? formatCountdown(diffSeconds) : '--:--:--'}
@@ -344,7 +344,7 @@ export default function PrayerTimesModal({ isOpen, onClose }: PrayerTimesModalPr
               <div className={`text-center pt-2 pb-1 text-[9px] uppercase tracking-widest font-bold ${
                 isLight ? 'text-slate-400' : 'text-white/30'
               }`}>
-                Powered by API Waktu Solat JAKIM
+                {t('prayerPoweredBy')}
               </div>
               
             </div>

@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Optional Sentry client error tracking (`VITE_SENTRY_DSN`).
 * Friendly error handling with a cached-timetable fallback when the USAS API is unavailable.
 * Basic accessibility improvements (visible keyboard focus, dialog roles, live regions, reduced-motion support).
+* Dialog accessibility: Escape-to-close and focus management for all modals via `useModalA11y`.
+* Full localisation of the lecturer, prayer times, attendance and exam modals (ms/en/zh/ta).
+* Unit tests for API error/outcome handling and the lecturer directory.
+* JavaScript bundle-size budget check (`npm run size`).
 * Scheduled USAS API schema monitor (`scripts/check-usas-schema.mjs`).
 * Complete project documentation suite following open-source repository standards.
 
@@ -32,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Resolved all ESLint warnings across the repository.
 
 ### Changed
+* Deduplicated the global stylesheet.
 * Refactored top navigation with custom language dropdown selector.
 * Standardized theme name to Dark Theme without Navy suffix.
 * Upgraded standalone error pages (404, 500, 502, 503, 504) with dark glassmorphic styling and USAS emblem.
