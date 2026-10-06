@@ -41,11 +41,11 @@ export default function ExamScheduleModal({ isOpen, onClose, courses = [], isDem
 
   if (!shouldRender) return null;
 
-  // Real vs Demo logic.
+  // Real vs Demo Logic.
   // The USAS mobile student backend does NOT expose a per-course final exam
-  // schedule during the early semester, so we only ever surface exam entries
-  // the backend actually returns (e.g. an `exam_date` field) and never invent
-  // fake dates, halls, or seat numbers for a real student account.
+  // schedule during the early semester, so only entries the backend actually
+  // returns (e.g. an `exam_date` field) are shown; fake dates, halls, or seat
+  // numbers are never generated for a real student account.
   const examFields = (course: TimetableItem) => course as unknown as {
     exam_date?: string;
     exam_time?: string;
@@ -206,7 +206,7 @@ export default function ExamScheduleModal({ isOpen, onClose, courses = [], isDem
                   </div>
                 </div>
 
-                {/* Date & Time block */}
+                {/* Date & Time Block */}
                 <div className="flex items-center justify-between md:flex-col md:items-end gap-1.5 border-t md:border-t-0 pt-2 md:pt-0 border-white/5">
                   <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${
                     isLight 

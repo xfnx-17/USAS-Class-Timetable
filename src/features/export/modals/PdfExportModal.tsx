@@ -951,7 +951,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                   </div>
                 </div>
 
-                {/* 3. Tema Jadual Selector */}
+                {/* 3. Timetable Theme Selector */}
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-start relative z-20 min-w-0">
                   <span className={`text-[10px] font-bold uppercase tracking-wider flex-shrink-0 ${isLight ? 'text-amber-800' : 'text-amber-400/90'
                     }`}>{t('tableTheme')}:</span>

@@ -114,7 +114,7 @@ export default function TurnstileCaptcha({
         try {
           window.turnstile.remove(widgetIdRef.current);
         } catch {
-          // Ignore
+          // Ignore cleanup errors
         }
         widgetIdRef.current = null;
       }

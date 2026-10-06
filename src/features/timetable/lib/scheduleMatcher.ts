@@ -8,7 +8,7 @@ export type FreeSlot = {
   endMins: number;
 };
 
-// Map malay days to integers (1=ISNIN, 5=JUMAAT)
+// Map Malay day names to integers (1 = ISNIN, 5 = JUMAAT)
 const dayMap: Record<string, number> = {
   'ISNIN': 1, 'SELASA': 2, 'RABU': 3, 'KHAMIS': 4, 'JUMAAT': 5, 'SABTU': 6, 'AHAD': 0
 };

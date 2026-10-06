@@ -46,7 +46,7 @@ export function formatICSDatetime(dayName: string | undefined, timeStr: IcsTimeI
   const now = new Date();
   const currentDayIndex = now.getDay();
   let daysUntil = (dayIndex - currentDayIndex + 7) % 7;
-  if (daysUntil === 0) daysUntil = 0; // Today or next week
+  if (daysUntil === 0) daysUntil = 0;
 
   const targetDate = new Date(now);
   targetDate.setDate(now.getDate() + daysUntil);

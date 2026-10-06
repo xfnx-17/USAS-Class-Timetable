@@ -99,7 +99,7 @@ export function parseDisplayDate(value?: string): Date | null {
 }
 
 /**
- * Sorts day labels into the canonical Monday→Sunday order. The USAS backend
+ * Sorts day labels into the canonical Monday-to-Sunday order. The USAS backend
  * returns days starting from the current day (e.g. Tuesday first), so this
  * keeps the UI stable regardless of the week offset.
  */

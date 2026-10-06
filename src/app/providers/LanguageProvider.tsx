@@ -28,7 +28,7 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
       try {
         localStorage.setItem('usas_lang', valid);
       } catch {
-        // ignore
+        // ignore storage failures
       }
       return valid;
     });

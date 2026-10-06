@@ -1,7 +1,7 @@
 /**
- * Audio Chime Notifier, Mobile Web Push & PWA Notification App Badge System for USAS Students
- * Generates a clean 3-tone campus chime (C5 -> E5 -> G5) using Web Audio API
- * Manages Mobile App Badge bubble numbers (navigator.setAppBadge)
+ * Class-chime notifier and PWA app-badge helper for USAS students.
+ * Plays a three-tone campus chime (C5 -> E5 -> G5) through the Web Audio API
+ * and manages the mobile app badge count (navigator.setAppBadge).
  */
 
 export function playClassChime(): void {

@@ -88,10 +88,10 @@ async function captureElement(elementRef: ExportElement | null, scale = 2, backg
       clonedRoot.style.animation = 'none';
       clonedRoot.style.filter = 'none';
 
-      // Compensate for html2canvas internal font baseline calculation bug on Windows/Chrome:
-      // We apply translateY(-4px) and display: inline-block directly to the text spans, h1, h2, and p elements
-      // so only the text shifts up, leaving background cards and borders in their exact grid positions.
-      // NOTE: We skip this on Apple devices as iOS Safari handles baselines differently and this hack breaks text kerning/alignment.
+      // Compensate for html2canvas's font-baseline calculation bug on Windows/Chrome:
+      // the text spans, h1, h2, and p elements are shifted up so only the text
+      // moves, keeping background cards and borders in their exact grid positions.
+      // NOTE: Skipped on Apple devices, where iOS Safari handles baselines differently and this correction breaks text alignment.
       const isApple = typeof navigator !== 'undefined' && (/Mac|iPod|iPhone|iPad/.test(navigator.platform) || (/MacIntel/.test(navigator.platform) && navigator.maxTouchPoints > 1) || /iPhone|iPad|iPod/i.test(navigator.userAgent));
 
       // Compensate for html2canvas's font-baseline offset by shifting text up

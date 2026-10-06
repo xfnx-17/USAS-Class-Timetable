@@ -15,7 +15,6 @@ const NOTIFY_WINDOW_SECONDS = 600;
 const PRAYER_NOTIFY_KEY = 'usas_prayer_auto_notify';
 const PRAYER_NOTIFY_EVENT = 'usas-prayer-auto-notify-changed';
 
-// Legacy parser removed since API now uses exact unix timestamps
 
 export const formatCountdown = (diffSeconds: number) => {
   const h = Math.floor(diffSeconds / 3600);

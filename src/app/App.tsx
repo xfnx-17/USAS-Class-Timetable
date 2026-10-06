@@ -108,7 +108,7 @@ function MainContent() {
     }
   }, [session, login]);
 
-  // Keep browser tab title strictly as USAS Class Timetable
+  // Update document title, meta tags, and structured data
   useEffect(() => {
     const title = view === 'login'
       ? 'Login | USAS Class Timetable'

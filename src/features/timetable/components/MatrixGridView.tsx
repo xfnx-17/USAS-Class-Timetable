@@ -198,7 +198,7 @@ export default function MatrixGridView({
               <col key={slot} style={{ width: `${SLOT_COL_WIDTH}px` }} />
             ))}
           </colgroup>
-          {/* Head - Transposed: Waktu slots as columns */}
+          {/* Head - Transposed: Time slots as columns */}
           <thead>
             <tr className={`border-b ${isLight ? 'border-slate-200 bg-slate-50/50' : 'border-white/[0.06]'}`}>
               <th

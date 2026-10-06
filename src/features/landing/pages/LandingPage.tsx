@@ -440,10 +440,10 @@ export default function LandingPage({ onNavigateLogin, onGoToLogin }: LandingPag
 
       {/* Dynamic Background Blurs */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {/* Subtle grid pattern overlay */}
+        {/* Subtle Grid Pattern Overlay */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
 
-        {/* Colorful glowing ambient blobs */}
+        {/* Colorful Glowing Ambient Blobs */}
         <div className={`absolute -top-40 left-1/2 -translate-x-1/2 h-[380px] w-[min(600px,90vw)] rounded-full blur-[120px] opacity-40 ${isLight ? 'bg-gradient-to-tr from-amber-200 to-sky-200' : 'bg-gradient-to-tr from-amber-500/10 to-indigo-500/10'
           }`} />
         <div className={`absolute top-20 right-10 h-80 w-80 rounded-full blur-[100px] opacity-35 ${isLight ? 'bg-amber-200' : 'bg-amber-500/5'
@@ -457,7 +457,7 @@ export default function LandingPage({ onNavigateLogin, onGoToLogin }: LandingPag
         
         <div className="max-w-3xl w-full text-center space-y-6 z-10 relative">
           
-          {/* Eyebrow badge */}
+          {/* Eyebrow Badge */}
           <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-[11px] font-bold tracking-wide transition-all shadow-sm mx-auto animate-fade-in ${isLight ? 'border-amber-300 bg-amber-100 text-amber-800' : 'border-amber-500/20 bg-amber-500/10 text-amber-400'}`}>
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span>{copy.eyebrow}</span>
@@ -498,7 +498,7 @@ export default function LandingPage({ onNavigateLogin, onGoToLogin }: LandingPag
 
         </div>
 
-        {/* Desktop scroll down prompt */}
+        {/* Desktop Scroll-Down Prompt */}
         <div className="hidden lg:flex absolute bottom-5 left-1/2 -translate-x-1/2 flex-col items-center gap-2.5 z-20">
           <span className="text-[9px] font-black tracking-[0.2em] uppercase opacity-60 text-slate-500 dark:text-slate-400 select-none">
             {lang === 'ms' ? 'Skrol ke Bawah' : lang === 'zh' ? '向下滚动' : lang === 'ta' ? 'கீழே உருட்டவும்' : 'Scroll Down'}
@@ -627,7 +627,7 @@ export default function LandingPage({ onNavigateLogin, onGoToLogin }: LandingPag
                 ))}
               </div>
 
-              {/* Mockup footer indicator */}
+              {/* Mockup Footer Indicator */}
               <div
                 className="mt-4 pt-2 border-t border-slate-200/50 dark:border-white/10 flex items-center justify-between text-[8px] font-semibold opacity-40 uppercase tracking-widest"
                 style={{ transform: 'translateZ(20px)' }}
@@ -680,7 +680,7 @@ export default function LandingPage({ onNavigateLogin, onGoToLogin }: LandingPag
 
           <div className="grid gap-4 md:grid-cols-3">
 
-            {/* CARD 1: DOWNLOADABLE FORMATS */}
+            {/* Card 1: Downloadable Formats */}
             <div className={`md:col-span-2 rounded-2xl border p-5 transition-all duration-300 hover:shadow-lg relative overflow-hidden flex flex-col justify-between min-h-[160px] ${isLight ? 'bg-white border-slate-200/60 shadow-sm' : 'bg-white/[0.015] border-white/[0.04] hover:bg-white/[0.025]'
               }`}>
               <div className="space-y-2 max-w-full sm:max-w-[52%]">
@@ -696,7 +696,7 @@ export default function LandingPage({ onNavigateLogin, onGoToLogin }: LandingPag
                 </p>
               </div>
 
-              {/* Graphical Stack representation inside Bento grid card */}
+              {/* Graphical Stack Representation Inside Bento Card */}
               <div className="absolute right-3 bottom-0 top-6 w-32 hidden sm:block pointer-events-none" style={{ perspective: '800px' }}>
                 <div className="absolute right-0 bottom-[-10px] w-14 h-24 rounded-lg bg-amber-500/10 border border-amber-500/20 rotate-[-12deg] shadow-lg flex flex-col p-1 gap-1 text-[4px] leading-none select-none">
                   <div className="h-2 w-full bg-amber-500/20 rounded-sm" />
@@ -714,7 +714,7 @@ export default function LandingPage({ onNavigateLogin, onGoToLogin }: LandingPag
               </div>
             </div>
 
-            {/* CARD 2: CALENDAR SYNC */}
+            {/* Card 2: Calendar Sync */}
             <div className={`md:col-span-1 rounded-2xl border p-5 transition-all duration-300 hover:shadow-lg flex flex-col justify-between min-h-[160px] ${isLight ? 'bg-white border-slate-200/60 shadow-sm' : 'bg-white/[0.015] border-white/[0.04] hover:bg-white/[0.025]'
               }`}>
               <div className="space-y-2">
@@ -731,7 +731,7 @@ export default function LandingPage({ onNavigateLogin, onGoToLogin }: LandingPag
               </div>
             </div>
 
-            {/* CARD 3: WHATSAPP & QR SHARING */}
+            {/* Card 3: WhatsApp & QR Sharing */}
             <div className={`md:col-span-1 rounded-2xl border p-5 transition-all duration-300 hover:shadow-lg flex flex-col justify-between min-h-[160px] ${isLight ? 'bg-white border-slate-200/60 shadow-sm' : 'bg-white/[0.015] border-white/[0.04] hover:bg-white/[0.025]'
               }`}>
               <div className="space-y-2">
@@ -748,7 +748,7 @@ export default function LandingPage({ onNavigateLogin, onGoToLogin }: LandingPag
               </div>
             </div>
 
-            {/* CARD 4: CLASH DETECTION & ATTENDANCE */}
+            {/* Card 4: Clash Detection & Attendance */}
             <div className={`md:col-span-2 rounded-2xl border p-5 transition-all duration-300 hover:shadow-lg relative overflow-hidden flex flex-col justify-between min-h-[160px] ${isLight ? 'bg-white border-slate-200/60 shadow-sm' : 'bg-white/[0.015] border-white/[0.04] hover:bg-white/[0.025]'
               }`}>
               <div className="space-y-2 max-w-full sm:max-w-[52%]">
@@ -764,7 +764,7 @@ export default function LandingPage({ onNavigateLogin, onGoToLogin }: LandingPag
                 </p>
               </div>
 
-              {/* Decorative mini widgets */}
+              {/* Decorative Mini Widgets */}
               <div className="absolute right-5 bottom-4 hidden sm:flex items-center gap-3 pointer-events-none">
                 <div className="px-2 py-1.5 rounded-lg border border-red-500/20 bg-red-500/10 text-red-500 text-[8px] font-bold flex items-center gap-1">
                   <AlertTriangle className="w-3.5 h-3.5" />
@@ -776,7 +776,7 @@ export default function LandingPage({ onNavigateLogin, onGoToLogin }: LandingPag
               </div>
             </div>
 
-            {/* CARD 5: SMART QR ATTENDANCE SCAN */}
+            {/* Card 5: Smart QR Attendance Scan */}
             <div className={`md:col-span-3 rounded-2xl border p-5 transition-all duration-300 hover:shadow-lg relative overflow-hidden flex flex-col justify-between min-h-[140px] ${isLight ? 'bg-white border-slate-200/60 shadow-sm' : 'bg-white/[0.015] border-white/[0.04] hover:bg-white/[0.025]'
               }`}>
               <div className="space-y-2 max-w-full sm:max-w-[70%]">
@@ -792,7 +792,7 @@ export default function LandingPage({ onNavigateLogin, onGoToLogin }: LandingPag
                 </p>
               </div>
 
-              {/* Decorative mini widgets */}
+              {/* Decorative Mini Widgets */}
               <div className="absolute right-6 bottom-4 top-4 hidden sm:flex flex-col items-center justify-center gap-2 pointer-events-none opacity-80">
                 <div className="h-14 w-14 rounded-xl border border-dashed border-amber-500/50 bg-amber-500/5 flex items-center justify-center relative">
                   <div className="absolute top-1 left-1 w-2 h-2 border-t border-l border-amber-500"></div>
@@ -807,7 +807,7 @@ export default function LandingPage({ onNavigateLogin, onGoToLogin }: LandingPag
           </div>
         </div>
 
-        {/* Pasang Aplikasi (PWA) Suggestion Section */}
+        {/* Install App (PWA) Suggestion Section */}
         <div className={`mt-24 rounded-2xl border p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6 justify-between text-center sm:text-left transition-all hover:shadow-lg ${
           isLight 
             ? 'bg-gradient-to-br from-amber-50 to-white border-amber-200/60 shadow-sm' 
@@ -971,7 +971,7 @@ export default function LandingPage({ onNavigateLogin, onGoToLogin }: LandingPag
                   : 'bg-gradient-to-br from-amber-500/[0.02] to-transparent border-white/[0.05] hover:border-white/[0.08]'
           }`}>
             
-            {/* Left Column: Helpdesk info */}
+            {/* Left Column: Helpdesk Information */}
             <div className="flex-1 flex flex-col justify-between text-left space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">

@@ -296,7 +296,7 @@ export default function GpaCalculatorModal({ isOpen, onClose, courses = [] }: Gp
                     <div className="font-bold leading-snug mt-0.5 truncate">{c.course_name || c.kursus}</div>
                   </div>
 
-                  {/* Custom Styled Select wrappers using Chevron and absolute overlays */}
+                  {/* Custom Dropdown Controls */}
                   <div className="flex flex-wrap items-center gap-2.5 sm:justify-end">
                     {/* Credit Selector */}
                     <div className="flex items-center gap-1.5">

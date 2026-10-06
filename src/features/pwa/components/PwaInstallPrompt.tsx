@@ -15,7 +15,7 @@ export default function PwaInstallPrompt() {
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleBeforeInstallPrompt = (e: any) => {
-      // Prevent Chrome 67 and earlier from automatically showing the prompt
+      // Prevent the browser from showing its default install prompt
       e.preventDefault();
       // Stash the event so it can be triggered later.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -48,7 +48,7 @@ export default function PwaInstallPrompt() {
     // Wait for the user to respond to the prompt
     await deferredPrompt.userChoice;
 
-    // We no longer need the prompt. Clear it up
+    // Prompt no longer needed; clear it
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).deferredPrompt = null;
     setDeferredPrompt(null);

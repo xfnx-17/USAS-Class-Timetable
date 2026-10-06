@@ -138,7 +138,7 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
     setEditingCourseId(null);
   };
 
-  // Detect clashes
+  // Filter courses by selected day and search query
   const filteredCourses = useMemo(() => {
     return allCourses.filter(item => {
       const matchesDay = selectedDay === 'ALL' || isSameDay(item.day, selectedDay);
