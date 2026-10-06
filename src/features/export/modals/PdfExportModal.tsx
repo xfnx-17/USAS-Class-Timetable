@@ -1280,12 +1280,6 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
 
                             return (
                               <table className={`w-full h-full table-fixed border-collapse ${style.tableFontSize}`}>
-                                <colgroup>
-                                  <col style={{ width: '38px' }} />
-                                  {hourStarts.map((hourStart) => (
-                                    <col key={hourStart} style={{ width: `${colWidth}px` }} />
-                                  ))}
-                                </colgroup>
                                 <thead>
                                   {(() => {
                                     const headerHeightPx = wallpaperPreset === 'phone' ? 14 : wallpaperPreset === 'square' ? 16 : wallpaperPreset === 'tablet' ? 20 : 18;
@@ -1293,7 +1287,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                       <tr style={{ height: `${headerHeightPx}px` }}>
                                         <th
                                           className={`p-0 font-black uppercase tracking-wider align-middle border-r ${lockscreenConfig.headerBorder} ${lockscreenConfig.headerText}`}
-                                          style={{ height: `${headerHeightPx}px` }}
+                                          style={{ height: `${headerHeightPx}px`, width: '38px' }}
                                         >
                                           <div className="w-full h-full flex items-center justify-center text-center leading-none" style={{ height: `${headerHeightPx}px` }}>
                                             <span className="leading-none">&nbsp;</span>
@@ -1303,7 +1297,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                           <th
                                             key={hourStart}
                                             className={`p-0 font-black uppercase tracking-wider align-middle border-r ${lockscreenConfig.headerBorder} ${lockscreenConfig.headerText}`}
-                                            style={{ height: `${headerHeightPx}px` }}
+                                            style={{ height: `${headerHeightPx}px`, width: `${colWidth}px` }}
                                           >
                                             <div className="w-full h-full flex items-center justify-center text-center leading-none" style={{ height: `${headerHeightPx}px` }}>
                                               <span className="leading-none">{formatWallpaperSlotLabel(hourStart, slotSize)}</span>
@@ -1320,7 +1314,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                       <tr key={d} style={{ height: `${rowHeightPx}px` }} className={`border-t ${lockscreenConfig.cellBorder}`}>
                                         <td
                                           className={`p-0 font-bold border-r ${lockscreenConfig.cellBorder} ${lockscreenConfig.dayText}`}
-                                          style={{ height: `${rowHeightPx}px` }}
+                                          style={{ height: `${rowHeightPx}px`, width: '38px' }}
                                         >
                                           <div className="w-full px-1 flex items-center justify-center text-center" style={{ height: `${rowHeightPx}px` }}>
                                             <span className="text-[10px] break-words whitespace-pre-wrap">{extractDayName(d) ? t(`shortDays.${extractDayName(d)}`) : formatDayDisplay(d, t, { short: true })}</span>
@@ -1341,14 +1335,14 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                                 key={hourStart}
                                                 colSpan={courseSpan}
                                                 className={`border-r align-middle p-0.5 overflow-visible ${lockscreenConfig.cellBorder} ${courseColor.bg} ${courseColor.border}`}
-                                                style={{ height: `${rowHeightPx}px` }}
+                                                style={{ height: `${rowHeightPx}px`, width: `${colWidth * courseSpan}px` }}
                                               >
                                                 {renderWallpaperCourseContent(course, courseSpan, colWidth * courseSpan, rowHeightPx, lockscreenConfig.isLight, style)}
                                               </td>
                                             );
                                           }
                                           return (
-                                            <td key={hourStart} className={`border-r align-middle p-0 ${lockscreenConfig.cellBorder}`} />
+                                            <td key={hourStart} style={{ width: `${colWidth}px` }} className={`border-r align-middle p-0 ${lockscreenConfig.cellBorder}`} />
                                           );
                                         })}
                                       </tr>
