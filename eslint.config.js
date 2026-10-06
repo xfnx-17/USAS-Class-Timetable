@@ -50,6 +50,9 @@ export default [
       'react-hooks/set-state-in-effect': 'off',
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrors: 'none' }],
       'no-unused-vars': 'off',
+      // React Compiler rules: warn only — useful but too strict to block CI here.
+      'react-hooks/preserve-manual-memoization': 'warn',
+      'react-hooks/immutability': 'warn',
     },
   },
   {
