@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/app/providers/AuthProvider';
-import { MOCK_PRAYER_TIMES } from '@/services/usas/Api';
 import { fetchPrayerTimesAPI } from '@/services/jakim/JakimApi';
-import type { PrayerTimeItem, WaktuSolatPrayer } from '@/shared/types/usas';
+import type { WaktuSolatPrayer } from '@/shared/types/usas';
 import { playPrayerChime, sendPushNotification } from '@/shared/lib/audioNotifier';
 import { getLocalDateStamp, pruneDayScopedNotificationKeys } from '@/shared/lib/notificationKeys';
 
@@ -14,6 +13,7 @@ type PrayerData = {
 const NOTIFY_WINDOW_SECONDS = 600;
 const PRAYER_NOTIFY_KEY = 'usas_prayer_auto_notify';
 const PRAYER_NOTIFY_EVENT = 'usas-prayer-auto-notify-changed';
+const PRAYER_NOTIFIED_STORE_KEY = 'usas_prayer_notified_store';
 
 
 export const formatCountdown = (diffSeconds: number) => {
@@ -177,6 +177,27 @@ export function useNextPrayer() {
   return { nextPrayer, diffSeconds, currentPrayer, secondsSinceCurrent, location: prayerData.location };
 }
 
+function readPrayerNotifiedStore(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(PRAYER_NOTIFIED_STORE_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : null;
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, boolean>;
+    }
+  } catch {
+    // Ignore malformed storage.
+  }
+  return {};
+}
+
+function persistPrayerNotifiedStore(store: Record<string, boolean>): void {
+  try {
+    localStorage.setItem(PRAYER_NOTIFIED_STORE_KEY, JSON.stringify(store));
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
 export function PrayerTimesNotifier() {
   const { session } = useAuth();
   const [zone] = usePrayerZone();
@@ -186,7 +207,9 @@ export function PrayerTimesNotifier() {
   });
   const [now, setNow] = useState(new Date());
   const [autoNotifyEnabled] = usePrayerAutoNotifySetting();
-  const notifiedRef = useRef<Record<string, boolean>>({});
+  // Persist the notified keys so a page refresh does not replay the chime for
+  // a prayer that was already announced.
+  const notifiedRef = useRef<Record<string, boolean>>(readPrayerNotifiedStore());
   const activeDayStampRef = useRef('');
 
   useEffect(() => {
@@ -218,6 +241,7 @@ export function PrayerTimesNotifier() {
     if (activeDayStampRef.current === dayStamp) return;
     activeDayStampRef.current = dayStamp;
     notifiedRef.current = pruneDayScopedNotificationKeys(notifiedRef.current, now);
+    persistPrayerNotifiedStore(notifiedRef.current);
   }, [now]);
 
   useEffect(() => {
@@ -225,6 +249,7 @@ export function PrayerTimesNotifier() {
 
     const dayStamp = getLocalDateStamp(now);
     const currentUnix = Math.floor(now.getTime() / 1000);
+    let changed = false;
 
     prayerData.times.forEach((prayer) => {
       const label = prayer.label.toLowerCase();
@@ -233,6 +258,7 @@ export function PrayerTimesNotifier() {
       const notifyKey = `${dayStamp}-${label}-${prayer.timestamp}`;
       if (diff > 0 && diff <= NOTIFY_WINDOW_SECONDS && !notifiedRef.current[notifyKey]) {
         notifiedRef.current[notifyKey] = true;
+        changed = true;
         playPrayerChime();
         sendPushNotification(
           `Waktu Solat USAS: ${prayer.label}`,
@@ -240,6 +266,8 @@ export function PrayerTimesNotifier() {
         );
       }
     });
+
+    if (changed) persistPrayerNotifiedStore(notifiedRef.current);
   }, [autoNotifyEnabled, now, prayerData]);
 
   return null;
