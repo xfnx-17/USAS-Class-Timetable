@@ -1,3 +1,7 @@
 name = "usas-class-timetable"
 compatibility_date = "2026-08-05"
 pages_build_output_dir = "./dist"
+
+[[kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "a9c3713152d145c8b2ac0c2efebf531f"
