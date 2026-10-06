@@ -366,17 +366,17 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex flex-col gap-0.5">
                                 <span className={`text-[10px] font-black tracking-wider ${cardColor.text} flex items-center gap-1.5`}>
+                                  {courseId}
                                   <span
-                                    className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ring-2 ring-white/90 ${
+                                    className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${
                                       courseStatus === 'ongoing'
                                         ? 'bg-emerald-400 animate-pulse'
                                         : courseStatus === 'upcoming'
                                           ? 'bg-amber-400'
-                                          : 'bg-transparent ring-transparent'
+                                          : 'bg-transparent'
                                     }`}
                                     aria-hidden="true"
                                   />
-                                  {courseId}
                                 </span>
                                 <div className={`flex items-center gap-1 text-[9.5px] leading-none ${isLight ? 'text-slate-500 font-semibold' : 'text-white/45'}`}>
                                   <Clock className={`w-3 h-3 flex-shrink-0 self-center ${isLight ? 'text-amber-600' : 'text-amber-400/70'}`} />

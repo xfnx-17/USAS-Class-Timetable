@@ -304,19 +304,19 @@ export default function MatrixGridView({
                               isDimmedRow ? 'opacity-30 blur-[1.5px]' : ''
                             }`}>
                             <div className="flex items-center justify-between gap-1 mb-0.5 min-w-0">
-                              <div className={`font-bold truncate ${courseColor?.text} flex items-center gap-1.5 min-w-0`} style={{ fontSize: fs(12) }}>
+                              <div className={`font-bold ${courseColor?.text} flex items-center gap-1.5 min-w-0`} style={{ fontSize: fs(12) }}>
+                                <span className="truncate">{course.course_id || course.kod_kursus}</span>
                                 <span
-                                  className={`inline-block rounded-full flex-shrink-0 ring-2 ring-white/90 ${
+                                  className={`inline-block rounded-full flex-shrink-0 ${
                                     courseStatus === 'ongoing'
                                       ? 'bg-emerald-400 animate-pulse'
                                       : courseStatus === 'upcoming'
                                         ? 'bg-amber-400'
-                                        : 'bg-transparent ring-transparent'
+                                        : 'bg-transparent'
                                   }`}
                                   style={{ width: fs(8), height: fs(8) }}
                                   aria-hidden="true"
                                 />
-                                <span className="truncate">{course.course_id || course.kod_kursus}</span>
                               </div>
                               {durationText && (
                                 <div className={`font-extrabold uppercase shrink-0 flex items-center justify-center text-center px-1 py-0.5 rounded leading-none ${
