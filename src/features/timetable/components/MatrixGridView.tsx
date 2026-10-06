@@ -294,7 +294,7 @@ export default function MatrixGridView({
                             onMouseLeave={() => setPreview(null)}
                             onFocus={(e) => showPreview(course, e.currentTarget)}
                             onBlur={() => setPreview(null)}
-                            className={`px-2 py-2 rounded-md border h-full flex flex-col justify-between gap-0.5 cursor-pointer outline-none transition-all duration-300 hover:brightness-105 overflow-hidden ${courseColor?.bg} ${courseColor?.border} ${
+                            className={`px-2 py-2 rounded-md border h-full flex flex-col justify-center gap-1 cursor-pointer outline-none transition-all duration-300 hover:brightness-105 overflow-hidden ${courseColor?.bg} ${courseColor?.border} ${
                               isDimmedRow ? 'opacity-30 blur-[1.5px]' : ''
                             } ${
                               courseStatus === 'ongoing'
