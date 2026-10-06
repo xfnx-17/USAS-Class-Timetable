@@ -1,6 +1,6 @@
-import { StudentSession } from '@/shared/types/usas';
+import type { StudentSession, WaktuSolatApiResponse } from '@/shared/types/usas';
 
-export async function fetchPrayerTimesAPI(_session: StudentSession | null, zoneCode: string = 'PRK02'): Promise<{ success: boolean; data?: import('@/shared/types/usas').WaktuSolatApiResponse; location: string }> {
+export async function fetchPrayerTimesAPI(_session: StudentSession | null, zoneCode: string = 'PRK02'): Promise<{ success: boolean; data?: WaktuSolatApiResponse; location: string }> {
   try {
     const res = await fetch(`https://api.waktusolat.app/v2/solat/${zoneCode}`);
     if (!res.ok) throw new Error('API returned ' + res.status);

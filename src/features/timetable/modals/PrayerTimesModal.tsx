@@ -109,9 +109,9 @@ function PrayerZoneDropdown({
 }
 
 export default function PrayerTimesModal({ isOpen, onClose }: PrayerTimesModalProps) {
-  const { session, timetableData } = useAuth();
+  const { session } = useAuth();
   const { theme } = useTheme();
-  const { lang, t } = useLanguage();
+  const { lang } = useLanguage();
   const isLight = theme === 'light';
 
   const [prayers, setPrayers] = useState<FormattedPrayer[]>([]);
@@ -207,51 +207,16 @@ export default function PrayerTimesModal({ isOpen, onClose }: PrayerTimesModalPr
   // Recalculate passed/next dynamically based on current `now`
   const dynamicPrayers = React.useMemo(() => {
     const currentUnix = Math.floor(now.getTime() / 1000);
-    let foundNext = false;
-    return prayers.map(p => {
-      const passed = p.unix <= currentUnix;
-      let isNext = false;
-      if (!passed && !foundNext) {
-        isNext = true;
-        foundNext = true;
-      }
-      return { ...p, passed, isNext };
-    });
+    const nextIndex = prayers.findIndex(p => p.unix > currentUnix);
+    return prayers.map((p, index) => ({
+      ...p,
+      passed: p.unix <= currentUnix,
+      isNext: index === nextIndex,
+    }));
   }, [prayers, now]);
 
   const nextPrayer = dynamicPrayers.find(p => p.isNext);
   const diffSeconds = nextPrayer ? nextPrayer.unix - Math.floor(now.getTime() / 1000) : 0;
-
-  const dayNames = ['AHAD', 'ISNIN', 'SELASA', 'RABU', 'KHAMIS', 'JUMAAT', 'SABTU'];
-  const currentDayName = dayNames[now.getDay()];
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
-  const currentSeconds = currentMinutes * 60 + now.getSeconds();
-
-  const parseTimeToMinutes = (timeStr: string | undefined) => {
-    if (!timeStr) return 0;
-    const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
-    if (!match) return 0;
-    let h = parseInt(match[1], 10);
-    const m = parseInt(match[2], 10);
-    const ampm = match[3]?.toUpperCase();
-    if (ampm === 'PM' && h < 12) h += 12;
-    if (ampm === 'AM' && h === 12) h = 0;
-    return h * 60 + m;
-  };
-
-  const parseTimeToSeconds = (timeStr: string | undefined) => {
-    if (!timeStr) return 0;
-    const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
-    if (!match) return 0;
-    let h = parseInt(match[1], 10);
-    const m = parseInt(match[2], 10);
-    const ampm = match[3]?.toUpperCase();
-    if (ampm === 'PM' && h < 12) h += 12;
-    if (ampm === 'AM' && h === 12) h = 0;
-    return h * 3600 + m * 60;
-  };
-
-
 
   if (!shouldRender) return null;
 

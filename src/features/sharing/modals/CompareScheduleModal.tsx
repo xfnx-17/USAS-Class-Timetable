@@ -21,7 +21,7 @@ type ScanState = 'idle' | 'scanning' | 'processing' | 'success' | 'error';
 
 export default function CompareScheduleModal({ isOpen, onClose, initialSharedData }: CompareScheduleModalProps) {
   const { timetableData, session } = useAuth();
-  const { lang, t } = useLanguage();
+  const { lang } = useLanguage();
   const { theme } = useTheme();
 
   const isLight = theme === 'light';

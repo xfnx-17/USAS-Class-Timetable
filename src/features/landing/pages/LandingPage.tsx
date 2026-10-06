@@ -415,10 +415,6 @@ export default function LandingPage({ onNavigateLogin, onGoToLogin }: LandingPag
 
   const isLight = theme === THEMES.LIGHT;
 
-  // Compute scroll progress (0 to 450px scroll range)
-  const scrollRange = 450;
-  const progress = Math.min(1, scrollY / scrollRange);
-
   const copy = LANDING_COPY[lang] || LANDING_COPY.en;
   const steps = copy.steps;
 
@@ -1104,7 +1100,7 @@ export default function LandingPage({ onNavigateLogin, onGoToLogin }: LandingPag
       {/* Floating Scroll-to-Top Button */}
       <button
         onClick={() => {
-          const lenis = (window as any).usasLenis;
+          const lenis = (window as Window & { usasLenis?: { scrollTo: (target: number, options?: { duration?: number }) => void } }).usasLenis;
           if (lenis) {
             lenis.scrollTo(0, { duration: 1.5 });
           } else {

@@ -36,12 +36,15 @@ export default function TurnstileCaptcha({
   onExpire,
   onError,
   theme = 'auto',
-  siteKey = (import.meta as any).env?.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA',
+  siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA',
   className = '',
   size = 'flexible',
 }: TurnstileCaptchaProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const widgetIdRef = useRef<string | null>(null);
+  const onVerifyRef = useRef(onVerify);
+  const onExpireRef = useRef(onExpire);
+  const onErrorRef = useRef(onError);
   const [isScriptReady, setIsScriptReady] = useState(() => typeof window !== 'undefined' && !!window.turnstile);
 
   useEffect(() => {
@@ -76,6 +79,10 @@ export default function TurnstileCaptcha({
     }
   }, []);
 
+  useEffect(() => { onVerifyRef.current = onVerify; }, [onVerify]);
+  useEffect(() => { onExpireRef.current = onExpire; }, [onExpire]);
+  useEffect(() => { onErrorRef.current = onError; }, [onError]);
+
   useEffect(() => {
     if (!isScriptReady || !containerRef.current || !window.turnstile) return;
 
@@ -95,13 +102,13 @@ export default function TurnstileCaptcha({
         theme,
         size,
         callback: (token: string) => {
-          onVerify(token);
+          onVerifyRef.current(token);
         },
         'expired-callback': () => {
-          onExpire?.();
+          onExpireRef.current?.();
         },
         'error-callback': () => {
-          onError?.();
+          onErrorRef.current?.();
         },
       });
       widgetIdRef.current = widgetId;
@@ -119,7 +126,7 @@ export default function TurnstileCaptcha({
         widgetIdRef.current = null;
       }
     };
-  }, [isScriptReady, theme, siteKey]);
+  }, [isScriptReady, theme, siteKey, size]);
 
   return (
     <div className={`w-full flex items-center my-2 min-h-[65px] ${className || 'justify-center'}`}>

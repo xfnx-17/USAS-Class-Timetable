@@ -20,7 +20,7 @@ describe('translations', () => {
 
   it('has non-empty string values for all top-level keys', () => {
     for (const lang of languages) {
-      for (const [key, value] of Object.entries(translations[lang])) {
+      for (const value of Object.values(translations[lang])) {
         if (typeof value === 'object' && value !== null) {
           expect(Object.keys(value).length).toBeGreaterThan(0);
         } else {

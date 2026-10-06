@@ -200,7 +200,7 @@ export async function onRequest(context: { request: Request }) {
   const { request } = context;
   const payload = request.method === 'POST' ? await readPayload(request) : null;
 
-  console.log('agent-intake', {
+  console.warn('agent-intake', {
     method: request.method,
     headers: {
       'user-agent': readHeader(request, 'user-agent'),

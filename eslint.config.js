@@ -77,6 +77,14 @@ export default [
     },
   },
   {
+    // Providers intentionally colocate their context hook/constants with the
+    // provider component, so React Fast Refresh cannot split them.
+    files: ['src/app/providers/**/*.{ts,tsx}', 'src/features/timetable/components/PrayerTimesWidget.tsx'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
+  {
     files: ['src/context/*.{ts,tsx}'],
     rules: {
       'react-refresh/only-export-components': 'off',

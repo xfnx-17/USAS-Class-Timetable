@@ -60,7 +60,12 @@ function wantsHtml(request: Request): boolean {
   return accept.includes('text/html');
 }
 
-export async function onRequest(context: any) {
+type PagesContext = {
+  request: Request;
+  env?: { TURNSTILE_SECRET_KEY?: string };
+};
+
+export async function onRequest(context: PagesContext) {
   if (!isAllowedUsasMethod(context.request.method)) {
     return jsonResponse({ success: false, error: 'Method not allowed.' }, 405);
   }
