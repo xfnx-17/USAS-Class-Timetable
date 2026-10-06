@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import jsQR from 'jsqr';
-import { Camera, AlertTriangle, QrCode, ScanLine, X, Upload, Square, Info } from 'lucide-react';
+import { Camera, AlertTriangle, QrCode, ScanLine, X, Upload, Square, Info, Maximize, Minimize, ZoomIn, ZoomOut } from 'lucide-react';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { useLanguage } from '@/app/providers/LanguageProvider';
 import { useTheme } from '@/app/providers/ThemeProvider';
@@ -76,6 +76,10 @@ export default function AttendanceScanModal({ isOpen, onClose, onSuccessfulScan 
   const [scanState, setScanState] = useState<ScanState>('idle');
   const [statusMessage, setStatusMessage] = useState(copy.desc);
   const [manualQr, setManualQr] = useState('');
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [maxZoom, setMaxZoom] = useState(3);
+  const [supportsNativeZoom, setSupportsNativeZoom] = useState(false);
 
   const mountedRef = useRef(true);
   const activeRef = useRef(false);
@@ -85,6 +89,8 @@ export default function AttendanceScanModal({ isOpen, onClose, onSuccessfulScan 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const zoomRef = useRef(1);
+  const nativeZoomRef = useRef<{ min: number; max: number; step?: number } | null>(null);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -164,6 +170,7 @@ export default function AttendanceScanModal({ isOpen, onClose, onSuccessfulScan 
   };
 
   const submitQrValue = async (rawValue: string) => {
+    setIsFullscreen(false);
     const qrValue = sanitizeSingleLine(rawValue, 2048);
     if (!qrValue) {
       setScanState('error');
@@ -214,9 +221,17 @@ export default function AttendanceScanModal({ isOpen, onClose, onSuccessfulScan 
         return;
       }
 
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const z = nativeZoomRef.current ? 1 : zoomRef.current;
+      const srcW = video.videoWidth;
+      const srcH = video.videoHeight;
+      const cropW = Math.max(1, Math.round(srcW / z));
+      const cropH = Math.max(1, Math.round(srcH / z));
+      const sx = (srcW - cropW) / 2;
+      const sy = (srcH - cropH) / 2;
+
+      canvas.width = cropW;
+      canvas.height = cropH;
+      context.drawImage(video, sx, sy, cropW, cropH, 0, 0, cropW, cropH);
 
       const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
       const code = jsQR(imageData.data, imageData.width, imageData.height, {
@@ -268,6 +283,21 @@ export default function AttendanceScanModal({ isOpen, onClose, onSuccessfulScan 
       streamRef.current = stream;
       activeRef.current = true;
 
+      setZoom(1);
+      zoomRef.current = 1;
+
+      const track = stream.getVideoTracks()[0];
+      const caps = track?.getCapabilities?.() as (MediaTrackCapabilities & { zoom?: { min: number; max: number; step?: number } }) | undefined;
+      if (caps?.zoom && typeof caps.zoom.max === 'number' && caps.zoom.max > caps.zoom.min) {
+        nativeZoomRef.current = caps.zoom;
+        setSupportsNativeZoom(true);
+        setMaxZoom(Math.max(3, Math.round(caps.zoom.max)));
+      } else {
+        nativeZoomRef.current = null;
+        setSupportsNativeZoom(false);
+        setMaxZoom(4);
+      }
+
       const video = videoRef.current;
       if (video) {
         video.srcObject = stream;
@@ -285,11 +315,27 @@ export default function AttendanceScanModal({ isOpen, onClose, onSuccessfulScan 
     }
   };
 
+  const applyZoom = (value: number) => {
+    const clamped = Math.min(maxZoom, Math.max(1, value));
+    setZoom(clamped);
+    zoomRef.current = clamped;
+
+    const native = nativeZoomRef.current;
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (native && track) {
+      const ratio = maxZoom > 1 ? (clamped - 1) / (maxZoom - 1) : 0;
+      const nativeValue = native.min + (native.max - native.min) * ratio;
+      type ZoomConstraint = MediaTrackConstraintSet & { zoom: number };
+      track.applyConstraints({ advanced: [{ zoom: nativeValue }] as ZoomConstraint[] }).catch(() => undefined);
+    }
+  };
+
   useEffect(() => {
     mountedRef.current = true;
 
     if (isOpen) {
       setShouldRender(true);
+      setIsFullscreen(false);
       setAnimate(false);
       let raf1 = 0;
       let raf2 = 0;
@@ -306,6 +352,7 @@ export default function AttendanceScanModal({ isOpen, onClose, onSuccessfulScan 
     }
 
     setAnimate(false);
+    setIsFullscreen(false);
     stopCamera();
     const timer = window.setTimeout(() => setShouldRender(false), 220);
     return () => window.clearTimeout(timer);
@@ -326,7 +373,7 @@ export default function AttendanceScanModal({ isOpen, onClose, onSuccessfulScan 
   return (
     <div data-testid="attendance-scan-modal" className={`fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-md transition-all duration-200 touch-pan-y overscroll-contain ${animate ? 'bg-slate-900/35 opacity-100' : 'bg-slate-900/0 opacity-0 pointer-events-none'
       }`}>
-      <div className={`flex flex-col w-full max-w-[96vw] sm:max-w-md max-h-[92dvh] rounded-2xl border transition-all duration-300 transform shadow-2xl backdrop-blur-xl overflow-hidden min-h-0 ${animate ? 'scale-100 opacity-100' : 'scale-[0.98] opacity-0'
+      <div className={`flex flex-col w-full rounded-2xl border transition-all duration-300 shadow-2xl overflow-hidden min-h-0 ${isFullscreen ? '' : 'max-w-[96vw] sm:max-w-md max-h-[92dvh] transform backdrop-blur-xl'} ${isFullscreen ? '' : animate ? 'scale-100 opacity-100' : 'scale-[0.98] opacity-0'
         } ${isLight ? 'bg-white/95 border-slate-200 text-slate-800' : 'bg-[#0A1428]/95 border-white/[0.08] shadow-black/40 text-white'
         }`}>
 
@@ -362,14 +409,49 @@ export default function AttendanceScanModal({ isOpen, onClose, onSuccessfulScan 
         <div data-lenis-prevent className="p-4 flex-1 overflow-y-auto min-h-0 flex flex-col gap-4 touch-pan-y overscroll-contain">
 
           {showCamera && (
-            <div className={`flex-shrink-0 rounded-2xl border overflow-hidden ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-black/40 border-white/10'
-              }`}>
-              <div className="relative h-48 sm:h-56 bg-black flex items-center justify-center">
-                <video ref={videoRef} className="absolute inset-0 h-full w-full object-cover" playsInline muted />
+            <div className={isFullscreen
+              ? 'fixed inset-0 z-[100] bg-black flex items-center justify-center'
+              : `flex-shrink-0 rounded-2xl border overflow-hidden ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-black/40 border-white/10'}`
+            }>
+              <div className={`relative bg-black flex items-center justify-center overflow-hidden ${isFullscreen ? 'w-full h-full' : 'h-48 sm:h-56 w-full'}`}>
+                <video
+                  ref={videoRef}
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-150 will-change-transform"
+                  style={supportsNativeZoom ? undefined : { transform: `scale(${zoom})` }}
+                  playsInline
+                  muted
+                />
                 <div className="absolute inset-0 pointer-events-none bg-black/10" />
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none p-4">
-                  <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-xl border-2 border-white/30 border-dashed" />
+                  <div className={`rounded-xl border-2 border-white/30 border-dashed ${isFullscreen ? 'w-56 h-56 sm:w-64 sm:h-64' : 'w-32 h-32 sm:w-40 sm:h-40'}`} />
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsFullscreen((v) => !v)}
+                  className="absolute top-2 right-2 p-2 rounded-lg bg-black/50 text-white/80 hover:text-white hover:bg-black/70 backdrop-blur-sm transition-colors"
+                  aria-label={isFullscreen ? (lang === 'ms' ? 'Keluar skrin penuh' : 'Exit fullscreen') : (lang === 'ms' ? 'Skrin penuh' : 'Fullscreen')}
+                >
+                  {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+                </button>
+
+                {(scanState === 'scanning' || scanState === 'starting') && (
+                  <div className={`absolute left-0 right-0 flex items-center gap-2 px-3 ${isFullscreen ? 'bottom-5' : 'bottom-2'}`}>
+                    <ZoomOut className="w-4 h-4 text-white/70 flex-shrink-0" />
+                    <input
+                      type="range"
+                      min={1}
+                      max={maxZoom}
+                      step={0.1}
+                      value={zoom}
+                      onChange={(e) => applyZoom(parseFloat(e.target.value))}
+                      className="flex-1 h-1 cursor-pointer accent-amber-400"
+                      aria-label={lang === 'ms' ? 'Zum kamera' : 'Camera zoom'}
+                    />
+                    <ZoomIn className="w-4 h-4 text-white/70 flex-shrink-0" />
+                    <span className="text-[10px] font-mono text-white/70 w-8 text-right flex-shrink-0">{zoom.toFixed(1)}x</span>
+                  </div>
+                )}
               </div>
             </div>
           )}
