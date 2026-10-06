@@ -3,20 +3,10 @@ import { getUsasProxyPath, isAllowedUsasMethod } from '../../../src/shared/lib/u
 const API_ORIGIN = 'https://mobile.usas.edu.my/umc_v2';
 const LOGIN_PATH = '/student/login_student.php';
 const TURNSTILE_VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
-const RATE_LIMIT_WINDOW_SECONDS = 60;
-const RATE_LIMIT_MAX_REQUESTS = 60;
-
-type RateLimitKV = {
-  get(key: string): Promise<string | null>;
-  put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
-};
 
 type PagesContext = {
   request: Request;
-  env?: {
-    TURNSTILE_SECRET_KEY?: string;
-    RATE_LIMIT_KV?: RateLimitKV;
-  };
+  env?: { TURNSTILE_SECRET_KEY?: string };
 };
 
 function buildUpstreamUrl(request: Request): string | null {
@@ -26,31 +16,15 @@ function buildUpstreamUrl(request: Request): string | null {
   return `${API_ORIGIN}${cleanPath}${url.search}`;
 }
 
-function jsonResponse(body: unknown, status: number, extraHeaders: Record<string, string> = {}): Response {
+function jsonResponse(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       'content-type': 'application/json; charset=utf-8',
       'cache-control': 'no-store',
       'x-content-type-options': 'nosniff',
-      ...extraHeaders,
     },
   });
-}
-
-// Fixed-window counter backed by a KV namespace. Reads/writes are best-effort:
-// if the namespace is not bound (e.g. local dev) or fails, requests are allowed.
-async function isRateLimited(kv: RateLimitKV, key: string): Promise<boolean> {
-  const bucket = Math.floor(Date.now() / (RATE_LIMIT_WINDOW_SECONDS * 1000));
-  const counterKey = `rl:${key}:${bucket}`;
-  try {
-    const current = Number(await kv.get(counterKey)) || 0;
-    if (current >= RATE_LIMIT_MAX_REQUESTS) return true;
-    await kv.put(counterKey, String(current + 1), { expirationTtl: RATE_LIMIT_WINDOW_SECONDS * 2 });
-    return false;
-  } catch {
-    return false;
-  }
 }
 
 async function verifyTurnstileToken(token: string, secret: string, ip?: string): Promise<boolean> {
@@ -103,17 +77,6 @@ export async function onRequest(context: PagesContext) {
   }
 
   const ip = context.request.headers.get('cf-connecting-ip') || 'unknown';
-
-  // Best-effort per-IP rate limiting when the KV namespace is bound.
-  const limiter = context.env?.RATE_LIMIT_KV;
-  if (limiter && (await isRateLimited(limiter, ip))) {
-    console.warn('usas-proxy rate limited', { ip, path: cleanPath });
-    return jsonResponse(
-      { success: false, error: 'Terlalu banyak permintaan. Sila cuba sebentar lagi.' },
-      429,
-      { 'retry-after': String(RATE_LIMIT_WINDOW_SECONDS) },
-    );
-  }
 
   // Verify the Cloudflare Turnstile token on login before proxying upstream.
   // Skipped only when the secret is not configured (e.g. local dev).

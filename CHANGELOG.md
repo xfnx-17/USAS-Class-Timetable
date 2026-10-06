@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Server-side Cloudflare Turnstile verification on login (token checked in the Pages Function).
 * Cloudflare Pages Function proxy for the USAS API (`/api/usas/*`).
 * Lecturer directory lookup — official e-mail, position and extension fetched on demand.
-* Best-effort per-IP rate limiting and structured logging in the API proxy.
+* Structured logging in the API proxy.
 * Optional Sentry client error tracking (`VITE_SENTRY_DSN`).
 * Complete project documentation suite following open-source repository standards.
 

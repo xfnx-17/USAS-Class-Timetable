@@ -131,16 +131,9 @@ Both hosts can serve the static `dist/` output. However, real API login depends 
 
 ### API rate limiting
 
-The Pages Function applies a best-effort per-IP limit (60 requests / minute) whenever a KV namespace named `RATE_LIMIT_KV` is bound. If the binding is missing, the limiter is skipped automatically.
+Login abuse is mitigated by server-side Cloudflare Turnstile verification. Cloudflare Pages Functions do not support Worker rate-limiting bindings, and the app's custom domain does not need to be hosted on Cloudflare DNS.
 
-1. Create a KV namespace:
-   ```bash
-   npx wrangler kv namespace create RATE_LIMIT_KV
-   ```
-2. Cloudflare dashboard → your Pages project → **Settings → Functions → KV namespace bindings** → add binding `RATE_LIMIT_KV` for **Production** and **Preview**.
-3. Redeploy.
-
-For a hard limit at the edge, also add a **WAF Rate limiting rule** (Cloudflare dashboard → your domain → **Security → WAF → Rate limiting rules**): match path `/api/usas/*`, e.g. 60 requests/minute per IP, action **Block**.
+If your domain is proxied through Cloudflare, you can add an additional edge limit via **Security → WAF → Rate limiting rules** matching `/api/usas/*`.
 
 ### Monitoring
 
