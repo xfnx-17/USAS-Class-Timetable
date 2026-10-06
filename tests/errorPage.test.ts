@@ -1,15 +1,37 @@
 import { describe, expect, it } from 'vitest';
 import { normalizeSafeHref } from '../src/shared/lib/errorPage';
 
-describe('error page href safety', () => {
-  it('allows same-origin relative links', () => {
-    expect(normalizeSafeHref('/login', 'https://example.com')).toBe('/login');
-    expect(normalizeSafeHref('offline.html', 'https://example.com')).toBe('/offline.html');
+describe('errorPage', () => {
+  const BASE = 'https://jadualkelas.zis3c.dev';
+
+  it('returns the path for a valid same-origin URL', () => {
+    expect(normalizeSafeHref('/app', BASE)).toBe('/app');
+    expect(normalizeSafeHref('/app?foo=bar', BASE)).toBe('/app?foo=bar');
+    expect(normalizeSafeHref('/app#section', BASE)).toBe('/app#section');
   });
 
-  it('rejects unsafe or cross-origin links', () => {
-    expect(normalizeSafeHref('javascript:alert(1)', 'https://example.com')).toBeNull();
-    expect(normalizeSafeHref('data:text/html,alert(1)', 'https://example.com')).toBeNull();
-    expect(normalizeSafeHref('https://evil.com/login', 'https://example.com')).toBeNull();
+  it('returns null for cross-origin URLs', () => {
+    expect(normalizeSafeHref('https://evil.com/path', BASE)).toBeNull();
+    expect(normalizeSafeHref('https://jadualkelas.zis3c.dev.evil.com', BASE)).toBeNull();
+  });
+
+  it('returns null for non-http protocols', () => {
+    expect(normalizeSafeHref('javascript:alert(1)', BASE)).toBeNull();
+    expect(normalizeSafeHref('data:text/html,<h1>x</h1>', BASE)).toBeNull();
+    expect(normalizeSafeHref('file:///etc/passwd', BASE)).toBeNull();
+  });
+
+  it('returns null for empty or invalid input', () => {
+    expect(normalizeSafeHref('', BASE)).toBeNull();
+    expect(normalizeSafeHref('   ', BASE)).toBeNull();
+  });
+
+  it('handles relative paths', () => {
+    expect(normalizeSafeHref('app', BASE)).toBe('/app');
+    expect(normalizeSafeHref('./app', BASE)).toBe('/app');
+  });
+
+  it('preserves query strings and hashes', () => {
+    expect(normalizeSafeHref('/app?x=1&y=2#top', BASE)).toBe('/app?x=1&y=2#top');
   });
 });
