@@ -1,8 +1,9 @@
 # USAS Class Timetable
 
+![CI](https://github.com/zis3c/USAS-Class-Timetable/actions/workflows/ci.yml/badge.svg)
 ![React](https://img.shields.io/badge/React-18.x-61DAFB?logo=react&logoColor=black)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-5.x-646CFF?logo=vite&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-6.x-3178C6?logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-8.x-646CFF?logo=vite&logoColor=white)
 ![Tailwind](https://img.shields.io/badge/Tailwind_CSS-3.x-38B2AC?logo=tailwindcss&logoColor=white)
 ![PWA](https://img.shields.io/badge/PWA-Ready-orange?logo=pwa&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
