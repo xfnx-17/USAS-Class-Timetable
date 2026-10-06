@@ -1300,7 +1300,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                             style={{ height: `${headerHeightPx}px`, width: `${colWidth}px` }}
                                           >
                                             <div className="w-full h-full flex items-center justify-center text-center leading-none" style={{ height: `${headerHeightPx}px` }}>
-                                              <span className="leading-none">{formatWallpaperSlotLabel(hourStart, slotSize)}</span>
+                                              <span data-export-time-label className="leading-none">{formatWallpaperSlotLabel(hourStart, slotSize)}</span>
                                             </div>
                                           </th>
                                         ))}

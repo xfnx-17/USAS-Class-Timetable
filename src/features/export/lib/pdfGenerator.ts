@@ -89,13 +89,12 @@ async function captureElement(elementRef: ExportElement | null, scale = 2, backg
       clonedRoot.style.animation = 'none';
       clonedRoot.style.filter = 'none';
 
-      // Compensate for html2canvas's font-baseline offset in formal exports.
-      // Wallpaper skips this correction because it displaces its small labels.
+      // Compensate for html2canvas's font-baseline offset. Wallpaper only needs it on time labels.
       const isApple = typeof navigator !== 'undefined' && (/Mac|iPod|iPhone|iPad/.test(navigator.platform) || (/MacIntel/.test(navigator.platform) && navigator.maxTouchPoints > 1) || /iPhone|iPad|iPod/i.test(navigator.userAgent));
 
-      if (!isApple && !isWallpaper) {
+      if (!isApple) {
         const view = clonedDoc.defaultView || window;
-        const textNodes = clonedRoot.querySelectorAll('span, h1, h2, p');
+        const textNodes = clonedRoot.querySelectorAll(isWallpaper ? '[data-export-time-label]' : 'span, h1, h2, p');
         textNodes.forEach((node) => {
           const el = node as HTMLElement;
           if (el.tagName.toLowerCase() === 'span') {
