@@ -7,6 +7,7 @@
     "dev": "vite",
     "dev:cf": "npm run build && npx wrangler pages dev dist",
     "build": "vite build",
+    "size": "node scripts/check-bundle-size.mjs",
     "preview": "vite preview",
     "preview:cf": "npm run build && npx wrangler pages dev dist",
     "deploy:cf": "npm run build && npx wrangler pages deploy dist",
@@ -17,7 +18,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:unit": "vitest run",
-    "test:strict": "npm run lint && npm run typecheck && npm run test:unit && npm run build",
+    "test:strict": "npm run lint && npm run typecheck && npm run test:unit && npm run build && npm run size",
     "test:e2e": "playwright test --reporter=line",
     "test:all": "npm run test:strict && npm run test:e2e"
   },
