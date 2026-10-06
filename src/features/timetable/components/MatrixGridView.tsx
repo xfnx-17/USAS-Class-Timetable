@@ -302,16 +302,21 @@ export default function MatrixGridView({
                             onBlur={() => setPreview(null)}
                             className={`px-2 py-2 rounded-md border h-full flex flex-col justify-center gap-1 cursor-pointer outline-none transition-all duration-300 hover:brightness-105 overflow-hidden ${courseColor?.bg} ${courseColor?.border} ${
                               isDimmedRow ? 'opacity-30 blur-[1.5px]' : ''
-                            } ${
-                              courseStatus === 'ongoing'
-                                ? 'ring-1 ring-emerald-400/70 shadow-[0_0_16px_rgba(52,211,153,0.20)]'
-                                : courseStatus === 'upcoming'
-                                  ? 'ring-1 ring-amber-300/60 shadow-[0_0_14px_rgba(251,191,36,0.16)] animate-[pulse_4s_ease-in-out_infinite]'
-                                  : ''
                             }`}>
                             <div className="flex items-center justify-between gap-1 mb-0.5 min-w-0">
-                              <div className={`font-bold truncate ${courseColor?.text}`} style={{ fontSize: fs(12) }}>
-                                {course.course_id || course.kod_kursus}
+                              <div className={`font-bold truncate ${courseColor?.text} flex items-center gap-1.5 min-w-0`} style={{ fontSize: fs(12) }}>
+                                <span
+                                  className={`inline-block rounded-full flex-shrink-0 ring-2 ring-white/90 ${
+                                    courseStatus === 'ongoing'
+                                      ? 'bg-emerald-400 animate-pulse'
+                                      : courseStatus === 'upcoming'
+                                        ? 'bg-amber-400'
+                                        : 'bg-transparent ring-transparent'
+                                  }`}
+                                  style={{ width: fs(8), height: fs(8) }}
+                                  aria-hidden="true"
+                                />
+                                <span className="truncate">{course.course_id || course.kod_kursus}</span>
                               </div>
                               {durationText && (
                                 <div className={`font-extrabold uppercase shrink-0 flex items-center justify-center text-center px-1 py-0.5 rounded leading-none ${
@@ -377,7 +382,7 @@ export default function MatrixGridView({
             </div>
             <div className={`flex items-center gap-1.5 text-[10.5px] ${isLight ? 'text-slate-500' : 'text-white/50'}`}>
               <GraduationCap className="w-3 h-3 flex-shrink-0 text-amber-500" />
-              <span className="truncate">{t('group')}: {(preview.course.group || preview.course.kumpulan || 'A').replace(/^GRP/i, 'G')}</span>
+              <span className="truncate">{t('group')}: {(preview.course.group || preview.course.kumpulan || '').replace(/^GRP/i, 'G') || '—'}</span>
             </div>
             <div className={`flex items-center gap-1.5 text-[10.5px] ${isLight ? 'text-slate-500' : 'text-white/50'}`}>
               <MapPin className="w-3 h-3 flex-shrink-0" style={{ color: '#ed4134' }} />

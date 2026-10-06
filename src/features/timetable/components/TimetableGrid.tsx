@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { useLanguage } from '@/app/providers/LanguageProvider';
 import { useTheme } from '@/app/providers/ThemeProvider';
@@ -108,7 +108,7 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
   const [noteInput, setNoteInput] = useState('');
 
   const normalizeGroup = (groupStr?: string) => {
-    if (!groupStr) return 'G1';
+    if (!groupStr) return '';
     return groupStr.replace(/^GRP/i, 'G');
   };
 
@@ -345,13 +345,7 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
                     return (
                       <div
                         key={cardKey}
-                        className={`rounded-lg border border-l-2 transition-all duration-300 flex flex-col ${cardColor.accent} ${cardColor.border} ${cardColor.bg} hover:brightness-105 shadow-sm ${
-                          courseStatus === 'ongoing'
-                            ? 'ring-1 ring-emerald-400/70 shadow-[0_0_18px_rgba(52,211,153,0.22)]'
-                            : courseStatus === 'upcoming'
-                              ? 'ring-1 ring-amber-300/60 shadow-[0_0_16px_rgba(251,191,36,0.18)] animate-[pulse_4s_ease-in-out_infinite]'
-                              : ''
-                        }`}
+                        className={`rounded-lg border border-l-2 transition-all duration-300 flex flex-col ${cardColor.accent} ${cardColor.border} ${cardColor.bg} hover:brightness-105 shadow-sm`}
                       >
                         {/* Card Header - Click to expand/collapse independently */}
                         <div 
@@ -371,7 +365,19 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
                             {/* Card Header Top Row */}
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex flex-col gap-0.5">
-                                <span className={`text-[10px] font-black tracking-wider ${cardColor.text}`}>{courseId}</span>
+                                <span className={`text-[10px] font-black tracking-wider ${cardColor.text} flex items-center gap-1.5`}>
+                                  <span
+                                    className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ring-2 ring-white/90 ${
+                                      courseStatus === 'ongoing'
+                                        ? 'bg-emerald-400 animate-pulse'
+                                        : courseStatus === 'upcoming'
+                                          ? 'bg-amber-400'
+                                          : 'bg-transparent ring-transparent'
+                                    }`}
+                                    aria-hidden="true"
+                                  />
+                                  {courseId}
+                                </span>
                                 <div className={`flex items-center gap-1 text-[9.5px] leading-none ${isLight ? 'text-slate-500 font-semibold' : 'text-white/45'}`}>
                                   <Clock className={`w-3 h-3 flex-shrink-0 self-center ${isLight ? 'text-amber-600' : 'text-amber-400/70'}`} />
                                   <span className="inline-flex items-center leading-none self-center">{getShortTimeRange(course.start_time, course.end_time)}</span>
@@ -444,7 +450,7 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
                             <div className="flex items-center gap-2 text-[9.5px]">
                               <GraduationCap className={`w-3 h-3 flex-shrink-0 ${isLight ? 'text-amber-600/75' : 'text-amber-400/55'}`} />
                               <span className={`font-medium leading-none ${isLight ? 'text-slate-500' : 'text-white/35'}`}>
-                                {t('group')}: {normalizeGroup(course.group || course.kumpulan || 'A')}
+                                {t('group')}: {normalizeGroup(course.group || course.kumpulan) || '—'}
                               </span>
                             </div>
 
