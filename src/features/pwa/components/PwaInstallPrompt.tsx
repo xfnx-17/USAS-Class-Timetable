@@ -15,6 +15,8 @@ export default function PwaInstallPrompt() {
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleBeforeInstallPrompt = (e: any) => {
+      if (!window.matchMedia('(min-width: 640px)').matches) return;
+
       // Prevent the browser from showing its default install prompt
       e.preventDefault();
       // Stash the event so it can be triggered later.
