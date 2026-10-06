@@ -32,18 +32,39 @@ Install the required Node.js packages:
 npm install
 ```
 
-### 3. Environment Configuration (Optional)
-Create an optional `.env` file in the project root if configuring custom Cloudflare Turnstile keys:
+### 3. Environment Configuration
+
+Create a `.env` file in the project root with the Cloudflare Turnstile **Site Key** (public):
+
 ```env
-VITE_TURNSTILE_SITE_KEY=1x00000000000000000000AA
+VITE_TURNSTILE_SITE_KEY=0x4AAAAAA...
+```
+
+The login captcha is verified server-side by the Pages Function, which needs the Turnstile **Secret Key**. For local testing create a `.dev.vars` file in the project root (already gitignored):
+
+```env
+TURNSTILE_SECRET_KEY=0x4AAAAAA...
+```
+
+> Without `TURNSTILE_SECRET_KEY`, the server-side captcha check is skipped (convenient for UI-only work). Cloudflare's testing site key `1x00000000000000000000AA` always passes on the client widget.
+
+Optionally enable client error tracking by adding a Sentry DSN:
+
+```env
+VITE_SENTRY_DSN=https://<key>@<org>.ingest.sentry.io/<project>
 ```
 
 ### 4. Start Development Server
+
 Launch the Vite development server with Hot Module Replacement (HMR):
+
 ```bash
 npm run dev
 ```
+
 Open your browser at `http://localhost:5173`.
+
+> `npm run dev` serves the Vite UI only (plus demo mode). Because the `/api/usas/*` requests are handled by a Cloudflare Pages Function, run **`npm run dev:cf`** to exercise real USAS API calls locally.
 
 ---
 
@@ -51,9 +72,13 @@ Open your browser at `http://localhost:5173`.
 
 | Command | Description |
 | :--- | :--- |
-| `npm run dev` | Starts Vite local development server. |
+| `npm run dev` | Starts Vite local development server (UI/demo only). |
+| `npm run dev:cf` | Builds and serves the app with Cloudflare Pages Functions (real API + captcha). |
 | `npm run build` | Compiles and optimizes assets into `dist/` for production. |
 | `npm run preview` | Previews the production bundle locally. |
+| `npm run preview:cf` | Builds and previews with Cloudflare Pages Functions. |
+| `npm run deploy:cf` | Builds and deploys to Cloudflare Pages via Wrangler. |
+| `npm run lint` | Runs ESLint across the repository. |
 | `npm run typecheck` | Executes TypeScript type checking without emitting files. |
 | `npm run test:unit` | Executes all unit test suites using Vitest. |
 | `npm run test:e2e` | Executes Playwright end-to-end browser integration tests. |
@@ -71,17 +96,61 @@ npm run build
 ```
 
 ### Deploying to Cloudflare Pages
-1. Connect your repository in the Cloudflare Pages dashboard.
+
+The `/api/usas/*` proxy and captcha verification run as Cloudflare Pages Functions, so Cloudflare Pages is the recommended host.
+
+1. Connect your repository in the Cloudflare Pages dashboard (or deploy with `npm run deploy:cf`).
 2. Build command: `npm run build`.
 3. Output directory: `dist`.
-4. The included `public/_headers` file will automatically configure Content Security Policy (CSP) and cache headers.
+4. Add environment variables under **Settings → Environment variables** (Production and Preview):
+   - `VITE_TURNSTILE_SITE_KEY` — Turnstile Site Key (public, baked into the build).
+5. Add the Turnstile Secret Key as an encrypted secret:
+   ```bash
+   npx wrangler pages secret put TURNSTILE_SECRET_KEY --project-name=<your-project>
+   ```
+6. The included `public/_headers` file automatically configures Content Security Policy (CSP) and cache headers.
 
-### Deploying to Vercel
-1. Import the repository into Vercel.
-2. Framework Preset: **Vite**.
-3. Output Directory: `dist`.
+#### Automated deployment (GitHub Actions)
 
-### Deploying to Netlify
-1. Connect the repository in Netlify.
-2. Build command: `npm run build`.
-3. Publish directory: `dist`.
+The bundled `.github/workflows/deploy.yml` deploys on every push to `main`. Add these repository secrets (**Settings → Secrets and variables → Actions**):
+
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+- `VITE_TURNSTILE_SITE_KEY`
+
+### Deploying to Vercel / Netlify
+
+Both hosts can serve the static `dist/` output. However, real API login depends on the Cloudflare Pages Function proxy (`/api/usas/*`) and its server-side Turnstile check, which are Cloudflare-specific. On Vercel or Netlify you must supply an equivalent serverless function that proxies `/api/usas/*` to the USAS API and verifies the Turnstile token.
+
+- **Vercel**: Framework Preset **Vite**, Output Directory `dist`.
+- **Netlify**: Build command `npm run build`, Publish directory `dist`.
+
+---
+
+## Rate Limiting & Monitoring
+
+### API rate limiting
+
+The Pages Function applies a best-effort per-IP limit (60 requests / minute) whenever a KV namespace named `RATE_LIMIT_KV` is bound. If the binding is missing, the limiter is skipped automatically.
+
+1. Create a KV namespace:
+   ```bash
+   npx wrangler kv namespace create RATE_LIMIT_KV
+   ```
+2. Cloudflare dashboard → your Pages project → **Settings → Functions → KV namespace bindings** → add binding `RATE_LIMIT_KV` for **Production** and **Preview**.
+3. Redeploy.
+
+For a hard limit at the edge, also add a **WAF Rate limiting rule** (Cloudflare dashboard → your domain → **Security → WAF → Rate limiting rules**): match path `/api/usas/*`, e.g. 60 requests/minute per IP, action **Block**.
+
+### Monitoring
+
+- **Traffic & Web Vitals**: Cloudflare dashboard → **Web Analytics** → enable for the Pages project (privacy-first, cookieless).
+- **Function logs & errors**: the proxy emits `console.warn` entries for captcha rejections, rate-limit hits and upstream failures. View them live with:
+  ```bash
+  npx wrangler pages deployment tail --project-name=<your-project>
+  ```
+  or via the Pages project → **Functions → Logs** in the dashboard.
+- **Client error tracking (optional)**: the app initialises Sentry automatically when `VITE_SENTRY_DSN` is set.
+  1. Create a Sentry project (platform **React**) and copy its DSN.
+  2. Set `VITE_SENTRY_DSN` in `.env` (local), Cloudflare Pages environment variables, and the GitHub Actions secret `VITE_SENTRY_DSN`.
+  3. The Sentry ingest hosts are already allowed in the Content Security Policy.

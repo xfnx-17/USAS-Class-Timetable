@@ -27,6 +27,7 @@ USAS Class Timetable is a modern, client-side academic schedule portal designed 
   * **Clash Detection**: Automated detection and warning flags for overlapping course hours.
   * **Attendance Meter**: Visual percentage tracker monitoring course attendance thresholds against the 80% bar risk limit.
   * **GPA Target Calculator**: Interactive tool for simulating semester GPA and cumulative CGPA goals.
+  * **Lecturer Directory Lookup**: Tap a lecturer to load their official e-mail, position and extension from the USAS staff directory.
 * **Calendar Sync & Social Sharing**:
   * **Universal .ICS Export**: One-click calendar sync compatible with Google Calendar, Apple iCal, and Microsoft Outlook.
   * **WhatsApp & QR Share**: Instant timetable dispatch via formatted messaging or scannable QR codes.
@@ -38,10 +39,10 @@ USAS Class Timetable is a modern, client-side academic schedule portal designed 
 
 Because the portal processes student academic schedules, security and privacy are implemented at every layer:
 
-* **Zero Intermediate Servers**: All API requests are dispatched directly from the client browser to `https://mobile.usas.edu.my`. No third-party backend ever receives or stores student credentials.
+* **Minimal Proxy, No Credential Storage**: API requests are relayed to `https://mobile.usas.edu.my` through a stateless Cloudflare Pages Function proxy (`/api/usas/*`). The proxy forwards requests and never persists student credentials or session tokens.
+* **Server-Side Bot Protection**: Login is protected by Cloudflare Turnstile. The captcha token is verified server-side in the Pages Function before the login request is proxied upstream.
 * **Strict Content Security Policy (CSP)**: Hardened headers mitigating Cross-Site Scripting (XSS), framing, and unauthorized resource injection.
-* **Local Storage Isolation**: Saved offline snapshots and user notes remain strictly encrypted in local browser storage.
-* **Cloudflare Turnstile Verification**: Integrated bot protection on login forms.
+* **Local Storage Isolation**: Offline snapshots and user notes are kept in the browser's session/local storage and never leave the device.
 
 ## Tech Stack
 
@@ -58,10 +59,17 @@ Because the portal processes student academic schedules, security and privacy ar
 - [html2canvas](https://html2canvas.hertzen.com/)
 - [QRCode](https://github.com/soldair/node-qrcode)
 
+**Backend & Hosting**
+- [Cloudflare Pages Functions](https://developers.cloudflare.com/pages/functions/) (API proxy & Turnstile verification)
+- [Wrangler](https://developers.cloudflare.com/workers/wrangler/)
+
 **Testing & Quality Assurance**
 - [Vitest](https://vitest.dev/)
 - [Playwright](https://playwright.dev/)
 - [ESLint](https://eslint.org/)
+
+**Monitoring**
+- [Sentry](https://sentry.io/) (optional client error tracking)
 
 ## Getting Started
 
@@ -91,6 +99,7 @@ Follow these quick steps to get a local development copy running.
    ```bash
    npm run dev
    ```
+   > **Real API login:** `npm run dev` serves the UI (and demo mode) only. The `/api/usas` proxy is a Cloudflare Pages Function, so run `npm run dev:cf` to exercise real USAS API calls locally.
 
 4. **Run unit tests and type checks**
    ```bash
@@ -104,7 +113,8 @@ Follow these quick steps to get a local development copy running.
 USAS Class Timetable/
 ├── .github/
 │   └── workflows/
-│       └── ci.yml             # GitHub Actions CI workflow (lint, typecheck, unit, e2e)
+│       ├── ci.yml             # GitHub Actions CI workflow (lint, typecheck, unit, e2e)
+│       └── deploy.yml         # Cloudflare Pages deployment workflow
 ├── public/
 │   ├── 404.html               # Branded standalone 404 error page
 │   ├── 500.html               # Branded standalone 500 error page
@@ -116,6 +126,9 @@ USAS Class Timetable/
 │   ├── error-page.js          # Error page hydration script
 │   ├── sw.js                  # PWA offline service worker
 │   └── usas-logo.png          # Official USAS emblem asset
+├── functions/
+│   └── api/usas/
+│       └── _middleware.ts     # Cloudflare Pages Function proxy to the USAS API (Turnstile gate)
 ├── src/
 │   ├── app/
 │   │   ├── main.tsx           # Application entrypoint
@@ -127,7 +140,7 @@ USAS Class Timetable/
 │   │   ├── export/            # PdfExportModal, PDF & wallpaper engines
 │   │   ├── landing/           # LandingPage (hero, 3D tilt, bento features)
 │   │   ├── planning/          # ExamScheduleModal, GpaCalculatorModal
-│   │   ├── sharing/           # QrShareModal, WhatsAppShareModal
+│   │   ├── sharing/           # Schedule comparison & sharing (CompareScheduleModal)
 │   │   └── timetable/         # TimetableGrid, LiveNextClass, AttendanceMeter
 │   ├── shared/
 │   │   ├── i18n/              # Multi-language dictionaries (en, ms, zh, ta)
