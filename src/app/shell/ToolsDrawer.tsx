@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { useLanguage } from '@/app/providers/LanguageProvider';
 import { useTheme } from '@/app/providers/ThemeProvider';
 import { 
-  X, Download, QrCode, Users, Moon,
-  GraduationCap, LogOut, MessageCircle, Calculator, Calendar, ScanLine, Bell, FileText
+  X, Download, Users, Moon,
+  GraduationCap, LogOut, Calculator, Calendar, ScanLine, Bell, FileText
 } from 'lucide-react';
 import { useNotification } from '@/app/providers/NotificationProvider';
 import { exportTimetableICS } from '@/features/export/lib/icsGenerator';

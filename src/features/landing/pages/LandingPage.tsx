@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '@/app/providers/LanguageProvider';
 import { useTheme, THEMES } from '@/app/providers/ThemeProvider';
 import type { LanguageCode } from '@/shared/types/usas';
 import {
   Download, Moon, Share2, AlertTriangle, ArrowRight,
-  Sparkles, ExternalLink, Send, Play, Instagram, Github, ShieldAlert, ScanLine, ArrowUp
+  ExternalLink, Send, Play, Instagram, Github, ShieldAlert, ScanLine, ArrowUp
 } from 'lucide-react';
 
 type LandingPageProps = {

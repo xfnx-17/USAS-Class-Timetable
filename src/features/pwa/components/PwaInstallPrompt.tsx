@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useTheme } from '@/app/providers/ThemeProvider';
 import { useLanguage } from '@/app/providers/LanguageProvider';
 import { Download, X } from 'lucide-react';

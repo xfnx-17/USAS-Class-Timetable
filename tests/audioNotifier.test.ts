@@ -3,7 +3,6 @@ import {
   playClassChime,
   playPrayerChime,
   updateAppBadge,
-  clearAppBadge,
   sendPushNotification,
 } from '../src/shared/lib/audioNotifier';
 
@@ -118,17 +117,6 @@ describe('audioNotifier', () => {
         configurable: true,
       });
       expect(() => updateAppBadge(3)).not.toThrow();
-    });
-  });
-
-  describe('clearAppBadge', () => {
-    it('does not throw when badge API is unavailable', () => {
-      Object.defineProperty(globalThis, 'navigator', {
-        value: {},
-        writable: true,
-        configurable: true,
-      });
-      expect(() => clearAppBadge()).not.toThrow();
     });
   });
 

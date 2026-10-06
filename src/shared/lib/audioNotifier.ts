@@ -80,17 +80,6 @@ export function updateAppBadge(count = 1): void {
   } catch (e) {}
 }
 
-export function clearAppBadge(): void {
-  try {
-    const badgeNavigator = navigator as Navigator & {
-      clearAppBadge?: () => Promise<void>;
-    };
-    if ('clearAppBadge' in navigator) {
-      badgeNavigator.clearAppBadge?.().catch(() => {});
-    }
-  } catch (e) {}
-}
-
 export function sendPushNotification(title: string, body: string): void {
   // Trigger mobile badge count bubble on device
   updateAppBadge(1);

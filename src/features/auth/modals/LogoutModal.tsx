@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLanguage } from '@/app/providers/LanguageProvider';
 import { useTheme } from '@/app/providers/ThemeProvider';
-import { LogOut, X } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 
 type LogoutModalProps = {
   isOpen: boolean;

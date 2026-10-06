@@ -4,7 +4,7 @@ import QRCode from 'qrcode';
 import { copyTextToClipboard, sanitizeTextForShare, openExternalUrl } from '@/shared/lib/security';
 import { compressTimetable } from '@/features/timetable/lib/scheduleMatcher';
 import { buildFullShareText } from '@/features/export/lib/shareText';
-import { Camera, QrCode, ScanLine, X, Upload, FileText, Calendar, AlertTriangle, ArrowLeft, Copy, Check, MessageCircle, Users } from 'lucide-react';
+import { Camera, ScanLine, X, Upload, FileText, Calendar, AlertTriangle, ArrowLeft, Copy, Check, Users } from 'lucide-react';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { useLanguage } from '@/app/providers/LanguageProvider';
 import { useTheme } from '@/app/providers/ThemeProvider';

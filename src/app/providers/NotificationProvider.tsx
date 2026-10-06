@@ -1,6 +1,5 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { useAuth } from './AuthProvider';
-import { getActiveCourseHighlights } from '@/shared/lib/timetableTime';
 import { extractDayName } from '@/shared/lib/dayFormat';
 
 type NotificationContextType = {
