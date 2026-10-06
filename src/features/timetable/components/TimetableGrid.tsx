@@ -131,7 +131,7 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
   // Assign each distinct course a stable, unique colour slot.
   const courseColorMap = useMemo(() => buildCourseColorMap(allCourses), [allCourses]);
 
-  const handleSaveNote = (courseId) => {
+  const handleSaveNote = (courseId: string) => {
     const updated = { ...courseNotes, [courseId]: noteInput };
     setCourseNotes(updated);
     try { localStorage.setItem('usas_course_notes', JSON.stringify(updated)); } catch (e) {}

@@ -198,7 +198,7 @@ function persistPrayerNotifiedStore(store: Record<string, boolean>): void {
   }
 }
 
-export function PrayerTimesNotifier() {
+export function PrayerTimesNotifier(): null {
   const { session } = useAuth();
   const [zone] = usePrayerZone();
   const [prayerData, setPrayerData] = useState<PrayerData>({

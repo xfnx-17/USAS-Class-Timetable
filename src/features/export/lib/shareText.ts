@@ -77,7 +77,7 @@ function buildCompactShareText(timetable: TimetableItem[] = [], matricNo = '') {
   const dayOrder = ['ISNIN', 'SELASA', 'RABU', 'KHAMIS', 'JUMAAT', 'SABTU', 'AHAD'];
   const dayGroups = buildDayGroups(timetable);
 
-  const parts = [];
+  const parts: string[] = [];
   dayOrder.forEach(day => {
     if (!dayGroups[day]) return;
     const items = dayGroups[day].map(c => {

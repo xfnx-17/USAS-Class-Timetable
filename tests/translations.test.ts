@@ -35,8 +35,8 @@ describe('translations', () => {
     const days = ['ISNIN', 'SELASA', 'RABU', 'KHAMIS', 'JUMAAT', 'SABTU', 'AHAD'];
     for (const lang of languages) {
       for (const day of days) {
-        expect(translations[lang].days[day]).toBeDefined();
-        expect(translations[lang].shortDays[day]).toBeDefined();
+        expect((translations[lang].days as Record<string, string>)[day]).toBeDefined();
+        expect((translations[lang].shortDays as Record<string, string>)[day]).toBeDefined();
       }
     }
   });

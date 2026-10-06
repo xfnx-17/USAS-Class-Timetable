@@ -81,7 +81,7 @@ const getDurationLabel = (startTime?: string, endTime?: string, lang?: string) =
 };
 
 const getSlotLabel = (slot: string) => {
-  const slotMap = {
+  const slotMap: Record<string, string> = {
     '08:00 AM': '8-9',
     '09:00 AM': '9-10',
     '10:00 AM': '10-11',

@@ -238,7 +238,7 @@ export default function AttendanceScanModal({ isOpen, onClose, onSuccessfulScan 
       const message = sanitizeSingleLine(result.data.alert || result.data.message || copy.success, 240);
       setScanState('success');
       setStatusMessage(message || copy.success);
-      await refreshTimetable().catch(() => undefined);
+      await refreshTimetable().catch(() => {});
       onSuccessfulScan?.();
       return;
     }
@@ -375,7 +375,7 @@ export default function AttendanceScanModal({ isOpen, onClose, onSuccessfulScan 
       const ratio = maxZoom > 1 ? (clamped - 1) / (maxZoom - 1) : 0;
       const nativeValue = native.min + (native.max - native.min) * ratio;
       type ZoomConstraint = MediaTrackConstraintSet & { zoom: number };
-      track.applyConstraints({ advanced: [{ zoom: nativeValue }] as ZoomConstraint[] }).catch(() => undefined);
+      track.applyConstraints({ advanced: [{ zoom: nativeValue }] as ZoomConstraint[] }).catch(() => {});
     }
   };
 

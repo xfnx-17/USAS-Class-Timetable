@@ -11,7 +11,7 @@ describe('JakimApi', () => {
   });
 
   it('returns success with data on a valid response', async () => {
-    const mockData = { zone: 'PRK02', prayers: [] };
+    const mockData = { zone: 'PRK02', prayers: [] as unknown[] };
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve(mockData),
@@ -46,7 +46,7 @@ describe('JakimApi', () => {
   });
 
   it('uses the default zone when none is provided', async () => {
-    const mockData = { zone: 'PRK02', prayers: [] };
+    const mockData = { zone: 'PRK02', prayers: [] as unknown[] };
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve(mockData),

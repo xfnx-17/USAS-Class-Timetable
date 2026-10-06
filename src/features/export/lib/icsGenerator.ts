@@ -30,7 +30,7 @@ export function sanitizeFileNameSegment(value: unknown): string {
 
 export function formatICSDatetime(dayName: string | undefined, timeStr: IcsTimeInput): string {
   // Map day names to day offset (Monday = 1, Friday = 5)
-  const dayOffsets = {
+  const dayOffsets: Record<string, number> = {
     'ISNIN': 1, 'MONDAY': 1, 'MON': 1,
     'SELASA': 2, 'TUESDAY': 2, 'TUE': 2,
     'RABU': 3, 'WEDNESDAY': 3, 'WED': 3,
