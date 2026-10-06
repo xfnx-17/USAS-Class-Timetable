@@ -117,7 +117,7 @@ export interface AuthContextValue {
   loading: boolean;
   error: string | null;
   isOffline: boolean;
-  login: (userId: string, password: string, isDemo?: boolean) => Promise<boolean>;
+  login: (userId: string, password: string, isDemo?: boolean, captchaToken?: string) => Promise<boolean>;
   logout: () => void;
   refreshTimetable: () => Promise<void>;
   setError: Dispatch<SetStateAction<string | null>>;

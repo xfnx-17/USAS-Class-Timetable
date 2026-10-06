@@ -182,7 +182,11 @@ export function parseSafeJsonResponse(text: string): unknown | null {
   }
 }
 
-async function postUSAS(endpoint: string, payload: UsasPayload): Promise<unknown> {
+async function postUSAS(
+  endpoint: string,
+  payload: UsasPayload,
+  extraHeaders: Record<string, string> = {},
+): Promise<unknown> {
   const fetchWithTimeout = async (input: RequestInfo | URL, init: RequestInit) => {
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -200,10 +204,10 @@ async function postUSAS(endpoint: string, payload: UsasPayload): Promise<unknown
   try {
     const jsonRes = await fetchWithTimeout(`${BASE_URL}${endpoint}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...extraHeaders },
       body: JSON.stringify(payload)
     });
-    if (jsonRes.ok) {
+    if (jsonRes.ok || jsonRes.status === 403) {
       const text = await jsonRes.text();
       if (text && !text.startsWith('Access Denied') && text.includes('{')) {
         const data = parseSafeJsonResponse(text);
@@ -224,7 +228,7 @@ async function postUSAS(endpoint: string, payload: UsasPayload): Promise<unknown
 
     const formRes = await fetchWithTimeout(`${BASE_URL}${endpoint}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', ...extraHeaders },
       body: formParams.toString()
     });
     if (formRes.ok) {
@@ -243,6 +247,7 @@ export async function loginStudentAPI(
   userId: string,
   password: string,
   isDemo = false,
+  captchaToken?: string,
 ): Promise<ApiResponse<StudentSession>> {
   if (isDemo || userId.toLowerCase() === 'demo') {
     return {
@@ -275,7 +280,19 @@ export async function loginStudentAPI(
     platform: PLATFORM
   };
 
-  const result = await postUSAS('/student/login_student.php', payload);
+  const result = await postUSAS(
+    '/student/login_student.php',
+    payload,
+    captchaToken ? { 'x-turnstile-token': captchaToken } : {},
+  );
+
+  const gateResult = result as { success?: boolean; error?: string } | null;
+  if (gateResult && gateResult.success === false && typeof gateResult.error === 'string' && gateResult.error.trim()) {
+    return {
+      success: false,
+      error: sanitizeSingleLine(gateResult.error, 160),
+    };
+  }
 
   const loginResult = result as {
     server_response?: Array<{ status?: number | string; message?: string; sid_1?: string; sid_2?: string; sid_3?: string }>;
