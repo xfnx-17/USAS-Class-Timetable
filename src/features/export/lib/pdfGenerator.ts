@@ -222,6 +222,6 @@ export async function generateElementPng(
  * Generates a high-resolution PNG image for Device Lock Screen / Phone Wallpaper
  */
 export async function generateLockscreenImage(elementRef: ExportElement | null, fileName = 'Jadual_USAS_Lockscreen.png') {
-  await generateElementPng(elementRef, fileName, 3, null);
+  await generateElementPng(elementRef, fileName, 4, null);
 }
 

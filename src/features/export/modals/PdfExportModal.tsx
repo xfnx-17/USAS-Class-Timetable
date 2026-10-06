@@ -527,7 +527,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
         await generateLockscreenImage(wallpaperRef.current, filename);
       } else if (exportFileType === 'PNG') {
         const filename = `Jadual_USAS_Formal_${matricNo || 'USAS'}_LANDSCAPE.png`;
-        await generateElementPng(pdfRef.current, filename, 4, '#FFFFFF');
+        await generateElementPng(pdfRef.current, filename, 5, '#FFFFFF');
       } else {
         const filename = `Jadual_USAS_Formal_${matricNo || 'USAS'}_LANDSCAPE.pdf`;
         await generateTimetablePdf(pdfRef.current, 'landscape', filename);
@@ -1292,21 +1292,21 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                     return (
                                       <tr style={{ height: `${headerHeightPx}px` }}>
                                         <th
-                                          className={`p-0 font-black uppercase tracking-wider border-r ${lockscreenConfig.headerBorder} ${lockscreenConfig.headerText}`}
+                                          className={`p-0 font-black uppercase tracking-wider align-middle border-r ${lockscreenConfig.headerBorder} ${lockscreenConfig.headerText}`}
                                           style={{ height: `${headerHeightPx}px` }}
                                         >
-                                          <div className="w-full flex items-center justify-center text-center" style={{ height: `${headerHeightPx}px` }}>
-                                            <span>&nbsp;</span>
+                                          <div className="w-full h-full flex items-center justify-center text-center leading-none" style={{ height: `${headerHeightPx}px` }}>
+                                            <span className="leading-none">&nbsp;</span>
                                           </div>
                                         </th>
                                         {hourStarts.map((hourStart) => (
                                           <th
                                             key={hourStart}
-                                            className={`p-0 font-black uppercase tracking-wider border-r ${lockscreenConfig.headerBorder} ${lockscreenConfig.headerText}`}
+                                            className={`p-0 font-black uppercase tracking-wider align-middle border-r ${lockscreenConfig.headerBorder} ${lockscreenConfig.headerText}`}
                                             style={{ height: `${headerHeightPx}px` }}
                                           >
-                                            <div className="w-full flex items-center justify-center text-center" style={{ height: `${headerHeightPx}px` }}>
-                                              <span>{formatWallpaperSlotLabel(hourStart, slotSize)}</span>
+                                            <div className="w-full h-full flex items-center justify-center text-center leading-none" style={{ height: `${headerHeightPx}px` }}>
+                                              <span className="leading-none">{formatWallpaperSlotLabel(hourStart, slotSize)}</span>
                                             </div>
                                           </th>
                                         ))}
