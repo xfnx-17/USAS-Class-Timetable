@@ -169,15 +169,12 @@ export default function MatrixGridView({
     return ALL_TIME_SLOTS.slice(0, maxIdx + 1);
   }, [timetable]);
 
-  // Auto-scale text based on how many columns exist — never below 1.0 (table scrolls instead of compressing)
-  const autoScale = useMemo(() => {
-    const n = activeTimeSlots.length || 6;
-    if (n <= 3) return 1.35;
-    if (n === 4) return 1.25;
-    if (n === 5) return 1.15;
-    if (n === 6) return 1.05;
-    return 1.0; // 7+ columns: keep at full base size, outer container scrolls horizontally
-  }, [activeTimeSlots.length]);
+  // Constant column widths + fixed text sizing: on small screens the grid
+  // scrolls horizontally instead of shrinking boxes or dropping content.
+  const DAY_COL_WIDTH = 92;
+  const SLOT_COL_WIDTH = 108;
+  const tableMinWidth = DAY_COL_WIDTH + activeTimeSlots.length * SLOT_COL_WIDTH;
+  const autoScale = 1;
 
   const hasDayFilter = Boolean(activeDay) && activeDay.toUpperCase() !== 'ALL';
 
@@ -186,10 +183,17 @@ export default function MatrixGridView({
       isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-white/[0.025] border-white/[0.06]'
     }`}>
       <div
-        className="min-w-[700px] flex-1 overflow-y-auto flex flex-col"
+        className="flex-1 overflow-y-auto flex flex-col"
+        style={{ minWidth: `${tableMinWidth}px` }}
         onScroll={() => { if (preview) setPreview(null); }}
       >
         <table className="w-full table-fixed border-collapse flex-1 h-auto sm:h-full">
+          <colgroup>
+            <col style={{ width: `${DAY_COL_WIDTH}px` }} />
+            {activeTimeSlots.map(slot => (
+              <col key={slot} style={{ width: `${SLOT_COL_WIDTH}px` }} />
+            ))}
+          </colgroup>
           {/* Head - Transposed: Waktu slots as columns */}
           <thead>
             <tr className={`border-b ${isLight ? 'border-slate-200 bg-slate-50/50' : 'border-white/[0.06]'}`}>
@@ -272,10 +276,8 @@ export default function MatrixGridView({
                     
                     skipCount = colSpan - 1;
 
-                    // Narrower cells (single period) use smaller text so content
-                    // never spills outside the box.
-                    const spanFactor = colSpan <= 1 ? 0.76 : colSpan === 2 ? 0.92 : 1;
-                    const fs = (value: number) => `${Math.max(6, autoScale * spanFactor * value).toFixed(1)}px`;
+                    // Constant text sizing — the grid scrolls instead of shrinking.
+                    const fs = (value: number) => `${value}px`;
 
                     return (
                       <td 
@@ -322,14 +324,12 @@ export default function MatrixGridView({
                             }`} style={{ fontSize: fs(10) }}>
                               {course.course_name || course.kursus}
                             </div>
-                            {colSpan > 1 && (
-                              <div className={`flex items-center gap-1 leading-none min-w-0 ${
-                                isLight ? 'text-slate-500' : 'text-white/50'
-                              }`} style={{ fontSize: fs(10.5) }}>
-                                <MapPin style={{ width: fs(10.5), height: fs(10.5), color: '#ed4134' }} className="flex-shrink-0 self-center" />
-                                <span className="leading-none self-center truncate">{course.location}</span>
-                              </div>
-                            )}
+                            <div className={`flex items-center gap-1 leading-none min-w-0 ${
+                              isLight ? 'text-slate-500' : 'text-white/50'
+                            }`} style={{ fontSize: fs(10.5) }}>
+                              <MapPin style={{ width: fs(10.5), height: fs(10.5), color: '#ed4134' }} className="flex-shrink-0 self-center" />
+                              <span className="leading-none self-center truncate">{course.location}</span>
+                            </div>
                           </div>
                         ) : (
                           <div className="h-full w-full min-h-[48px]" />
