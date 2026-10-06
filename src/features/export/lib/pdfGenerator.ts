@@ -52,15 +52,17 @@ async function captureElement(elementRef: ExportElement | null, scale = 2, backg
   }
 
   const exportRootId = elementRef.getAttribute?.('data-export-root');
+  const isWallpaper = exportRootId === 'wallpaper-export-root';
 
   // Measure the element layout width and height before cloning
   const width = elementRef.scrollWidth || elementRef.offsetWidth || undefined;
   const height = elementRef.scrollHeight || elementRef.offsetHeight || undefined;
-  const exportWidth = exportRootId === 'wallpaper-export-root' && width ? width + 2 : width;
-  const exportHeight = exportRootId === 'wallpaper-export-root' && height ? height + 2 : height;
+  const exportWidth = isWallpaper && width ? width + 2 : width;
+  const exportHeight = isWallpaper && height ? height + 2 : height;
 
   return html2canvas(elementRef, {
     scale,
+    foreignObjectRendering: isWallpaper,
     useCORS: true,
     logging: false,
     backgroundColor,
@@ -88,17 +90,11 @@ async function captureElement(elementRef: ExportElement | null, scale = 2, backg
       clonedRoot.style.animation = 'none';
       clonedRoot.style.filter = 'none';
 
-      // Compensate for html2canvas's font-baseline calculation bug on Windows/Chrome:
-      // the text spans, h1, h2, and p elements are shifted up so only the text
-      // moves, keeping background cards and borders in their exact grid positions.
-      // NOTE: Skipped on Apple devices, where iOS Safari handles baselines differently and this correction breaks text alignment.
+      // Compensate for html2canvas's font-baseline offset in formal exports.
+      // Wallpaper uses browser-native foreign-object rendering and needs no text shift.
       const isApple = typeof navigator !== 'undefined' && (/Mac|iPod|iPhone|iPad/.test(navigator.platform) || (/MacIntel/.test(navigator.platform) && navigator.maxTouchPoints > 1) || /iPhone|iPad|iPod/i.test(navigator.userAgent));
 
-      // Compensate for html2canvas's font-baseline offset by shifting text up
-      // proportionally to its font size. A fixed -4px over-shifts the tiny
-      // wallpaper labels (they dropped onto the grid lines); scaling keeps both
-      // the large formal document and the small wallpaper text correctly placed.
-      if (!isApple) {
+      if (!isApple && !isWallpaper) {
         const view = clonedDoc.defaultView || window;
         const textNodes = clonedRoot.querySelectorAll('span, h1, h2, p');
         textNodes.forEach((node) => {
@@ -222,6 +218,6 @@ export async function generateElementPng(
  * Generates a high-resolution PNG image for Device Lock Screen / Phone Wallpaper
  */
 export async function generateLockscreenImage(elementRef: ExportElement | null, fileName = 'Jadual_USAS_Lockscreen.png') {
-  await generateElementPng(elementRef, fileName, 4, null);
+  await generateElementPng(elementRef, fileName, 5, null);
 }
 
