@@ -142,31 +142,35 @@ export default function MatrixGridView({
     setPreview({ course, x: left, y: top });
   };
 
-  // Filter out trailing empty time slots dynamically checking class end times
+  // Show only the time slots that actually contain classes, so a day starting
+  // at 11am doesn't render empty 8-9/9-10/10-11 columns.
   const activeTimeSlots = useMemo(() => {
     if (timetable.length === 0) return ALL_TIME_SLOTS.slice(0, 4);
 
-    let maxHour = 8;
+    let minHour = Infinity;
+    let maxHour = -Infinity;
     timetable.forEach(c => {
-      const startH = parseTo24hHour(c.start_time);
+      const startH = parseTo24hHour(c.start_time || c.jadual || '');
       const endH = parseTo24hHour(c.end_time);
       if (startH !== null) {
-        if (startH > maxHour) maxHour = startH;
+        minHour = Math.min(minHour, startH);
+        maxHour = Math.max(maxHour, startH);
       }
       if (endH !== null) {
-        if (endH - 1 > maxHour) maxHour = endH - 1;
+        maxHour = Math.max(maxHour, endH - 1);
       }
     });
 
-    let maxIdx = 0;
-    ALL_TIME_SLOTS.forEach((slot, idx) => {
-      const slotH = parseTo24hHour(slot);
-      if (slotH !== null && slotH <= maxHour) {
-        maxIdx = idx;
-      }
+    if (!Number.isFinite(minHour) || !Number.isFinite(maxHour)) {
+      return ALL_TIME_SLOTS.slice(0, 4);
+    }
+
+    const slots = ALL_TIME_SLOTS.filter(slot => {
+      const hour = parseTo24hHour(slot);
+      return hour !== null && hour >= minHour && hour <= maxHour;
     });
 
-    return ALL_TIME_SLOTS.slice(0, maxIdx + 1);
+    return slots.length > 0 ? slots : ALL_TIME_SLOTS.slice(0, 4);
   }, [timetable]);
 
   // Constant column widths + fixed text sizing: on small screens the grid
