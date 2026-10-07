@@ -46,6 +46,7 @@ describe('audioNotifier', () => {
         return {
           currentTime: 0,
           destination: {},
+          resume: vi.fn().mockResolvedValue(undefined),
           createOscillator,
           createGain,
         };
@@ -59,12 +60,13 @@ describe('audioNotifier', () => {
       });
 
       playClassChime();
+      playClassChime();
 
-      expect(AudioContextMock).toHaveBeenCalled();
-      expect(createOscillator).toHaveBeenCalledTimes(3);
-      expect(createGain).toHaveBeenCalledTimes(3);
-      expect(start).toHaveBeenCalledTimes(3);
-      expect(stop).toHaveBeenCalledTimes(3);
+      expect(AudioContextMock).toHaveBeenCalledTimes(1);
+      expect(createOscillator).toHaveBeenCalledTimes(6);
+      expect(createGain).toHaveBeenCalledTimes(6);
+      expect(start).toHaveBeenCalledTimes(6);
+      expect(stop).toHaveBeenCalledTimes(6);
 
       Object.defineProperty(globalThis, 'window', {
         value: originalWindow,

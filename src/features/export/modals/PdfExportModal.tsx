@@ -724,7 +724,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
   const getSpacerHeights = (preset: WallpaperPreset, offset = 0) => {
     const top = preset === 'desktop' ? 56 : preset === 'square' ? 64 : preset === 'tablet' ? 104 : 96;
     const bottom = preset === 'desktop' ? 28 : preset === 'square' ? 24 : preset === 'tablet' ? 22 : 18;
-    const clampedOffset = Math.max(-48, Math.min(48, offset));
+    const clampedOffset = Math.max(-48, Math.min(120, offset));
     return {
       top: Math.max(12, top + clampedOffset),
       bottom: Math.max(8, bottom - clampedOffset),
@@ -1004,7 +1004,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                       <input
                         type="range"
                         min={-48}
-                        max={48}
+                        max={120}
                         step={1}
                         value={wallpaperYOffset}
                         onChange={(e) => setWallpaperYOffset(Number(e.target.value))}

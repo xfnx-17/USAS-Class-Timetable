@@ -4,13 +4,13 @@ import { fetchPrayerTimesAPI } from '@/services/jakim/JakimApi';
 import type { WaktuSolatPrayer } from '@/shared/types/usas';
 import { playPrayerChime, sendPushNotification } from '@/shared/lib/audioNotifier';
 import { getLocalDateStamp, pruneDayScopedNotificationKeys } from '@/shared/lib/notificationKeys';
+import { isPrayerNotificationDue } from '@/shared/lib/notificationTiming';
 
 type PrayerData = {
   times: { label: string; timestamp: number }[];
   location: string;
 };
 
-const NOTIFY_WINDOW_SECONDS = 600;
 const PRAYER_NOTIFY_KEY = 'usas_prayer_auto_notify';
 const PRAYER_NOTIFY_EVENT = 'usas-prayer-auto-notify-changed';
 const PRAYER_NOTIFIED_STORE_KEY = 'usas_prayer_notified_store';
@@ -259,13 +259,13 @@ export function PrayerTimesNotifier(): null {
 
       const diff = prayer.timestamp - currentUnix;
       const notifyKey = `${dayStamp}-${label}-${prayer.timestamp}`;
-      if (diff > 0 && diff <= NOTIFY_WINDOW_SECONDS && !notifiedRef.current.has(notifyKey)) {
+      if (isPrayerNotificationDue(diff) && !notifiedRef.current.has(notifyKey)) {
         notifiedRef.current.add(notifyKey);
         changed = true;
         playPrayerChime();
         sendPushNotification(
           `Waktu Solat USAS: ${prayer.label}`,
-          `${prayer.label} masuk dalam ${Math.ceil(diff / 60)} minit di ${prayerData.location}`
+          `${prayer.label} telah masuk di ${prayerData.location}`
         );
       }
     });

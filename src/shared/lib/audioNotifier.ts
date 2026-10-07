@@ -4,11 +4,24 @@
  * and manages the mobile app badge count (navigator.setAppBadge).
  */
 
-export function playClassChime(): void {
+let notificationAudioContext: AudioContext | undefined;
+
+function getNotificationAudioContext(): AudioContext | undefined {
   try {
     const AudioCtx = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
+    if (!AudioCtx) return undefined;
+    notificationAudioContext ??= new AudioCtx();
+    void notificationAudioContext.resume().catch(() => {});
+    return notificationAudioContext;
+  } catch {
+    return undefined;
+  }
+}
+
+export function playClassChime(): void {
+  try {
+    const ctx = getNotificationAudioContext();
+    if (!ctx) return;
 
     // 3-tone campus chime sequence: C5 (523.25 Hz) -> E5 (659.25 Hz) -> G5 (783.99 Hz)
     const tones = [523.25, 659.25, 783.99];
@@ -36,9 +49,8 @@ export function playClassChime(): void {
 
 export function playPrayerChime(): void {
   try {
-    const AudioCtx = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
+    const ctx = getNotificationAudioContext();
+    if (!ctx) return;
 
     // Deep, softer echoing tone for prayer: A3 -> D4 -> A4
     const tones = [220.00, 293.66, 440.00];
