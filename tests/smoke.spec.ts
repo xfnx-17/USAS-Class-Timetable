@@ -368,6 +368,11 @@ test('wallpaper class blocks stay centered at maximum position', async ({ page }
       const row = block.parentElement!.parentElement!;
       return Math.abs(block.getBoundingClientRect().height - row.getBoundingClientRect().height);
     });
+    const blockSeamInsets = contents.map((content) => {
+      const block = content.parentElement!.getBoundingClientRect();
+      const row = content.parentElement!.parentElement!.parentElement!.getBoundingClientRect();
+      return { top: block.top - row.top, bottom: row.bottom - block.bottom };
+    });
     const centerDeltaRatios = contents.map((content) => {
       const block = content.parentElement!.getBoundingClientRect();
       const items = ['[data-export-course-duration]', '[data-export-course-code]', '[data-export-course-location]']
@@ -387,6 +392,7 @@ test('wallpaper class blocks stay centered at maximum position', async ({ page }
       lastRowBottomOverflow: lastRow.bottom - gridRect.bottom,
       blockHeights,
       blockRowHeightDeltas,
+      blockSeamInsets,
       centerDeltaRatios,
       minEndInset: Math.min(...endInsets),
       maxEndInset: Math.max(...endInsets),
@@ -397,6 +403,8 @@ test('wallpaper class blocks stay centered at maximum position', async ({ page }
   expect(layout.lastRowBottomOverflow).toBeLessThanOrEqual(1);
   expect(Math.max(...layout.blockHeights) - Math.min(...layout.blockHeights)).toBeLessThan(1);
   expect(Math.max(...layout.blockRowHeightDeltas)).toBeLessThanOrEqual(1);
+  expect(Math.max(...layout.blockSeamInsets.map(({ top }) => top))).toBeLessThanOrEqual(0.6);
+  expect(Math.max(...layout.blockSeamInsets.map(({ bottom }) => bottom))).toBeLessThanOrEqual(0.6);
   expect(Math.max(...layout.centerDeltaRatios)).toBeLessThan(0.2);
   expect(layout.minEndInset).toBeGreaterThan(0);
   expect(layout.maxEndInset).toBeLessThan(4);

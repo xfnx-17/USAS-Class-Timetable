@@ -1364,7 +1364,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                               <div
                                                 key={`${course.course_id || course.kod_kursus}-${start}`}
                                                 className={`absolute inset-0 border-r align-middle p-0.5 overflow-hidden ${lockscreenConfig.cellBorder} ${courseColor.bg} ${courseColor.border}`}
-                                                style={{ left: `${left}%`, width: `${width}%` }}
+                                                style={{ left: `${left}%`, width: `${width}%`, top: '-0.5px', bottom: '-0.5px' }}
                                               >
                                                 {renderWallpaperCourseContent(course, courseWidth, lockscreenConfig.isLight, style)}
                                               </div>
