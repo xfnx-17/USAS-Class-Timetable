@@ -844,7 +844,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                 />
               )}
 
-              <div data-wallpaper-controls className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 items-center gap-3 w-full relative z-40">
+              <div data-wallpaper-controls className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[1.1fr_1fr_1fr_1.5fr] items-center gap-3 w-full relative z-40">
                 {/* 1. Device Ratio Selector (WALLPAPER only) */}
                 {exportMode === 'WALLPAPER' && (
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full min-w-0 relative z-40">

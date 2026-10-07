@@ -51,6 +51,29 @@ test('wallpaper controls wrap into two columns at tablet width', async ({ page }
   expect(layout.hasHorizontalOverflow).toBe(false);
 });
 
+test('wallpaper position controls fit inside the export toolbar on laptop', async ({ page }) => {
+  await page.setViewportSize({ width: 1917, height: 865 });
+  await page.goto('/');
+  await page.getByRole('button', { name: /log in|log masuk/i }).first().click();
+  await page.getByRole('button', { name: /log masuk tanpa akaun|demo/i }).click();
+  await page.getByRole('button', { name: /open tools and export/i }).click();
+  await page.getByRole('button', { name: /eksport pdf & wallpaper|export pdf & wallpaper/i }).click();
+  await page.getByRole('button', { name: /wallpaper lockscreen/i }).click();
+
+  const controls = page.locator('[data-wallpaper-controls]');
+  const layout = await controls.evaluate((element) => {
+    const container = element.getBoundingClientRect();
+    const position = element.lastElementChild!.getBoundingClientRect();
+    return {
+      hasHorizontalOverflow: element.scrollWidth > element.clientWidth,
+      positionRight: position.right,
+      containerRight: container.right,
+    };
+  });
+  expect(layout.hasHorizontalOverflow).toBe(false);
+  expect(layout.positionRight).toBeLessThanOrEqual(layout.containerRight + 1);
+});
+
 test('class reminder chime does not replay after a page refresh', async ({ page, context }) => {
   const nextWednesday = new Date();
   nextWednesday.setDate(nextWednesday.getDate() + ((3 - nextWednesday.getDay() + 7) % 7));
