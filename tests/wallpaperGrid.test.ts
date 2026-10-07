@@ -30,4 +30,14 @@ describe('buildWallpaperGridSlots', () => {
       { start: 13 * 60, end: 14 * 60 },
     ]);
   });
+
+  it('keeps equal-width periods aligned when the last class ends between periods', () => {
+    expect(buildWallpaperGridSlots([{ start: 8 * 60 + 30, end: 17 * 60 }])).toEqual([
+      { start: 8 * 60, end: 10 * 60 },
+      { start: 10 * 60, end: 12 * 60 },
+      { start: 12 * 60, end: 14 * 60 },
+      { start: 14 * 60, end: 16 * 60 },
+      { start: 16 * 60, end: 18 * 60 },
+    ]);
+  });
 });

@@ -13,14 +13,17 @@ export const buildWallpaperGridSlots = (ranges: WallpaperTimeRange[], maxColumns
     }));
   }
 
-  const firstHour = Math.floor(Math.min(...validRanges.map(({ start }) => start)) / 60);
+  let firstHour = Math.floor(Math.min(...validRanges.map(({ start }) => start)) / 60);
   const lastHour = Math.min(24, Math.ceil(Math.max(...validRanges.map(({ end }) => end)) / 60));
-  const periodHours = Math.max(2, Math.ceil((lastHour - firstHour) / maxColumns));
+  const periodHours = Math.max(lastHour - firstHour >= 2 ? 2 : 1, Math.ceil((lastHour - firstHour) / maxColumns));
   const periodMinutes = periodHours * 60;
+  const slotCount = Math.ceil((lastHour - firstHour) / periodHours);
+  if (firstHour + slotCount * periodHours > 24) firstHour = 24 - slotCount * periodHours;
   const slots: WallpaperGridSlot[] = [];
 
-  for (let start = firstHour * 60; start < lastHour * 60; start += periodMinutes) {
-    slots.push({ start, end: Math.min(lastHour * 60, start + periodMinutes) });
+  for (let index = 0; index < slotCount; index++) {
+    const start = firstHour * 60 + index * periodMinutes;
+    slots.push({ start, end: start + periodMinutes });
   }
 
   return slots;
