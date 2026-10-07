@@ -32,6 +32,31 @@ test('demo login opens timetable and export modal', async ({ page }) => {
   await expect(page.getByRole('button', { name: /^download$|^muat turun$/i })).toBeVisible();
 });
 
+test('matrix view positions classes accurately to the minute', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /log in|log masuk/i }).first().click();
+  await page.getByRole('button', { name: /log masuk tanpa akaun|demo/i }).click();
+  await page.getByTitle('Paparan Grid').click();
+
+  const firstHour = page.locator('[data-matrix-time-slot="08:00"]');
+  const halfHourClass = page.locator('[data-matrix-course-code="CSC2103"][data-matrix-course-start="08:30 AM"]');
+  await expect(firstHour).toBeVisible();
+  await expect(halfHourClass).toHaveCount(1);
+  await expect(halfHourClass).toHaveAttribute('data-matrix-course-time', '8:30-10:30');
+
+  const geometry = await Promise.all([
+    firstHour.boundingBox(),
+    halfHourClass.boundingBox(),
+  ]);
+  const [hourBounds, classBounds] = geometry;
+  expect(hourBounds).not.toBeNull();
+  expect(classBounds).not.toBeNull();
+  expect(classBounds!.x - hourBounds!.x).toBeGreaterThan(hourBounds!.width * 0.4);
+  expect(classBounds!.x - hourBounds!.x).toBeLessThan(hourBounds!.width * 0.65);
+  expect(classBounds!.width / hourBounds!.width).toBeGreaterThan(1.8);
+  expect(classBounds!.width / hourBounds!.width).toBeLessThan(2.1);
+});
+
 test('wallpaper controls wrap into two columns at tablet width', async ({ page }) => {
   await page.setViewportSize({ width: 1128, height: 900 });
   await page.goto('/');
@@ -148,13 +173,16 @@ test('wallpaper export converts OKLab gradient colors for PNG rendering', async 
     return {
       label: label.textContent,
       width: header.getBoundingClientRect().width,
+      duration: Number(header.getAttribute('data-export-time-duration')),
       availableWidth: label.parentElement!.clientWidth,
       labelWidth: label.scrollWidth,
     };
   }));
   expect(headerColumns.length).toBeGreaterThan(0);
-  expect(headerColumns.length).toBeLessThanOrEqual(8);
-  expect(Math.max(...headerColumns.map(({ width }) => width)) - Math.min(...headerColumns.map(({ width }) => width))).toBeLessThanOrEqual(1);
+  expect(headerColumns.length).toBe(8);
+  expect(headerColumns.every(({ duration }) => duration === 60)).toBe(true);
+  const pixelsPerMinute = headerColumns.map(({ width, duration }) => width / duration);
+  expect(Math.max(...pixelsPerMinute) - Math.min(...pixelsPerMinute)).toBeLessThan(Math.max(...pixelsPerMinute) * 0.03);
   expect(headerColumns.every(({ availableWidth, labelWidth }) => availableWidth >= labelWidth), JSON.stringify(headerColumns)).toBe(true);
   const gridPosition = await page.evaluate(() => {
     const root = document.querySelector<HTMLElement>('[data-export-root="wallpaper-export-root"]')!;
@@ -177,15 +205,41 @@ test('wallpaper export converts OKLab gradient colors for PNG rendering', async 
       const rect = root.querySelector<HTMLElement>(selector)!.getBoundingClientRect();
       return { x: rect.left - rootRect.left, y: rect.top - rootRect.top, width: rect.width, height: rect.height };
     };
+    const contents = [...root.querySelectorAll<HTMLElement>('[data-export-course-content]')];
+    const content = contents[0];
+    const blockRect = content.parentElement!.getBoundingClientRect();
+    const centerDeltaRatios = contents.map((courseContent) => {
+      const courseBlock = courseContent.parentElement!.getBoundingClientRect();
+      const centerItems = ['[data-export-course-duration]', '[data-export-course-code]', '[data-export-course-location]']
+        .map((selector) => courseContent.querySelector<HTMLElement>(selector)?.getBoundingClientRect())
+        .filter((rect): rect is DOMRect => Boolean(rect));
+      const groupTop = Math.min(...centerItems.map((rect) => rect.top));
+      const groupBottom = Math.max(...centerItems.map((rect) => rect.bottom));
+      return Math.abs((groupTop + groupBottom) / 2 - (courseBlock.top + courseBlock.height / 2)) / courseBlock.height;
+    });
     return {
       rootWidth: (root as HTMLElement).offsetWidth,
       rootHeight: (root as HTMLElement).offsetHeight,
       previewWidth: rootRect.width,
       previewHeight: rootRect.height,
       time: bounds('[data-export-time-label]'),
+      block: { x: blockRect.left - rootRect.left, y: blockRect.top - rootRect.top, width: blockRect.width, height: blockRect.height },
+      maxCenterDeltaRatio: Math.max(...centerDeltaRatios),
+      start: bounds('[data-export-course-time="start"]'),
+      end: bounds('[data-export-course-time="end"]'),
+      duration: bounds('[data-export-course-duration]'),
       course: bounds('[data-export-course-code]'),
     };
   });
+  expect(textBounds.start.x).toBeGreaterThan(textBounds.block.x + 1);
+  expect(textBounds.start.y).toBeGreaterThan(textBounds.block.y + 1);
+  expect(textBounds.end.x + textBounds.end.width).toBeLessThan(textBounds.block.x + textBounds.block.width - 1);
+  expect(textBounds.end.y + textBounds.end.height).toBeLessThan(textBounds.block.y + textBounds.block.height - 1);
+  expect(textBounds.duration.y + textBounds.duration.height).toBeLessThan(textBounds.course.y);
+  expect(textBounds.maxCenterDeltaRatio).toBeLessThan(0.2);
+  await expect(page.locator('[data-export-course-time="start"]').first()).toBeVisible();
+  await expect(page.locator('[data-export-course-time="end"]').first()).toBeVisible();
+  await expect(page.locator('[data-export-course-duration]').first()).toBeVisible();
 
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: /^download$|^muat turun$/i }).click();
@@ -289,6 +343,63 @@ test('wallpaper export converts OKLab gradient colors for PNG rendering', async 
   const adjustedGrid = await getGridPosition();
   expect(adjustedGrid.top).toBeLessThan(lowerGrid.top - 80);
   expect(adjustedGrid.bottom).toBeCloseTo(lowerGrid.bottom, 0);
+});
+
+test('wallpaper class blocks stay centered at maximum position', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await page.getByRole('button', { name: /log in|log masuk/i }).first().click();
+  await page.getByRole('button', { name: /log masuk tanpa akaun|demo/i }).click();
+  await page.getByRole('button', { name: /open tools and export/i }).click();
+  await page.getByRole('button', { name: /eksport pdf & wallpaper|export pdf & wallpaper/i }).click();
+  await page.getByRole('button', { name: /wallpaper lockscreen/i }).click();
+  await page.getByRole('slider', { name: 'Laraskan ruang atas jadual pada lockscreen' }).press('End');
+  await page.getByRole('slider', { name: 'Laraskan ruang bawah jadual pada lockscreen' }).press('End');
+  await expect(page.getByRole('slider', { name: 'Laraskan ruang atas jadual pada lockscreen' })).toHaveValue('216');
+  await expect(page.getByRole('slider', { name: 'Laraskan ruang bawah jadual pada lockscreen' })).toHaveValue('138');
+  const layout = await page.locator('[data-wallpaper-grid]').evaluate((grid) => {
+    const rows = [...grid.querySelectorAll('tbody tr')].map((row) => row.getBoundingClientRect().height);
+    const lastRow = grid.querySelector('tbody tr:last-child')!.getBoundingClientRect();
+    const gridRect = grid.getBoundingClientRect();
+    const contents = [...grid.querySelectorAll<HTMLElement>('[data-export-course-content]')];
+    const blockHeights = contents.map((content) => content.parentElement!.getBoundingClientRect().height);
+    const blockRowHeightDeltas = contents.map((content) => {
+      const block = content.parentElement!;
+      const row = block.parentElement!.parentElement!;
+      return Math.abs(block.getBoundingClientRect().height - row.getBoundingClientRect().height);
+    });
+    const centerDeltaRatios = contents.map((content) => {
+      const block = content.parentElement!.getBoundingClientRect();
+      const items = ['[data-export-course-duration]', '[data-export-course-code]', '[data-export-course-location]']
+        .map((selector) => content.querySelector<HTMLElement>(selector)?.getBoundingClientRect())
+        .filter((rect): rect is DOMRect => Boolean(rect));
+      const top = Math.min(...items.map((rect) => rect.top));
+      const bottom = Math.max(...items.map((rect) => rect.bottom));
+      return Math.abs((top + bottom) / 2 - (block.top + block.height / 2)) / block.height;
+    });
+    const endInsets = contents.map((content) => {
+      const block = content.parentElement!.getBoundingClientRect();
+      const end = content.querySelector<HTMLElement>('[data-export-course-time="end"]')!;
+      return block.bottom - end.getBoundingClientRect().bottom;
+    });
+    return {
+      rows,
+      lastRowBottomOverflow: lastRow.bottom - gridRect.bottom,
+      blockHeights,
+      blockRowHeightDeltas,
+      centerDeltaRatios,
+      minEndInset: Math.min(...endInsets),
+      maxEndInset: Math.max(...endInsets),
+    };
+  });
+
+  expect(Math.max(...layout.rows) - Math.min(...layout.rows)).toBeLessThan(1);
+  expect(layout.lastRowBottomOverflow).toBeLessThanOrEqual(1);
+  expect(Math.max(...layout.blockHeights) - Math.min(...layout.blockHeights)).toBeLessThan(1);
+  expect(Math.max(...layout.blockRowHeightDeltas)).toBeLessThanOrEqual(1);
+  expect(Math.max(...layout.centerDeltaRatios)).toBeLessThan(0.2);
+  expect(layout.minEndInset).toBeGreaterThan(0);
+  expect(layout.maxEndInset).toBeLessThan(4);
 });
 
 test('unknown route shows branded 404 screen', async ({ page }) => {

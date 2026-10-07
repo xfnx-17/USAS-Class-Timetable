@@ -1,25 +1,25 @@
 import { describe, expect, it } from 'vitest';
-import { buildWallpaperGridSlots } from '../src/features/export/lib/wallpaperGrid';
+import { buildWallpaperGridSlots, getWallpaperAxisOffset } from '../src/features/export/lib/wallpaperGrid';
 
 describe('buildWallpaperGridSlots', () => {
-  it('uses compact, regular periods across the class range', () => {
-    const slots = buildWallpaperGridSlots([
+  it('skips empty hours and keeps one-hour periods', () => {
+    expect(buildWallpaperGridSlots([
+      { start: 8 * 60 + 30, end: 10 * 60 + 30 },
       { start: 11 * 60, end: 13 * 60 },
-      { start: 13 * 60, end: 16 * 60 },
-      { start: 20 * 60, end: 23 * 60 },
-    ]);
-
-    expect(slots).toEqual([
-      { start: 11 * 60, end: 13 * 60 },
-      { start: 13 * 60, end: 15 * 60 },
-      { start: 15 * 60, end: 17 * 60 },
-      { start: 17 * 60, end: 19 * 60 },
-      { start: 19 * 60, end: 21 * 60 },
-      { start: 21 * 60, end: 23 * 60 },
+      { start: 14 * 60 + 30, end: 16 * 60 + 30 },
+    ])).toEqual([
+      { start: 8 * 60, end: 9 * 60 },
+      { start: 9 * 60, end: 10 * 60 },
+      { start: 10 * 60, end: 11 * 60 },
+      { start: 11 * 60, end: 12 * 60 },
+      { start: 12 * 60, end: 13 * 60 },
+      { start: 14 * 60, end: 15 * 60 },
+      { start: 15 * 60, end: 16 * 60 },
+      { start: 16 * 60, end: 17 * 60 },
     ]);
   });
 
-  it('caps the last slot at midnight', () => {
+  it('caps periods at midnight', () => {
     expect(buildWallpaperGridSlots([{ start: 23 * 60, end: 25 * 60 }])).toEqual([
       { start: 23 * 60, end: 24 * 60 },
     ]);
@@ -31,13 +31,28 @@ describe('buildWallpaperGridSlots', () => {
     ]);
   });
 
-  it('keeps equal-width periods aligned when the last class ends between periods', () => {
-    expect(buildWallpaperGridSlots([{ start: 8 * 60 + 30, end: 17 * 60 }])).toEqual([
+  it('groups active hours when they exceed the column limit', () => {
+    expect(buildWallpaperGridSlots([{ start: 8 * 60, end: 18 * 60 }], 8)).toEqual([
       { start: 8 * 60, end: 10 * 60 },
       { start: 10 * 60, end: 12 * 60 },
       { start: 12 * 60, end: 14 * 60 },
       { start: 14 * 60, end: 16 * 60 },
       { start: 16 * 60, end: 18 * 60 },
     ]);
+  });
+});
+
+describe('getWallpaperAxisOffset', () => {
+  it('compresses empty time gaps but preserves class duration', () => {
+    const slots = [
+      { start: 8 * 60, end: 9 * 60 },
+      { start: 10 * 60, end: 11 * 60 },
+    ];
+
+    expect(getWallpaperAxisOffset(8 * 60 + 30, slots)).toBe(30);
+    expect(getWallpaperAxisOffset(9 * 60, slots)).toBe(60);
+    expect(getWallpaperAxisOffset(10 * 60, slots)).toBe(60);
+    expect(getWallpaperAxisOffset(10 * 60 + 30, slots)).toBe(90);
+    expect(getWallpaperAxisOffset(11 * 60, slots)).toBe(120);
   });
 });

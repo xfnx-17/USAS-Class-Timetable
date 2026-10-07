@@ -74,12 +74,21 @@ export const parseTimeToMinutes = (timeStr?: string): number | null => {
 };
 
 export const getShortTimeRange = (startTime?: string, endTime?: string) => {
-  const startHour = parseTo24hHour(startTime);
-  const endHour = parseTo24hHour(endTime);
-  if (startHour === null) return startTime || '';
-  if (endHour === null) return `${startHour}`;
-  return `${startHour}-${endHour}`;
+  const format = (minutes: number) => {
+    const hour = Math.floor(minutes / 60);
+    return `${hour}:${String(minutes % 60).padStart(2, '0')}`;
+  };
+  const start = parseTimeToMinutes(startTime);
+  const end = parseTimeToMinutes(endTime);
+  if (start === null) return startTime || '';
+  if (end === null) return format(start);
+  return `${format(start)}-${format(end)}`;
 };
+
+export const getTimeRangePosition = (start: number, end: number, axisStart: number, axisDuration: number) => ({
+  left: ((start - axisStart) / axisDuration) * 100,
+  width: ((end - start) / axisDuration) * 100,
+});
 
 export const getDayKeyFromDate = (date: Date) => {
   const dayMap = ['AHAD', 'ISNIN', 'SELASA', 'RABU', 'KHAMIS', 'JUMAAT', 'SABTU'];

@@ -7,7 +7,8 @@ import { generateTimetablePdf, generateElementPng, generateLockscreenImage } fro
 import { extractDayName, formatDayDisplay, sortDayLabels } from '@/shared/lib/dayFormat';
 import { buildCourseColorMap, getCourseColorSlot } from '@/shared/lib/courseColors';
 import { getOwnRecordValue } from '@/shared/lib/security';
-import { buildWallpaperGridSlots } from '@/features/export/lib/wallpaperGrid';
+import { getShortTimeRange } from '@/shared/lib/timetableTime';
+import { buildWallpaperGridSlots, getWallpaperAxisOffset } from '@/features/export/lib/wallpaperGrid';
 import type { TimetableItem } from '@/shared/types/usas';
 import {
   X, Download, Smartphone, RotateCw, ChevronDown, Plus, Minus, FileBadge
@@ -294,10 +295,9 @@ const formatWallpaperSlotLabel = (startMinutes: number, endMinutes: number) => {
   const format = (minutes: number) => {
     const hour = Math.floor(minutes / 60);
     const minute = minutes % 60;
-    return minute === 0
-      ? String(hour).padStart(2, '0')
-      : `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+    return minute === 0 ? String(hour) : `${hour}:${String(minute).padStart(2, '0')}`;
   };
+  if (endMinutes - startMinutes <= 30) return format(startMinutes);
   const start = format(startMinutes);
   const end = format(Math.min(24 * 60, endMinutes));
   return `${start}-${end}`;
@@ -627,9 +627,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
 
   const renderWallpaperCourseContent = (
     course: TimetableItem,
-    _span: number,
     cellWidthPx: number,
-    badgeHeightPx: number,
     isLightMode: boolean,
     style: {
       tableFontSize: string;
@@ -646,7 +644,21 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
     const code = course.course_id || course.kod_kursus || '';
     const loc = course.location || '';
     const duration = formatDurationRange(course.start_time || course.jadual, course.end_time);
+    const timeRange = getShortTimeRange(course.start_time || course.jadual, course.end_time);
+    const [startTimeLabel, endTimeLabel] = timeRange.split('-');
     const shortDuration = formatShortDurationLabel(course.start_time || course.jadual, course.end_time);
+    const timeInfoFontSize = Math.max(3.6, Math.min(5, (cellWidthPx - 8) / (Math.max(startTimeLabel.length, endTimeLabel?.length || 0) * 0.58)));
+    const timeInfo = (
+      <>
+        {startTimeLabel && <span data-export-course-time="start" title={duration} className={`absolute left-0.5 top-0.5 z-20 whitespace-nowrap font-semibold leading-none ${isLightMode ? 'text-slate-600' : 'text-white/70'}`} style={{ fontSize: `${timeInfoFontSize}px` }}>{startTimeLabel}</span>}
+        {endTimeLabel && <span data-export-course-time="end" title={duration} className={`absolute right-0.5 bottom-0.5 z-20 whitespace-nowrap font-semibold leading-none ${isLightMode ? 'text-slate-600' : 'text-white/70'}`} style={{ fontSize: `${timeInfoFontSize}px` }}>{endTimeLabel}</span>}
+      </>
+    );
+    const durationInfo = shortDuration && (
+      <div data-export-course-duration className={`w-full text-center ${style.durationSize} leading-normal font-bold ${isLightMode ? 'text-slate-500' : 'text-white/60'}`}>
+        {shortDuration}
+      </div>
+    );
     const codeOnlyFontSize = (() => {
       const baseSize = (() => {
         if (wallpaperPreset === 'phone') {
@@ -691,14 +703,12 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
     return (
       <div
         data-export-course-content
-        className="w-full flex flex-col justify-center items-center text-center p-0.5"
-        style={{ height: `${badgeHeightPx - 2}px` }}
+        className="absolute inset-0 w-full flex flex-col justify-center items-center text-center p-0.5"
       >
+        {timeInfo}
         {contentDetail === 'DETAILS' ? (
           <div className="w-full flex flex-col justify-center items-center text-center gap-0.5">
-            <div className={`w-full text-center ${style.durationSize} leading-normal font-bold ${isLightMode ? 'text-slate-500' : 'text-white/60'}`}>
-              <span className="break-words text-center leading-tight">{shortDuration || duration}</span>
-            </div>
+            {durationInfo}
             <div className="w-full text-center">
               <span
                 data-export-course-code
@@ -711,11 +721,12 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
               </span>
             </div>
             <div className={`w-full text-center ${style.courseLocSize} leading-normal font-semibold ${isLightMode ? 'text-slate-500' : 'text-white/60'}`}>
-              <span className="break-words whitespace-normal text-center" title={loc}>{loc}</span>
+              <span data-export-course-location className="break-words whitespace-normal text-center" title={loc}>{loc}</span>
             </div>
           </div>
         ) : (
-          <div className="w-full flex items-center justify-center text-center">
+          <div className="w-full flex flex-col items-center justify-center text-center gap-0.5">
+            {durationInfo}
             <span
               data-export-course-code
               className={`inline-block max-w-full whitespace-nowrap leading-normal tracking-tight text-center font-black ${isLightMode ? 'text-slate-800' : 'text-white'}`}
@@ -1265,19 +1276,13 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                           {/* DYNAMIC SCALING WALLPAPER GRID VIEW TABLE */}
                           {(() => {
                             const style = getPresetStyle(wallpaperPreset, contentDetail);
-                            const rowHeightPx = wallpaperPreset === 'phone'
-                              ? 46
-                              : wallpaperPreset === 'square'
-                                ? 42
-                                : wallpaperPreset === 'tablet'
-                                  ? 54
-                                  : 44;
-
                             const wallpaperPadding = wallpaperPreset === 'phone' ? 12 : wallpaperPreset === 'square' ? 14 : 16;
+                            const headerHeightPx = wallpaperPreset === 'phone' ? 14 : wallpaperPreset === 'square' ? 16 : wallpaperPreset === 'tablet' ? 20 : 18;
+                            const gridHeightPx = h - (wallpaperPadding * 2) - 20 - currentSpacers.top - currentSpacers.bottom;
+                            const rowHeightPx = Math.max(1, (gridHeightPx - 4 - headerHeightPx) / daysList.length);
                             const gridInnerWidth = w - (wallpaperPadding * 2) - 2;
 
-                            // Use class boundaries as equal-width columns to keep labels and
-                            // cells tidy. Long empty gaps stay compressed into one column.
+                            // Skip hours with no classes. Dense schedules group active hours into wider periods.
                             const maxColumns = wallpaperPreset === 'phone' ? 8 : wallpaperPreset === 'square' ? 9 : wallpaperPreset === 'tablet' ? 10 : 12;
                             const slots = buildWallpaperGridSlots(allCourses.flatMap((course) => {
                               const start = parseTimeToMinutes(course.start_time || course.jadual || '');
@@ -1287,16 +1292,13 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                             }), maxColumns);
                             const axisStart = slots[0].start;
                             const axisEnd = slots[slots.length - 1].end;
-                            const axisDuration = axisEnd - axisStart;
+                            const axisDuration = slots.reduce((total, slot) => total + slot.end - slot.start, 0);
                             const gridContentWidth = gridInnerWidth - 38;
-                            const widthPerSlot = gridContentWidth / slots.length;
+                            const widthPerSlot = (slot: { start: number; end: number }) => gridContentWidth * (slot.end - slot.start) / axisDuration;
 
                             return (
                               <table className={`w-full h-full table-fixed border-collapse ${style.tableFontSize}`}>
                                 <thead>
-                                  {(() => {
-                                    const headerHeightPx = wallpaperPreset === 'phone' ? 14 : wallpaperPreset === 'square' ? 16 : wallpaperPreset === 'tablet' ? 20 : 18;
-                                    return (
                                       <tr style={{ height: `${headerHeightPx}px` }}>
                                         <th
                                           className={`p-0 font-black uppercase tracking-wider align-middle border-r ${lockscreenConfig.headerBorder} ${lockscreenConfig.headerText}`}
@@ -1309,26 +1311,25 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                         {slots.map((slot) => (
                                           <th
                                             key={slot.start}
+                                            data-export-time-duration={slot.end - slot.start}
                                             className={`p-0 font-black uppercase tracking-wider align-middle border-r ${lockscreenConfig.headerBorder} ${lockscreenConfig.headerText}`}
-                                            style={{ height: `${headerHeightPx}px`, width: `${widthPerSlot}px` }}
+                                            style={{ height: `${headerHeightPx}px`, width: `${widthPerSlot(slot)}px` }}
                                           >
                                             <div className="w-full h-full flex items-center justify-center text-center leading-none" style={{ height: `${headerHeightPx}px` }}>
                                               {(() => {
                                                 const label = formatWallpaperSlotLabel(slot.start, slot.end);
-                                                const fontSize = Math.max(4, Math.min(8, widthPerSlot / (label.length * 0.62)));
+                                                const fontSize = Math.max(3.5, Math.min(8, widthPerSlot(slot) / (label.length * 0.9)));
                                                 return <span data-export-time-label className="leading-none whitespace-nowrap" style={{ fontSize: `${fontSize}px` }}>{label}</span>;
                                               })()}
                                             </div>
                                           </th>
                                         ))}
                                       </tr>
-                                    );
-                                  })()}
                                 </thead>
                                 <tbody>
                                   {daysList.map((d) => {
                                     return (
-                                      <tr key={d} style={{ height: `${rowHeightPx}px` }} className={`border-t ${lockscreenConfig.cellBorder}`}>
+                                      <tr key={d} style={{ height: `${rowHeightPx}px`, minHeight: `${rowHeightPx}px` }} className={`border-t ${lockscreenConfig.cellBorder}`}>
                                         <td
                                           className={`p-0 font-bold border-r ${lockscreenConfig.cellBorder} ${lockscreenConfig.dayText}`}
                                           style={{ height: `${rowHeightPx}px`, width: '38px' }}
@@ -1337,8 +1338,8 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                             <span className="text-[10px] break-words whitespace-pre-wrap">{extractDayName(d) ? t(`shortDays.${extractDayName(d)}`) : formatDayDisplay(d, t, { short: true })}</span>
                                           </div>
                                         </td>
-                                        <td colSpan={slots.length} className="relative p-0 overflow-hidden" style={{ height: `${rowHeightPx}px` }}>
-                                          <div className="absolute inset-0 grid" style={{ gridTemplateColumns: `repeat(${slots.length}, minmax(0, 1fr))` }} aria-hidden="true">
+                                        <td colSpan={slots.length} className="relative p-0 overflow-hidden" style={{ height: `${rowHeightPx}px`, minHeight: `${rowHeightPx}px` }}>
+                                          <div className="absolute inset-0 grid" style={{ gridTemplateColumns: slots.map((slot) => `${slot.end - slot.start}fr`).join(' ') }} aria-hidden="true">
                                             {slots.map((slot) => (
                                               <div key={slot.start} className={`border-r last:border-r-0 ${lockscreenConfig.cellBorder}`} />
                                             ))}
@@ -1350,9 +1351,11 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                             const rawEnd = parseTimeToMinutes(course.end_time || '');
                                             const end = Math.min(axisEnd, rawEnd != null && rawEnd > start ? rawEnd : start + 60);
                                             if (end <= start) return null;
-                                            const left = ((start - axisStart) / axisDuration) * 100;
-                                            const width = ((end - start) / axisDuration) * 100;
-                                            const courseWidth = gridContentWidth * (end - start) / axisDuration;
+                                            const courseStart = getWallpaperAxisOffset(start, slots);
+                                            const courseEnd = getWallpaperAxisOffset(end, slots);
+                                            const left = (courseStart / axisDuration) * 100;
+                                            const width = ((courseEnd - courseStart) / axisDuration) * 100;
+                                            const courseWidth = gridContentWidth * (courseEnd - courseStart) / axisDuration;
                                             const courseColor = getModalDayColors(
                                               getCourseColorSlot(courseColorMap, course.course_id || course.kod_kursus),
                                               exportTheme,
@@ -1360,10 +1363,10 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                             return (
                                               <div
                                                 key={`${course.course_id || course.kod_kursus}-${start}`}
-                                                className={`absolute inset-y-0.5 border-r align-middle p-0.5 overflow-hidden ${lockscreenConfig.cellBorder} ${courseColor.bg} ${courseColor.border}`}
+                                                className={`absolute inset-0 border-r align-middle p-0.5 overflow-hidden ${lockscreenConfig.cellBorder} ${courseColor.bg} ${courseColor.border}`}
                                                 style={{ left: `${left}%`, width: `${width}%` }}
                                               >
-                                                {renderWallpaperCourseContent(course, 1, courseWidth, rowHeightPx, lockscreenConfig.isLight, style)}
+                                                {renderWallpaperCourseContent(course, courseWidth, lockscreenConfig.isLight, style)}
                                               </div>
                                             );
                                           })}

@@ -10,6 +10,8 @@ import AttendanceMeter from './AttendanceMeter';
 import {
   buildHourlyTimeSlots,
   getCourseHighlightKey,
+  getShortTimeRange,
+  getTimeRangePosition,
   parseTo24hHour,
   parseTimeToMinutes,
 } from '@/shared/lib/timetableTime';
@@ -98,18 +100,6 @@ export default function MatrixGridView({
   // Stable unique colour per course (shared with the card and export views).
   const courseColorMap = useMemo(() => buildCourseColorMap(timetable), [timetable]);
 
-  const getCourseForSlot = (dayName: string, slotTime: string) => {
-    const targetDay = extractDayName(dayName);
-    const slotHour = parseTo24hHour(slotTime);
-    if (slotHour === null) return undefined;
-
-    return timetable.find(c => {
-      if (extractDayName(c.day) !== targetDay) return false;
-      const startHour = parseTo24hHour(c.start_time || c.jadual || '');
-      return startHour !== null && startHour === slotHour;
-    });
-  };
-
   useEffect(() => {
     if (!preview) return;
     const close = (event: MouseEvent) => {
@@ -132,29 +122,26 @@ export default function MatrixGridView({
   // Show only the time slots that actually contain classes, so a day starting
   // at 11am doesn't render empty 8-9/9-10/10-11 columns.
   const activeTimeSlots = useMemo(() => {
-    if (timetable.length === 0) return buildHourlyTimeSlots(8, 11);
+    if (timetable.length === 0) return buildHourlyTimeSlots(8, 10);
 
     let minHour = Infinity;
     let maxHour = -Infinity;
     timetable.forEach(c => {
-      const startH = parseTo24hHour(c.start_time || c.jadual || '');
-      const endH = parseTo24hHour(c.end_time);
-      if (startH !== null) {
-        minHour = Math.min(minHour, startH);
-        maxHour = Math.max(maxHour, startH);
-      }
-      if (endH !== null) {
-        maxHour = Math.max(maxHour, endH - 1);
-      }
+      const start = parseTimeToMinutes(c.start_time || c.jadual || '');
+      if (start === null) return;
+      const end = parseTimeToMinutes(c.end_time);
+      const endMinutes = end !== null && end > start ? end : start + 60;
+      minHour = Math.min(minHour, Math.floor(start / 60));
+      maxHour = Math.max(maxHour, Math.ceil(endMinutes / 60));
     });
 
     if (!Number.isFinite(minHour) || !Number.isFinite(maxHour)) {
-      return buildHourlyTimeSlots(8, 11);
+      return buildHourlyTimeSlots(8, 10);
     }
 
-    const slots = buildHourlyTimeSlots(minHour, maxHour);
+    const slots = buildHourlyTimeSlots(minHour, maxHour - 1);
 
-    return slots.length > 0 ? slots : buildHourlyTimeSlots(8, 11);
+    return slots.length > 0 ? slots : buildHourlyTimeSlots(8, 10);
   }, [timetable]);
 
   // Constant column widths + fixed text sizing: on small screens the grid
@@ -162,6 +149,8 @@ export default function MatrixGridView({
   const DAY_COL_WIDTH = 92;
   const SLOT_COL_WIDTH = 108;
   const tableMinWidth = DAY_COL_WIDTH + activeTimeSlots.length * SLOT_COL_WIDTH;
+  const axisStart = parseTimeToMinutes(activeTimeSlots[0]) ?? 8 * 60;
+  const axisDuration = activeTimeSlots.length * 60;
   const autoScale = 1;
 
   const hasDayFilter = Boolean(activeDay) && activeDay.toUpperCase() !== 'ALL';
@@ -192,9 +181,10 @@ export default function MatrixGridView({
                 style={{ fontSize: `${autoScale * 10}px` }}
               >
               </th>
-              {activeTimeSlots.map(slot => (
+              {activeTimeSlots.map((slot) => (
                 <th
                   key={slot}
+                  data-matrix-time-slot={slot}
                   className={`px-2 sm:px-3 py-1.5 sm:py-2 text-center font-semibold font-mono tracking-wider border-r whitespace-nowrap leading-none ${
                     isLight ? 'text-slate-500 border-slate-200 bg-slate-50/10' : 'text-amber-400/70 border-white/[0.04]'
                   } last:border-r-0`}
@@ -210,7 +200,6 @@ export default function MatrixGridView({
           <tbody>
             {days.map((d) => {
               const isDimmedRow = hasDayFilter && !isSameDay(d, activeDay);
-              let skipCount = 0;
 
               return (
                 <tr key={d} className={`border-b last:border-b-0 transition-colors ${
@@ -228,108 +217,69 @@ export default function MatrixGridView({
                       <span className={isLight ? 'text-slate-600' : 'text-white/70'}>{formatDayDisplay(d, t)}</span>
                     </span>
                   </td>
-                  {activeTimeSlots.map((slot) => {
-                    if (skipCount > 0) {
-                      skipCount--;
-                      return null;
-                    }
-
-                    const course = getCourseForSlot(d, slot);
-                    const courseColor = course
-                      ? getDayColors(getCourseColorSlot(courseColorMap, course.course_id || course.kod_kursus), isLight)
-                      : null;
-                    const courseKey = course ? getCourseHighlightKey(course) : '';
-                    const courseStatus =
-                      courseKey && activeHighlights
-                        ? (activeHighlights.ongoingKey === courseKey
-                            ? 'ongoing'
-                            : activeHighlights.upcomingKey === courseKey
-                              ? 'upcoming'
-                              : 'idle')
+                  <td colSpan={activeTimeSlots.length} className="relative p-0 min-h-[64px]">
+                    <div
+                      className={`absolute inset-0 grid ${isLight ? 'divide-x divide-slate-100' : 'divide-x divide-white/[0.03]'}`}
+                      style={{ gridTemplateColumns: `repeat(${activeTimeSlots.length}, minmax(0, 1fr))` }}
+                      aria-hidden="true"
+                    >
+                      {activeTimeSlots.map((slot) => <div key={slot} />)}
+                    </div>
+                    {timetable.map((course) => {
+                      if (extractDayName(course.day) !== extractDayName(d)) return null;
+                      const start = parseTimeToMinutes(course.start_time || course.jadual || '');
+                      if (start === null || start < axisStart || start >= axisStart + axisDuration) return null;
+                      const parsedEnd = parseTimeToMinutes(course.end_time);
+                      const end = parsedEnd !== null && parsedEnd > start ? parsedEnd : start + 60;
+                      const position = getTimeRangePosition(start, end, axisStart, axisDuration);
+                      const courseColor = getDayColors(getCourseColorSlot(courseColorMap, course.course_id || course.kod_kursus), isLight);
+                      const courseKey = getCourseHighlightKey(course);
+                      const courseStatus = courseKey && activeHighlights
+                        ? activeHighlights.ongoingKey === courseKey ? 'ongoing' : activeHighlights.upcomingKey === courseKey ? 'upcoming' : 'idle'
                         : 'idle';
-                    let colSpan = 1;
-                    
-                    let durationText = '';
-                    if (course) {
-                      const startH = parseTo24hHour(course.start_time);
-                      const endH = parseTo24hHour(course.end_time);
-                      if (startH !== null && endH !== null) {
-                        const duration = endH - startH;
-                        if (duration > 1) {
-                          colSpan = duration;
-                        }
-                        durationText = getDurationLabel(course.start_time, course.end_time, lang);
-                      }
-                    }
-                    
-                    skipCount = colSpan - 1;
+                      const durationText = getDurationLabel(course.start_time, course.end_time, lang);
+                      const timeRangeText = getShortTimeRange(course.start_time || course.jadual, course.end_time);
+                      const courseWidthPx = activeTimeSlots.length * SLOT_COL_WIDTH * position.width / 100;
+                      const timeFontSize = Math.max(4, Math.min(8, (courseWidthPx - 16) / (timeRangeText.length * 0.58)));
+                      const fs = (value: number) => `${value}px`;
 
-                    // Constant text sizing — the grid scrolls instead of shrinking.
-                    const fs = (value: number) => `${value}px`;
-
-                    return (
-                      <td 
-                        key={slot} 
-                        colSpan={colSpan}
-                        className={`p-1 border-r last:border-r-0 ${
-                          isLight ? 'border-slate-100' : 'border-white/[0.03]'
-                        }`}
-                      >
-                        {course ? (
-                          <div
-                            role="button"
-                            tabIndex={0}
-                            onClick={(e) => { e.stopPropagation(); showPreview(course, e.currentTarget); }}
-                            onMouseEnter={(e) => showPreview(course, e.currentTarget)}
-                            onMouseLeave={() => setPreview(null)}
-                            onFocus={(e) => showPreview(course, e.currentTarget)}
-                            onBlur={() => setPreview(null)}
-                            className={`px-2 py-2 rounded-md border h-full flex flex-col justify-center gap-1 cursor-pointer outline-none transition-all duration-300 hover:brightness-105 overflow-hidden ${courseColor?.bg} ${courseColor?.border} ${
-                              isDimmedRow ? 'opacity-30 blur-[1.5px]' : ''
-                            }`}>
-                            <div className="flex items-center justify-between gap-1 mb-0.5 min-w-0">
-                              <div className={`font-bold ${courseColor?.text} flex items-center gap-1.5 min-w-0`} style={{ fontSize: fs(12) }}>
-                                <span className="truncate">{course.course_id || course.kod_kursus}</span>
-                                <span
-                                  className={`inline-block rounded-full flex-shrink-0 ${
-                                    courseStatus === 'ongoing'
-                                      ? 'bg-emerald-400 animate-pulse'
-                                      : courseStatus === 'upcoming'
-                                        ? 'bg-amber-400'
-                                        : 'bg-transparent'
-                                  }`}
-                                  style={{ width: fs(8), height: fs(8) }}
-                                  aria-hidden="true"
-                                />
-                              </div>
-                              {durationText && (
-                                <div className={`font-extrabold uppercase shrink-0 flex items-center justify-center text-center px-1 py-0.5 rounded leading-none ${
-                                  isLight 
-                                    ? 'bg-slate-100 text-slate-600 border border-slate-200/50' 
-                                    : 'bg-white/10 text-white/80 border border-white/5'
-                                }`} style={{ fontSize: fs(8) }}>
-                                  {durationText}
-                                </div>
-                              )}
+                      return (
+                        <div
+                          key={`${course.course_id || course.kod_kursus}-${start}`}
+                          role="button"
+                          data-matrix-course-code={course.course_id || course.kod_kursus || ''}
+                          data-matrix-course-start={course.start_time || course.jadual || ''}
+                          data-matrix-course-time={timeRangeText}
+                          tabIndex={0}
+                          onClick={(e) => { e.stopPropagation(); showPreview(course, e.currentTarget); }}
+                          onMouseEnter={(e) => showPreview(course, e.currentTarget)}
+                          onMouseLeave={() => setPreview(null)}
+                          onFocus={(e) => showPreview(course, e.currentTarget)}
+                          onBlur={() => setPreview(null)}
+                          className={`absolute top-1 bottom-1 z-10 px-2 py-2 rounded-md border flex flex-col justify-center gap-1 cursor-pointer outline-none transition-all duration-300 hover:brightness-105 overflow-hidden ${courseColor.bg} ${courseColor.border} ${isDimmedRow ? 'opacity-30 blur-[1.5px]' : ''}`}
+                          style={{ left: `${position.left}%`, width: `${position.width}%` }}
+                        >
+                          <div className="flex items-center justify-between gap-1 mb-0.5 min-w-0">
+                            <div className={`font-bold ${courseColor.text} flex items-center gap-1.5 min-w-0`} style={{ fontSize: fs(12) }}>
+                              <span className="truncate">{course.course_id || course.kod_kursus}</span>
+                              <span className={`inline-block rounded-full flex-shrink-0 ${courseStatus === 'ongoing' ? 'bg-emerald-400 animate-pulse' : courseStatus === 'upcoming' ? 'bg-amber-400' : 'bg-transparent'}`} style={{ width: fs(8), height: fs(8) }} aria-hidden="true" />
                             </div>
-                            <div className={`font-medium leading-snug break-words line-clamp-2 ${
-                              isLight ? 'text-slate-700' : 'text-white/80'
-                            }`} style={{ fontSize: fs(10) }}>
-                              {course.course_name || course.kursus}
-                            </div>
-                            <div className={`flex items-center gap-1 leading-none min-w-0 ${
-                              isLight ? 'text-slate-500' : 'text-white/50'
-                            }`} style={{ fontSize: fs(10.5) }}>
-                              <MapPin style={{ width: fs(10.5), height: fs(10.5), color: '#ed4134' }} className="flex-shrink-0 self-center" />
-                              <span className="leading-none self-center truncate">{course.location}</span>
-                            </div>
+                            {durationText && <div className={`font-extrabold uppercase shrink-0 flex items-center justify-center text-center px-1 py-0.5 rounded leading-none ${isLight ? 'bg-slate-100 text-slate-600 border border-slate-200/50' : 'bg-white/10 text-white/80 border border-white/5'}`} style={{ fontSize: fs(8) }}>{durationText}</div>}
                           </div>
-                        ) : (
-                          <div className="h-full w-full min-h-[48px]" />
-                        )}
-                      </td>
-                    );
-                  })}
+                          <div className={`w-full text-center font-mono font-semibold leading-none whitespace-nowrap overflow-hidden text-ellipsis ${isLight ? 'text-slate-600' : 'text-white/65'}`} style={{ fontSize: `${timeFontSize}px` }} title={timeRangeText}>
+                            {timeRangeText}
+                          </div>
+                          <div className={`font-medium leading-snug break-words line-clamp-2 ${isLight ? 'text-slate-700' : 'text-white/80'}`} style={{ fontSize: fs(10) }}>
+                            {course.course_name || course.kursus}
+                          </div>
+                          <div className={`flex items-center gap-1 leading-none min-w-0 ${isLight ? 'text-slate-500' : 'text-white/50'}`} style={{ fontSize: fs(10.5) }}>
+                            <MapPin style={{ width: fs(10.5), height: fs(10.5), color: '#ed4134' }} className="flex-shrink-0 self-center" />
+                            <span className="leading-none self-center truncate">{course.location}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </td>
                 </tr>
               );
             })}

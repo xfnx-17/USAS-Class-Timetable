@@ -6,6 +6,7 @@ import {
   getCourseHighlightKey,
   getDayKeyFromDate,
   getShortTimeRange,
+  getTimeRangePosition,
   parseTimeToMinutes,
   parseTo24hHour,
 } from '../src/shared/lib/timetableTime';
@@ -28,13 +29,24 @@ describe('timetableTime', () => {
     ]);
   });
 
+  it('positions classes accurately to each minute, not only half hours', () => {
+    expect(getTimeRangePosition(8 * 60 + 10, 9 * 60 + 10, 8 * 60, 2 * 60)).toMatchObject({ width: 50 });
+    expect(getTimeRangePosition(8 * 60 + 10, 9 * 60 + 10, 8 * 60, 2 * 60).left).toBeCloseTo(100 / 12);
+    expect(getTimeRangePosition(8 * 60 + 20, 9 * 60 + 20, 8 * 60, 2 * 60).left).toBeCloseTo(100 / 6);
+    expect(getTimeRangePosition(8 * 60 + 30, 9 * 60 + 30, 8 * 60, 2 * 60).left).toBe(25);
+  });
+
   it('rejects text that only contains a time-like number', () => {
     expect(parseTimeToMinutes('course starts around 8 somewhere')).toBeNull();
   });
 
   it('formats short time ranges', () => {
-    expect(getShortTimeRange('08:00 AM', '10:00 AM')).toBe('8-10');
-    expect(getShortTimeRange('01:00 PM', '03:00 PM')).toBe('13-15');
+    expect(getShortTimeRange('08:00 AM', '10:00 AM')).toBe('8:00-10:00');
+    expect(getShortTimeRange('01:00 PM', '03:00 PM')).toBe('13:00-15:00');
+    expect(getShortTimeRange('08:10 AM', '09:10 AM')).toBe('8:10-9:10');
+    expect(getShortTimeRange('08:20 AM', '09:20 AM')).toBe('8:20-9:20');
+    expect(getShortTimeRange('08:30 AM', '10:30 AM')).toBe('8:30-10:30');
+    expect(getShortTimeRange('08:50 AM', '09:50 AM')).toBe('8:50-9:50');
   });
 
   it('builds stable highlight keys', () => {
