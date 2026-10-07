@@ -69,6 +69,14 @@ test('wallpaper export converts OKLab gradient colors for PNG rendering', async 
   await page.getByRole('button', { name: /open tools and export/i }).click();
   await page.getByRole('button', { name: /eksport pdf & wallpaper|export pdf & wallpaper/i }).click();
   await page.getByRole('button', { name: /wallpaper lockscreen/i }).click();
+  await expect(page.locator('[data-wallpaper-grid]')).toHaveCSS('border-top-left-radius', '24px');
+  const gridPosition = await page.evaluate(() => {
+    const root = document.querySelector<HTMLElement>('[data-export-root="wallpaper-export-root"]')!;
+    const grid = document.querySelector<HTMLElement>('[data-wallpaper-grid]')!;
+    const rootRect = root.getBoundingClientRect();
+    const gridRect = grid.getBoundingClientRect();
+    return { x: gridRect.left - rootRect.left, y: gridRect.top - rootRect.top, rootWidth: rootRect.width };
+  });
 
   await page.locator('[data-export-root="wallpaper-export-root"]').evaluate((root) => {
     root.style.setProperty('--tw-gradient-from', 'oklab(0.35 0.08 -0.12)');
@@ -90,6 +98,23 @@ test('wallpaper export converts OKLab gradient colors for PNG rendering', async 
   expect(image.subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
   expect(image.readUInt32BE(16)).toBeGreaterThan(500);
   expect(image.readUInt32BE(20)).toBeGreaterThan(500);
+
+  const [cornerPixel, backgroundPixel] = await page.evaluate(async ({ png, x, y, rootWidth }) => {
+    const image = new Image();
+    image.src = `data:image/png;base64,${png}`;
+    await image.decode();
+    const canvas = document.createElement('canvas');
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+    const context = canvas.getContext('2d')!;
+    context.drawImage(image, 0, 0);
+    const scale = image.naturalWidth / (rootWidth + 2);
+    const sample = (sampleX: number, sampleY: number) => Array.from(context.getImageData(
+      Math.round(sampleX * scale), Math.round(sampleY * scale), 1, 1,
+    ).data);
+    return [sample(x + 2, y + 2), sample(x + 2, y - 3)];
+  }, { png: image.toString('base64'), ...gridPosition });
+  expect(cornerPixel).toEqual(backgroundPixel);
 });
 
 test('unknown route shows branded 404 screen', async ({ page }) => {

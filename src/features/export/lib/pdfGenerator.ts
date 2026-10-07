@@ -148,6 +148,13 @@ async function captureElement(elementRef: ExportElement | null, scale = 2, backg
       }
 
       if (exportRootId === 'wallpaper-export-root') {
+        const wallpaperGrid = clonedRoot.querySelector<HTMLElement>('[data-wallpaper-grid]');
+        const wallpaperGridRadius = wallpaperGrid?.dataset.wallpaperGridRadius;
+        if (wallpaperGrid && wallpaperGridRadius) {
+          wallpaperGrid.style.borderRadius = wallpaperGridRadius;
+          wallpaperGrid.style.overflow = 'hidden';
+        }
+
         // Keep fixed width and height for wallpaper to preserve correct ratio
         clonedRoot.style.overflow = 'hidden';
         clonedRoot.style.width = elementRef.style.width || `${exportWidth || elementRef.offsetWidth}px`;

@@ -1221,7 +1221,12 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                         <div style={{ height: `${currentSpacers.top}px` }} className="flex-shrink-0" />
 
                         {/* Lock Screen Matrix Grid */}
-                        <div className={`border rounded-xl p-0 flex-1 min-h-0 flex flex-col justify-start overflow-hidden ${lockscreenConfig.gridBg}`}>
+                        <div
+                          data-wallpaper-grid
+                          data-wallpaper-grid-radius={wallpaperPreset === 'phone' ? '24px' : '12px'}
+                          className={`border p-0 flex-1 min-h-0 flex flex-col justify-start overflow-hidden ${lockscreenConfig.gridBg}`}
+                          style={{ borderRadius: wallpaperPreset === 'phone' ? '24px' : '12px' }}
+                        >
                           {/* DYNAMIC SCALING WALLPAPER GRID VIEW TABLE */}
                           {(() => {
                             const style = getPresetStyle(wallpaperPreset, contentDetail);
