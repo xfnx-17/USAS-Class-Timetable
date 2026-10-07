@@ -1,6 +1,16 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", Inter, system-ui, -apple-system, sans-serif;
+  --color-usas-navy: #0B1B3D;
+  --color-usas-blue: #002B5B;
+  --color-usas-gold: #D4AF37;
+  --color-usas-gold-light: #FFD700;
+  --color-usas-emerald: #00875A;
+  --color-usas-dark: #070F22;
+  --color-usas-card: #0F2148;
+  --color-usas-border: rgba(212, 175, 55, 0.2);
+}
 
 @layer base {
   html, body {

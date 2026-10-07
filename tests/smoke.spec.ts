@@ -26,6 +26,7 @@ test('demo login opens timetable and export modal', async ({ page }) => {
 });
 
 test('png export flow downloads an image file', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
 
   await page.getByRole('button', { name: /log in|log masuk/i }).first().click();
@@ -41,6 +42,15 @@ test('png export flow downloads an image file', async ({ page }) => {
   const download = await downloadPromise;
 
   expect(download.suggestedFilename().toLowerCase()).toContain('.png');
+  const stream = await download.createReadStream();
+  if (!stream) throw new Error('PNG download has no stream.');
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+  const image = Buffer.concat(chunks);
+  expect(image.subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+  expect(image.readUInt32BE(16)).toBeGreaterThan(500);
+  expect(image.readUInt32BE(20)).toBeGreaterThan(500);
+  expect(image.byteLength).toBeGreaterThan(20_000);
 });
 
 test('unknown route shows branded 404 screen', async ({ page }) => {

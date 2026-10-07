@@ -8,11 +8,14 @@ import { registerSW } from 'virtual:pwa-register'
 
 initMonitoring()
 
+const root = document.getElementById('root');
+if (!root) throw new Error('Missing root element');
+
 if (import.meta.env.PROD) {
   registerSW({ immediate: true })
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+ReactDOM.createRoot(root).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>,

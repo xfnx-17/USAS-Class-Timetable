@@ -12,6 +12,7 @@ import {
   sanitizeSingleLine,
   sanitizeTimetableItem,
   sanitizeTextForShare,
+  getOwnRecordValue,
 } from '@/shared/lib/security';
 import { normalizeDayLabel, parseDisplayDate, sortDayLabels } from '@/shared/lib/dayFormat';
 
@@ -164,7 +165,7 @@ function isSafeJsonValue(value: unknown): boolean {
 
   for (const key of Object.keys(value as Record<string, unknown>)) {
     if (POISON_KEYS.has(key)) return false;
-    if (!isSafeJsonValue((value as Record<string, unknown>)[key])) return false;
+    if (!isSafeJsonValue(getOwnRecordValue(value, key))) return false;
   }
 
   return true;
@@ -234,7 +235,7 @@ async function postUSASOutcome(
   try {
     const formParams = new URLSearchParams();
     Object.keys(payload).forEach(key => {
-      const value = payload[key];
+      const value = getOwnRecordValue(payload, key);
       if (value !== undefined && value !== null) {
         formParams.append(key, String(value));
       }
@@ -442,7 +443,7 @@ export async function fetchAttendanceHistoryAPI(
     ];
   }
 
-  if (!groupId) return [];
+  if (!session || !groupId) return [];
 
   const payload = {
     apiKey: API_KEY,

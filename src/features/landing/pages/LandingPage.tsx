@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLanguage } from '@/app/providers/LanguageProvider';
 import { useTheme, THEMES } from '@/app/providers/ThemeProvider';
 import type { LanguageCode } from '@/shared/types/usas';
+import { getOwnRecordValue } from '@/shared/lib/security';
 import {
   Download, Moon, Share2, AlertTriangle, ArrowRight,
   ExternalLink, Send, Play, Instagram, Github, ShieldAlert, ScanLine, ArrowUp
@@ -21,6 +22,7 @@ const LANDING_COPY: Record<LanguageCode, {
   ctaSecondary: string;
   disclaimerTitle: string;
   disclaimerText: string;
+  privacyLink: string;
   createdBy: string;
   previewTitle: string;
   featureOneTitle: string;
@@ -69,7 +71,8 @@ const LANDING_COPY: Record<LanguageCode, {
     cta: 'Log In Now',
     ctaSecondary: 'Watch Guide Video',
     disclaimerTitle: 'Data Security & Official Disclaimer',
-    disclaimerText: 'This portal connects directly to the official USAS UMC API. We (the developers & STEM USAS) do not operate middle servers, do not store, and do not touch any personal student data or login credentials.',
+    disclaimerText: 'Login requests pass through Cloudflare Pages to the official USAS UMC API. Your session and timetable cache are stored in this browser. Read our privacy notice for details.',
+    privacyLink: 'Privacy notice',
     createdBy: 'An Independent Project by STEM USAS',
     previewTitle: 'Sample Timetable Preview',
     featureOneTitle: 'Official Academic Prints',
@@ -142,7 +145,8 @@ const LANDING_COPY: Record<LanguageCode, {
     cta: 'Log Masuk Sekarang',
     ctaSecondary: 'Tonton Panduan Video',
     disclaimerTitle: 'Keselamatan Data & Penafian Rasmi',
-    disclaimerText: 'Portal ini menghubungi API rasmi UMC USAS secara terus. Kami (pembangun & STEM USAS) tidak mempunyai pelayan tengah, tidak menyimpan, tidak memodifikasi, dan tidak menyentuh sebarang data peribadi mahupun kredensial log masuk pelajar.',
+    disclaimerText: 'Permintaan log masuk melalui Cloudflare Pages ke API rasmi UMC USAS. Sesi dan cache jadual disimpan dalam pelayar ini. Baca notis privasi untuk maklumat lanjut.',
+    privacyLink: 'Notis privasi',
     createdBy: 'Projek Pembelajaran Bebas oleh STEM USAS',
     previewTitle: 'Paparan Contoh Jadual',
     featureOneTitle: 'Eksport Akademik Rasmi',
@@ -215,7 +219,8 @@ const LANDING_COPY: Record<LanguageCode, {
     cta: '立即登录',
     ctaSecondary: '观看使用指南',
     disclaimerTitle: '数据安全与官方声明',
-    disclaimerText: '本门户直接与官方 USAS UMC API 通信。我们（开发团队与 STEM USAS）不设立中间服务器，绝不存储、修改或接触任何学生个人数据与登录凭据。',
+    disclaimerText: '登录请求会经由 Cloudflare Pages 转发至 USAS UMC 官方 API。登录会话和课表缓存保存在此浏览器中。详情请阅读隐私说明。',
+    privacyLink: '隐私说明',
     createdBy: 'STEM USAS 独立技术项目',
     previewTitle: '示例课程表预览',
     featureOneTitle: '官方学术打印版',
@@ -288,7 +293,8 @@ const LANDING_COPY: Record<LanguageCode, {
     cta: 'இப்போது உள்நுழைக',
     ctaSecondary: 'வழிகாட்டி வீடியோவைப் பாருங்கள்',
     disclaimerTitle: 'தரவு பாதுகாப்பு மற்றும் அதிகாரப்பூர்வ மறுப்பு',
-    disclaimerText: 'இந்த தளம் அதிகாரப்பூர்வ USAS UMC API உடன் நேரடியாக இணைகிறது. நாங்கள் (உருவாக்குநர்கள் & STEM USAS) மாணவர் தனிப்பட்ட தரவு அல்லது உள்நுழைவு தகவல்களை சேமிக்கவோ தொடவோ மாட்டோம்.',
+    disclaimerText: 'உள்நுழைவு கோரிக்கைகள் Cloudflare Pages வழியாக அதிகாரப்பூர்வ USAS UMC API-க்கு அனுப்பப்படும். அமர்வும் அட்டவணை தற்காலிகச் சேமிப்பும் இந்த உலாவியில் சேமிக்கப்படும். விவரங்களுக்கு தனியுரிமை அறிவிப்பைப் படிக்கவும்.',
+    privacyLink: 'தனியுரிமை அறிவிப்பு',
     createdBy: 'STEM USAS இன் சுயாதீன திட்டம்',
     previewTitle: 'மாதிரி அட்டவணை முன்னோட்டம்',
     featureOneTitle: 'அதிகாரப்பூர்வ கல்வி அச்சிடல்கள்',
@@ -415,7 +421,7 @@ export default function LandingPage({ onNavigateLogin, onGoToLogin }: LandingPag
 
   const isLight = theme === THEMES.LIGHT;
 
-  const copy = LANDING_COPY[lang] || LANDING_COPY.en;
+  const copy = getOwnRecordValue<typeof LANDING_COPY.en>(LANDING_COPY, lang) || LANDING_COPY.en;
   const steps = copy.steps;
 
   return (
@@ -952,6 +958,14 @@ export default function LandingPage({ onNavigateLogin, onGoToLogin }: LandingPag
             <p className="text-xs leading-relaxed opacity-75">
               {copy.disclaimerText}
             </p>
+            <a
+              href="https://github.com/zis3c/USAS-Class-Timetable/blob/main/docs/PRIVACY.md"
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2 inline-block text-xs font-bold underline underline-offset-2"
+            >
+              {copy.privacyLink}
+            </a>
           </div>
         </div>
 

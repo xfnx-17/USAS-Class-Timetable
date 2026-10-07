@@ -177,22 +177,25 @@ export function useNextPrayer() {
   return { nextPrayer, diffSeconds, currentPrayer, secondsSinceCurrent, location: prayerData.location };
 }
 
-function readPrayerNotifiedStore(): Record<string, boolean> {
+function readPrayerNotifiedStore(): Set<string> {
   try {
     const raw = localStorage.getItem(PRAYER_NOTIFIED_STORE_KEY);
     const parsed: unknown = raw ? JSON.parse(raw) : null;
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      return parsed as Record<string, boolean>;
+    if (Array.isArray(parsed)) {
+      return new Set(parsed.filter((key): key is string => typeof key === 'string'));
+    }
+    if (parsed && typeof parsed === 'object') {
+      return new Set(Object.entries(parsed).filter(([, value]) => value === true).map(([key]) => key));
     }
   } catch {
     // Ignore malformed storage.
   }
-  return {};
+  return new Set();
 }
 
-function persistPrayerNotifiedStore(store: Record<string, boolean>): void {
+function persistPrayerNotifiedStore(store: ReadonlySet<string>): void {
   try {
-    localStorage.setItem(PRAYER_NOTIFIED_STORE_KEY, JSON.stringify(store));
+    localStorage.setItem(PRAYER_NOTIFIED_STORE_KEY, JSON.stringify([...store]));
   } catch {
     // Ignore storage failures.
   }
@@ -209,7 +212,7 @@ export function PrayerTimesNotifier(): null {
   const [autoNotifyEnabled] = usePrayerAutoNotifySetting();
   // Persist the notified keys so a page refresh does not replay the chime for
   // a prayer that was already announced.
-  const notifiedRef = useRef<Record<string, boolean>>(readPrayerNotifiedStore());
+  const notifiedRef = useRef(readPrayerNotifiedStore());
   const activeDayStampRef = useRef('');
 
   useEffect(() => {
@@ -256,8 +259,8 @@ export function PrayerTimesNotifier(): null {
 
       const diff = prayer.timestamp - currentUnix;
       const notifyKey = `${dayStamp}-${label}-${prayer.timestamp}`;
-      if (diff > 0 && diff <= NOTIFY_WINDOW_SECONDS && !notifiedRef.current[notifyKey]) {
-        notifiedRef.current[notifyKey] = true;
+      if (diff > 0 && diff <= NOTIFY_WINDOW_SECONDS && !notifiedRef.current.has(notifyKey)) {
+        notifiedRef.current.add(notifyKey);
         changed = true;
         playPrayerChime();
         sendPushNotification(

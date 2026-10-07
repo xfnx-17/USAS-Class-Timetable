@@ -10,9 +10,9 @@ export function buildDayScopedNotificationKey(now: Date, ...parts: Array<string 
 }
 
 export function pruneDayScopedNotificationKeys(
-  store: Record<string, boolean>,
+  store: ReadonlySet<string>,
   now: Date,
-): Record<string, boolean> {
+): Set<string> {
   const prefix = `${getLocalDateStamp(now)}-`;
-  return Object.fromEntries(Object.entries(store).filter(([key]) => key.startsWith(prefix)));
+  return new Set([...store].filter((key) => key.startsWith(prefix)));
 }

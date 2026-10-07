@@ -117,15 +117,15 @@ export default function GpaCalculatorModal({ isOpen, onClose, courses = [] }: Gp
   }, []);
 
   // State mapping course id to { credits, grade }
-  const [courseTargets, setCourseTargets] = useState<Record<string, CourseTarget>>({});
+  const [courseTargets, setCourseTargets] = useState<Map<string, CourseTarget>>(() => new Map());
 
   // Reset/Initialize state when courses list changes or modal opens
   useEffect(() => {
     if (isOpen) {
-      const initial: Record<string, CourseTarget> = {};
+      const initial = new Map<string, CourseTarget>();
       uniqueCourses.forEach((c) => {
         const id = c.course_id || c.kod_kursus || c.course_name || 'course';
-        initial[id] = { credits: 3, grade: 'A' };
+        initial.set(id, { credits: 3, grade: 'A' });
       });
       setCourseTargets(initial);
     }
@@ -156,20 +156,18 @@ export default function GpaCalculatorModal({ isOpen, onClose, courses = [] }: Gp
   if (!shouldRender) return null;
 
   const handleTargetChange = (courseId: string, field: keyof CourseTarget, value: string | number) => {
-    setCourseTargets(prev => ({
-      ...prev,
-      [courseId]: {
-        ...prev[courseId],
-        [field]: value
-      }
-    }));
+    setCourseTargets((prev) => {
+      const next = new Map(prev);
+      next.set(courseId, { ...next.get(courseId), [field]: value } as CourseTarget);
+      return next;
+    });
   };
 
   // Calculate GPA
   let totalPoints = 0;
   let totalCredits = 0;
 
-  Object.values(courseTargets).forEach((item) => {
+  courseTargets.values().forEach((item) => {
     const cred = Number(item.credits) || 0;
     const pts = gradePoints[item.grade as keyof typeof gradePoints] || 4.0;
     totalPoints += pts * cred;
@@ -286,7 +284,7 @@ export default function GpaCalculatorModal({ isOpen, onClose, courses = [] }: Gp
           <div className="space-y-2 pr-1">
             {uniqueCourses.map((c, i) => {
               const id = c.course_id || c.kod_kursus || c.course_name || `course-${i}`;
-              const target = courseTargets[id] || { credits: 3, grade: 'A' };
+              const target = courseTargets.get(id) || { credits: 3, grade: 'A' };
               return (
                 <div key={i} className={`p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs transition-colors ${
                   isLight 

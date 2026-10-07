@@ -37,7 +37,7 @@ export function sanitizeDownloadFileName(value: unknown, fallback: string): stri
   return safeName;
 }
 
-async function captureElement(elementRef: ExportElement | null, scale = 2, backgroundColor = '#FFFFFF') {
+async function captureElement(elementRef: ExportElement | null, scale = 2, backgroundColor: string | null = '#FFFFFF') {
   if (!elementRef) {
     throw new Error('Element template not found for export.');
   }
@@ -79,6 +79,40 @@ async function captureElement(elementRef: ExportElement | null, scale = 2, backg
       const clonedRoot = clonedDoc.querySelector(`[data-export-root="${exportRootId}"]`) as HTMLElement | null;
       if (!clonedRoot) return;
 
+      // html2canvas cannot parse modern OKLCH colors emitted by Tailwind 4.
+      // Convert only affected computed declarations in the export clone.
+      const colorContext = clonedDoc.createElement('canvas').getContext('2d');
+      const view = clonedDoc.defaultView || window;
+      if (colorContext) {
+        const oklchPattern = /oklch\([^)]*\)/gi;
+        const colorProperties = new Set([
+          'color', 'background-color', 'background-image', 'outline-color', 'text-decoration-color',
+          'text-emphasis-color', 'column-rule-color', 'caret-color', 'accent-color', 'fill', 'stroke',
+          'box-shadow', 'text-shadow',
+        ]);
+        const colorCache = new Map<string, string>();
+        [clonedRoot, ...clonedRoot.querySelectorAll<HTMLElement>('*')].forEach((el) => {
+          const computed = view.getComputedStyle(el);
+          Array.from(computed).forEach((property) => {
+            if (!colorProperties.has(property) && !(property.startsWith('border-') && property.endsWith('-color'))) return;
+            const value = computed.getPropertyValue(property);
+            if (!value.includes('oklch(')) return;
+            const compatibleValue = value.replace(oklchPattern, (color) => {
+              const cached = colorCache.get(color);
+              if (cached) return cached;
+              colorContext.clearRect(0, 0, 1, 1);
+              colorContext.fillStyle = color;
+              colorContext.fillRect(0, 0, 1, 1);
+              const [red, green, blue, alpha] = colorContext.getImageData(0, 0, 1, 1).data;
+              const converted = `rgba(${red}, ${green}, ${blue}, ${alpha / 255})`;
+              colorCache.set(color, converted);
+              return converted;
+            });
+            el.style.setProperty(property, compatibleValue, 'important');
+          });
+        });
+      }
+
       // Reset transform, transitions, animations, and filters on the cloned root
       clonedRoot.style.transform = 'none';
       clonedRoot.style.transition = 'none';
@@ -95,7 +129,6 @@ async function captureElement(elementRef: ExportElement | null, scale = 2, backg
       }
 
       if (!isApple || isWallpaper) {
-        const view = clonedDoc.defaultView || window;
         const textNodes = clonedRoot.querySelectorAll(isWallpaper ? '[data-export-time-label]' : 'span, h1, h2, p');
         textNodes.forEach((node) => {
           const el = node as HTMLElement;
@@ -175,7 +208,7 @@ export async function generateElementPng(
   elementRef: ExportElement | null,
   fileName = 'Jadual_Kuliah_USAS.png',
   scale = 3,
-  backgroundColor = '#FFFFFF',
+  backgroundColor: string | null = '#FFFFFF',
 ) {
   const canvas = await captureElement(elementRef, scale, backgroundColor);
   const safeFileName = sanitizeDownloadFileName(fileName, 'Jadual_Kuliah_USAS.png');

@@ -9,15 +9,15 @@ describe('notification keys', () => {
   });
 
   it('prunes keys from older days', () => {
-    const store = {
-      '2026-08-04-CSC2103-ISNIN-08:30 AM': true,
-      '2026-08-05-CSC2103-ISNIN-08:30 AM': true,
-      '2026-08-05-MTH1001-SELASA-09:00 AM': true,
-    };
+    const store = new Set([
+      '2026-08-04-CSC2103-ISNIN-08:30 AM',
+      '2026-08-05-CSC2103-ISNIN-08:30 AM',
+      '2026-08-05-MTH1001-SELASA-09:00 AM',
+    ]);
 
-    expect(pruneDayScopedNotificationKeys(store, new Date(2026, 7, 5, 12, 0, 0))).toEqual({
-      '2026-08-05-CSC2103-ISNIN-08:30 AM': true,
-      '2026-08-05-MTH1001-SELASA-09:00 AM': true,
-    });
+    expect(pruneDayScopedNotificationKeys(store, new Date(2026, 7, 5, 12, 0, 0))).toEqual(new Set([
+      '2026-08-05-CSC2103-ISNIN-08:30 AM',
+      '2026-08-05-MTH1001-SELASA-09:00 AM',
+    ]));
   });
 });

@@ -2,6 +2,7 @@ import { createContext, useContext, useState, type ReactNode } from 'react';
 import { translations } from '@/shared/i18n/translations';
 import type { LanguageContextValue, LanguageCode } from '@/shared/types/usas';
 import { lookupTranslationValue } from '@/shared/lib/translation';
+import { getOwnRecordValue } from '@/shared/lib/security';
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
@@ -38,12 +39,12 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
     setLang((prev) => {
       const idx = VALID_LANGUAGES.indexOf(prev);
       const nextIdx = (idx + 1) % VALID_LANGUAGES.length;
-      return VALID_LANGUAGES[nextIdx];
+      return VALID_LANGUAGES.at(nextIdx) ?? 'en';
     });
   };
 
   const t = (key: string) => {
-    const activeDict = translations[lang] || translations.en;
+    const activeDict = getOwnRecordValue<typeof translations.en>(translations, lang) || translations.en;
     const activeValue = lookupTranslationValue(activeDict, key);
     if (activeValue) return activeValue;
 

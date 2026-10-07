@@ -1,5 +1,5 @@
 import type { StudentSession, TimetableData } from '../types/usas';
-import { isValidLoginUserId, sanitizeSession, sanitizeTimetableItem, sanitizeTextForShare, sanitizeSingleLine } from './security';
+import { getOwnRecordValue, isValidLoginUserId, sanitizeSession, sanitizeTimetableItem, sanitizeTextForShare, sanitizeSingleLine } from './security';
 import { normalizeDayLabel, sortDayLabels } from './dayFormat';
 
 const POISON_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
@@ -21,7 +21,7 @@ function isSafeParsedValue(value: unknown): boolean {
 
   for (const key of Object.keys(value as Record<string, unknown>)) {
     if (POISON_KEYS.has(key)) return false;
-    if (!isSafeParsedValue((value as Record<string, unknown>)[key])) return false;
+    if (!isSafeParsedValue(getOwnRecordValue(value, key))) return false;
   }
 
   return true;

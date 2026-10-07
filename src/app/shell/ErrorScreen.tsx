@@ -1,6 +1,7 @@
 import { ArrowLeft, RefreshCw, ShieldAlert, WifiOff } from 'lucide-react';
 import { useLanguage } from '@/app/providers/LanguageProvider';
 import { useTheme, THEMES } from '@/app/providers/ThemeProvider';
+import { getOwnRecordValue } from '@/shared/lib/security';
 
 type ErrorScreenProps = {
   status: 404 | 500 | 502 | 503 | 504;
@@ -60,7 +61,7 @@ export default function ErrorScreen({
   const { theme } = useTheme();
 
   const isLight = theme === THEMES.LIGHT;
-  const copy = defaultCopy[status];
+  const copy = getOwnRecordValue<typeof defaultCopy[404]>(defaultCopy, status) || defaultCopy[404];
   const heading = title || copy.title;
   const body = message || copy.message;
   const primary = primaryLabel || copy.primary;

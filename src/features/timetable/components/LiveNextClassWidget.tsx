@@ -25,7 +25,7 @@ export default function LiveNextClassWidget({ timetable = [] }: LiveNextClassWid
   const [autoNotifyEnabled, setAutoNotifyEnabled] = useState(() => {
     try { return localStorage.getItem('usas_auto_notify') === 'true'; } catch (e) { return false; }
   });
-  const notifiedRef = useRef<Record<string, boolean>>({});
+  const notifiedRef = useRef(new Set<string>());
   const activeDayStampRef = useRef('');
   const isLight = theme === 'light';
 
@@ -102,9 +102,9 @@ export default function LiveNextClassWidget({ timetable = [] }: LiveNextClassWid
   let minDiff = Infinity;
 
   if (Array.isArray(timetable) && timetable.length > 0) {
-    timetable.forEach((item) => {
+    for (const item of timetable) {
       const isToday = extractDayName(item.day) === currentDayName || item.day?.toUpperCase() === currentDayName;
-      if (!isToday) return;
+      if (!isToday) continue;
 
       const startMin = parseTimeToMinutes(item.start_time);
       const endMin = item.end_time ? parseTimeToMinutes(item.end_time) : startMin + 120;
@@ -120,14 +120,14 @@ export default function LiveNextClassWidget({ timetable = [] }: LiveNextClassWid
           nextClass = { ...item, diffSeconds: diff };
         }
       }
-    });
+    }
   }
 
   useEffect(() => {
     if (autoNotifyEnabled && nextClass && nextClass.diffSeconds !== undefined && nextClass.diffSeconds <= 600 && nextClass.diffSeconds > 0) {
       const key = buildDayScopedNotificationKey(now, nextClass.course_id, nextClass.day, nextClass.start_time);
-      if (!notifiedRef.current[key]) {
-        notifiedRef.current[key] = true;
+      if (!notifiedRef.current.has(key)) {
+        notifiedRef.current.add(key);
         playClassChime();
         sendPushNotification(
           `Peringatan Kuliah USAS: ${nextClass.course_id}`,

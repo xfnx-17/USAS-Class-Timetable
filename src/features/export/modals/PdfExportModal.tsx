@@ -6,6 +6,7 @@ import { useModalA11y } from '@/shared/lib/useModalA11y';
 import { generateTimetablePdf, generateElementPng, generateLockscreenImage } from '@/features/export/lib/pdfGenerator';
 import { extractDayName, formatDayDisplay, sortDayLabels } from '@/shared/lib/dayFormat';
 import { buildCourseColorMap, getCourseColorSlot } from '@/shared/lib/courseColors';
+import { getOwnRecordValue } from '@/shared/lib/security';
 import type { TimetableItem } from '@/shared/types/usas';
 import {
   X, Download, Smartphone, RotateCw, ChevronDown, Plus, Minus, FileBadge
@@ -21,6 +22,17 @@ type ExportFileType = 'PDF' | 'PNG';
 type WallpaperPreset = 'phone' | 'tablet' | 'desktop' | 'square';
 type ContentDetail = 'CODE' | 'DETAILS';
 type ExportTheme = 'light' | 'dark' | 'emerald' | 'oled' | 'warm';
+type WallpaperPresetStyle = {
+  tableFontSize: string;
+  thPadding: string;
+  tdPadding: string;
+  minH: string;
+  courseTitleSize: string;
+  courseSubSize?: string;
+  courseLocSize: string;
+  durationSize: string;
+  iconSize: string;
+};
 
 const getModalDayColors = (day: string | undefined, theme: ExportTheme) => {
   const isLight = theme === 'light';
@@ -81,7 +93,8 @@ const getModalDayColors = (day: string | undefined, theme: ExportTheme) => {
           : darkColors;
 
   const key = (extractDayName(day) || 'ISNIN') as keyof typeof map;
-  return map[key] || map['ISNIN'];
+  return getOwnRecordValue<(typeof map)[keyof typeof map]>(map, key)
+    || getOwnRecordValue<(typeof map)[keyof typeof map]>(map, 'ISNIN')!;
 };
 
 const getLockscreenThemeConfig = (theme: ExportTheme) => {
@@ -150,8 +163,8 @@ const getLockscreenThemeConfig = (theme: ExportTheme) => {
   }
 };
 
-const getPresetStyle = (preset: WallpaperPreset, detail: ContentDetail = 'DETAILS') => {
-  const base = {
+const getPresetStyle = (preset: WallpaperPreset, detail: ContentDetail = 'DETAILS'): WallpaperPresetStyle => {
+  const base: Record<WallpaperPreset, WallpaperPresetStyle> = {
     phone: {
       tableFontSize: 'text-[5.75px]',
       thPadding: 'p-0.5',
@@ -198,7 +211,7 @@ const getPresetStyle = (preset: WallpaperPreset, detail: ContentDetail = 'DETAIL
     },
   };
 
-  const detailTweaks = {
+  const detailTweaks: Record<ContentDetail, Partial<Record<WallpaperPreset, Partial<WallpaperPresetStyle>>>> = {
     CODE: {
       phone: { minH: 'min-h-[24px]', courseTitleSize: 'text-[7.2px] font-black leading-none text-center tracking-tight', durationSize: 'text-[4px] leading-none text-center font-semibold' },
       square: { minH: 'min-h-[32px]', courseTitleSize: 'text-[8.4px] font-black leading-none text-center tracking-tight', durationSize: 'text-[4.6px] leading-none text-center font-semibold' },
@@ -213,13 +226,19 @@ const getPresetStyle = (preset: WallpaperPreset, detail: ContentDetail = 'DETAIL
     },
   };
 
-  return {
-    ...base[preset],
-    ...(detailTweaks[detail]?.[preset] || {}),
-  };
+  const presetBase = getOwnRecordValue<WallpaperPresetStyle>(base, preset) ?? base.phone;
+  const detailConfig = getOwnRecordValue<Partial<Record<WallpaperPreset, Partial<WallpaperPresetStyle>>>>(detailTweaks, detail);
+  const presetTweaks = detailConfig && getOwnRecordValue<Partial<WallpaperPresetStyle>>(detailConfig, preset);
+  return { ...presetBase, ...(presetTweaks || {}) };
 };
 
 const WALLPAPER_HOUR_STARTS = [8, 9, 10, 11, 12, 13, 14, 15, 16];
+const WALLPAPER_PRESET_SIZES = new Map<WallpaperPreset, { width: number; height: number }>([
+  ['phone', { width: 360, height: 640 }],
+  ['tablet', { width: 520, height: 640 }],
+  ['square', { width: 480, height: 480 }],
+  ['desktop', { width: 780, height: 480 }],
+]);
 
 // Measures the real rendered width of bold text so the wallpaper can shrink the
 // course code to exactly fit a narrow (single-period) cell.
@@ -1114,7 +1133,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                         const isFirstOfDay = dayName !== prevName;
                         let span = 1;
                         if (isFirstOfDay) {
-                          for (let j = i + 1; j < pdfCourses.length && extractDayName(pdfCourses[j].day) === dayName; j += 1) {
+                          for (let j = i + 1; j < pdfCourses.length && extractDayName(pdfCourses.at(j)?.day) === dayName; j += 1) {
                             span += 1;
                           }
                         }
@@ -1169,10 +1188,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                   {renderFloatingZoomWidget(lockscreenConfig.isLight)}
                 </div>
                 {(() => {
-                  const widthMap = { phone: 360, tablet: 520, square: 480, desktop: 780 };
-                  const heightMap = { phone: 640, tablet: 640, square: 480, desktop: 480 };
-                  const w = widthMap[wallpaperPreset];
-                  const h = heightMap[wallpaperPreset];
+                  const { width: w, height: h } = WALLPAPER_PRESET_SIZES.get(wallpaperPreset) ?? WALLPAPER_PRESET_SIZES.get('phone')!;
                   return (
                     <div
                       style={{
@@ -1390,6 +1406,9 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
             <button
               onClick={handleDownload}
               disabled={exporting}
+              aria-label={exporting
+                ? (lang === 'en' ? 'Generating download' : 'Menjana muat turun')
+                : (lang === 'en' ? 'Download' : 'Muat Turun')}
               className={`px-4 sm:px-4 py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-all flex-1 sm:flex-none ${isLight
                   ? 'bg-[#0B1E43] hover:bg-[#152e63] text-white shadow-slate-900/10'
                   : 'bg-amber-400 hover:bg-amber-300 text-slate-950 shadow-amber-400/10'

@@ -66,7 +66,7 @@ Finally, go to GitHub and create a Pull Request.
 
 ## Code formatting
 
-Please ensure your code passes ESLint and TypeScript checks:
+Please run the full lint, security lint, type, unit, build, bundle-size, and browser test suite:
 ```sh
-npm run test:strict
+npm run test:all
 ```

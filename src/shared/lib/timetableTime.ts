@@ -61,17 +61,6 @@ export const parseTimeToMinutes = (timeStr?: string): number | null => {
     return hour * 60;
   }
 
-  // General match for any string with hour
-  const generalMatch = raw.match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?/i);
-  if (generalMatch) {
-    let hour = parseInt(generalMatch[1], 10);
-    const minute = generalMatch[2] ? parseInt(generalMatch[2], 10) : 0;
-    const suffix = generalMatch[3]?.toUpperCase();
-    if (suffix === 'PM' && hour < 12) hour += 12;
-    if (suffix === 'AM' && hour === 12) hour = 0;
-    return hour * 60 + minute;
-  }
-
   return null;
 };
 

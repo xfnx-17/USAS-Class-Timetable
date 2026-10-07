@@ -9,13 +9,13 @@ import {
   stripDayPrefix,
 } from '../src/shared/lib/dayFormat';
 
-const enDays: Record<string, string> = {
-  'days.ISNIN': 'MONDAY',
-  'days.SELASA': 'TUESDAY',
-  'shortDays.ISNIN': 'Mon',
-  'shortDays.SELASA': 'Tue',
-};
-const t = (key: string) => enDays[key] ?? key;
+const enDays = new Map([
+  ['days.ISNIN', 'MONDAY'],
+  ['days.SELASA', 'TUESDAY'],
+  ['shortDays.ISNIN', 'Mon'],
+  ['shortDays.SELASA', 'Tue'],
+]);
+const t = (key: string) => enDays.get(key) ?? key;
 
 describe('day formatting', () => {
   it('strips the raw USAS localization prefix but keeps the date', () => {

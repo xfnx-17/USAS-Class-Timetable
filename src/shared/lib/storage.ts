@@ -10,7 +10,7 @@ export function restoreStringRecord(value: string): Record<string, string> {
   const restored: Record<string, string> = {};
   for (const [key, entry] of Object.entries(parsed)) {
     if (typeof entry === 'string') {
-      restored[key] = entry;
+      Object.defineProperty(restored, key, { value: entry, enumerable: true, configurable: true, writable: true });
     }
   }
 

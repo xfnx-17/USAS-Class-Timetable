@@ -18,6 +18,10 @@ describe('timetableTime', () => {
     expect(parseTimeToMinutes('12:00 AM')).toBe(0);
   });
 
+  it('rejects text that only contains a time-like number', () => {
+    expect(parseTimeToMinutes('course starts around 8 somewhere')).toBeNull();
+  });
+
   it('formats short time ranges', () => {
     expect(getShortTimeRange('08:00 AM', '10:00 AM')).toBe('8-10');
     expect(getShortTimeRange('01:00 PM', '03:00 PM')).toBe('13-15');

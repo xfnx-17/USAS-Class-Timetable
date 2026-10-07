@@ -17,6 +17,7 @@ import {
 import { extractDayName, formatDayDisplay, isSameDay, sortDayLabels } from '@/shared/lib/dayFormat';
 import { buildCourseColorMap, getCourseColorSlot } from '@/shared/lib/courseColors';
 import { restoreStringRecord } from '@/shared/lib/storage';
+import { getOwnRecordValue } from '@/shared/lib/security';
 import { 
   Clock, MapPin, User, BookOpen, Search, 
   GraduationCap, StickyNote, Edit3,
@@ -71,7 +72,8 @@ const DAY_COLOR_KEY: Record<string, string> = {
 
 const getCardColorBySlot = (slot: string | undefined, isLight: boolean): CardColorScheme => {
   const key = DAY_COLOR_KEY[slot || ''] || 'emerald';
-  return (isLight ? CARD_LIGHT_COLORS[key] : CARD_DARK_COLORS[key]) || (isLight ? CARD_LIGHT_COLORS.emerald : CARD_DARK_COLORS.emerald);
+  const colors = isLight ? CARD_LIGHT_COLORS : CARD_DARK_COLORS;
+  return getOwnRecordValue<CardColorScheme>(colors, key) || colors.emerald;
 };
 
 type TimetableGridProps = {
@@ -90,7 +92,7 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
   const [selectedDay, setSelectedDay] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState('cards');
-  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(() => new Set());
   const [expandAll, setExpandAll] = useState(false);
   // Modals
   const [selectedLecturer, setSelectedLecturer] = useState<string | null>(null);
@@ -132,7 +134,8 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
   const courseColorMap = useMemo(() => buildCourseColorMap(allCourses), [allCourses]);
 
   const handleSaveNote = (courseId: string) => {
-    const updated = { ...courseNotes, [courseId]: noteInput };
+    const updated = { ...courseNotes };
+    Object.defineProperty(updated, courseId, { value: noteInput, enumerable: true, configurable: true, writable: true });
     setCourseNotes(updated);
     try { localStorage.setItem('usas_course_notes', JSON.stringify(updated)); } catch (e) {}
     setEditingCourseId(null);
@@ -268,7 +271,7 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
                   const nextExpandAll = !expandAll;
                   setExpandAll(nextExpandAll);
                   if (!nextExpandAll) {
-                    setExpandedCards({});
+                    setExpandedCards(new Set());
                   }
                 }}
                 className={`px-2 py-1 rounded text-[10px] font-semibold transition-all ${
@@ -330,11 +333,11 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 items-start">
                   {filteredCourses.map((course) => {
-                    const courseId = course.course_id || course.kod_kursus;
+                    const courseId = course.course_id || course.kod_kursus || course.id;
                     const cardColor = getCardColorBySlot(getCourseColorSlot(courseColorMap, courseId), isLight);
                     const cardKey = getCourseHighlightKey(course);
-                    const isExpanded = expandAll ? true : !!expandedCards[cardKey];
-                    const currentNote = courseNotes[courseId] || '';
+                    const isExpanded = expandAll || expandedCards.has(cardKey);
+                    const currentNote = getOwnRecordValue<string>(courseNotes, courseId) || '';
                     const courseStatus =
                       activeClassKeys.ongoingKey === cardKey
                         ? 'ongoing'
@@ -354,10 +357,12 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
                           }`}
                           onClick={(e) => {
                             e.stopPropagation();
-                            setExpandedCards(prev => ({
-                              ...prev,
-                              [cardKey]: expandAll ? false : !prev[cardKey]
-                            }));
+                            setExpandedCards((prev) => {
+                              const next = new Set(prev);
+                              if (expandAll || next.has(cardKey)) next.delete(cardKey);
+                              else next.add(cardKey);
+                              return next;
+                            });
                             if (expandAll) setExpandAll(false);
                           }}
                         >
@@ -435,7 +440,7 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
                               className="flex items-center gap-2 text-[9.5px] cursor-pointer group"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setSelectedLecturer(course.lecturer || course.pensyarah);
+                                setSelectedLecturer(course.lecturer || course.pensyarah || '');
                               }}
                             >
                               <User className={`w-3 h-3 flex-shrink-0 ${isLight ? 'text-emerald-600' : 'text-emerald-400/60'}`} />

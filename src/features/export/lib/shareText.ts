@@ -19,16 +19,17 @@ function normalizeGroup(groupStr: string | undefined): string {
   return sanitizeSingleLine(groupStr, 32).replace(/^GRP/i, 'G');
 }
 
-function buildDayGroups(timetable: TimetableItem[] = []): Record<string, TimetableItem[]> {
-  const dayGroups: Record<string, TimetableItem[]> = {};
+function buildDayGroups(timetable: TimetableItem[] = []): Map<string, TimetableItem[]> {
+  const dayGroups = new Map<string, TimetableItem[]>();
 
   timetable.forEach((item: TimetableItem) => {
     const day = extractDayName(item.day) || 'LAIN';
-    if (!dayGroups[day]) dayGroups[day] = [];
-    dayGroups[day].push(item);
+    const classes = dayGroups.get(day) ?? [];
+    classes.push(item);
+    dayGroups.set(day, classes);
   });
 
-  Object.values(dayGroups).forEach((classes) => {
+  dayGroups.forEach((classes) => {
     classes.sort((a, b) => parseTimeToMinutes(a.start_time) - parseTimeToMinutes(b.start_time));
   });
 
@@ -51,9 +52,10 @@ function buildFullShareText(timetable: TimetableItem[] = [], studentName = '', m
   text += '----------------------------------------\n\n';
 
   dayOrder.forEach(day => {
-    if (!dayGroups[day]) return;
+    const classes = dayGroups.get(day);
+    if (!classes) return;
     text += `${day}\n`;
-    dayGroups[day].forEach(c => {
+    classes.forEach(c => {
       const time = c.start_time ? `${sanitizeSingleLine(c.start_time, 32)}${c.end_time ? ' - ' + sanitizeSingleLine(c.end_time, 32) : ''}` : 'TBA';
       const code = sanitizeSingleLine(c.course_id || c.kod_kursus || '', 64);
       const name = sanitizeTextForShare(c.course_name || c.kursus || '', 160);
@@ -79,8 +81,9 @@ function buildCompactShareText(timetable: TimetableItem[] = [], matricNo = '') {
 
   const parts: string[] = [];
   dayOrder.forEach(day => {
-    if (!dayGroups[day]) return;
-    const items = dayGroups[day].map(c => {
+    const classes = dayGroups.get(day);
+    if (!classes) return;
+    const items = classes.map(c => {
       const time = formatTimeRange(
         sanitizeSingleLine(c.start_time, 32),
         sanitizeSingleLine(c.end_time, 32),

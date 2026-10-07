@@ -11,7 +11,7 @@ Before you begin, ensure your system meets the following requirements:
 ### Frontend Environment
 * **Node.js**: `v18.x` or higher (v20+ recommended)
 * **NPM**: `v9.x` or higher (or `pnpm` / `yarn`)
-* **Modern Web Browser**: Google Chrome, Mozilla Firefox, Apple Safari, or Microsoft Edge.
+* **Modern Web Browser**: Chrome 111+, Safari 16.4+, or Firefox 128+. These are Tailwind CSS 4's minimum supported browser versions.
 
 ---
 
@@ -46,7 +46,7 @@ The login captcha is verified server-side by the Pages Function, which needs the
 TURNSTILE_SECRET_KEY=0x4AAAAAA...
 ```
 
-> Without `TURNSTILE_SECRET_KEY`, the server-side captcha check is skipped (convenient for UI-only work). Cloudflare's testing site key `1x00000000000000000000AA` always passes on the client widget.
+> Without `TURNSTILE_SECRET_KEY`, the server-side captcha check is skipped. Use this only for local UI work. Set a real secret in every production and preview environment. Cloudflare's testing site key `1x00000000000000000000AA` always passes on the client widget and is not suitable for production.
 
 Optionally enable client error tracking by adding a Sentry DSN:
 
@@ -83,6 +83,7 @@ Open your browser at `http://localhost:5173`.
 | `npm run test:unit` | Executes all unit test suites using Vitest. |
 | `npm run test:e2e` | Executes Playwright end-to-end browser integration tests. |
 | `npm run test:strict` | Runs linter, typecheck, unit tests, and production build in sequence. |
+| `npm run test:all` | Runs the full strict suite followed by Playwright end-to-end tests. |
 
 ---
 
@@ -108,6 +109,7 @@ The `/api/usas/*` proxy and captcha verification run as Cloudflare Pages Functio
    ```bash
    npx wrangler pages secret put TURNSTILE_SECRET_KEY --project-name=<your-project>
    ```
+   Confirm `TURNSTILE_SECRET_KEY` exists in the Pages production environment. The GitHub deployment workflow deploys the Function but does not configure this Pages secret.
 6. The included `public/_headers` file automatically configures Content Security Policy (CSP) and cache headers.
 
 #### Automated deployment (GitHub Actions)
@@ -138,7 +140,7 @@ If your domain is proxied through Cloudflare, you can add an additional edge lim
 ### Monitoring
 
 - **Traffic & Web Vitals**: Cloudflare dashboard → **Web Analytics** → enable for the Pages project (privacy-first, cookieless).
-- **Function logs & errors**: the proxy emits `console.warn` entries for captcha rejections, rate-limit hits and upstream failures. View them live with:
+- **Function logs & errors**: the proxy emits `console.warn` entries for captcha rejections and upstream path/status failures. It does not log request bodies. View them live with:
   ```bash
   npx wrangler pages deployment tail --project-name=<your-project>
   ```

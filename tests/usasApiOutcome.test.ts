@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import {
   loginStudentAPI,
   fetchTimetableAPI,
+  fetchAttendanceHistoryAPI,
   searchLecturerDirectoryAPI,
   UsasUnavailableError,
 } from '../src/services/usas/Api';
@@ -74,6 +75,16 @@ describe('fetchTimetableAPI unavailable fallback', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
 
     await expect(fetchTimetableAPI(session)).rejects.toBeInstanceOf(UsasUnavailableError);
+  });
+});
+
+describe('fetchAttendanceHistoryAPI session guard', () => {
+  it('returns no history and skips the API call without a session', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(fetchAttendanceHistoryAPI(null, 'group-1')).resolves.toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 

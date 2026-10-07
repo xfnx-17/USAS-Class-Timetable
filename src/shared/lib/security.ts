@@ -8,6 +8,11 @@ const MAX_LOGIN_ATTEMPTS = 5;
 const LOGIN_LOCKOUT_MS = 5 * 60 * 1000;
 const POISON_IDENTIFIERS = new Set(['__proto__', 'constructor', 'prototype']);
 
+export function getOwnRecordValue<T>(record: object, key: PropertyKey): T | undefined {
+  const descriptor = Object.getOwnPropertyDescriptor(record, key);
+  return descriptor && 'value' in descriptor ? descriptor.value as T : undefined;
+}
+
 export type LoginThrottleState = {
   failedAttempts: number;
   lockedUntil: number;

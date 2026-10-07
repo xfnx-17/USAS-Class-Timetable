@@ -4,7 +4,7 @@
 ![React](https://img.shields.io/badge/React-18.x-61DAFB?logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6.x-3178C6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-8.x-646CFF?logo=vite&logoColor=white)
-![Tailwind](https://img.shields.io/badge/Tailwind_CSS-3.x-38B2AC?logo=tailwindcss&logoColor=white)
+![Tailwind](https://img.shields.io/badge/Tailwind_CSS-4.x-38B2AC?logo=tailwindcss&logoColor=white)
 ![PWA](https://img.shields.io/badge/PWA-Ready-orange?logo=pwa&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 
@@ -15,11 +15,11 @@
 USAS Class Timetable is a modern, client-side academic schedule portal designed for Universiti Sultan Azlan Shah (USAS) students. Built on React 18, TypeScript, and Vite with custom glassmorphism styling, it enables students to fetch, view, and export their class timetables directly into standard calendar feeds (.ICS), official A4 printable PDF documents, and high-resolution device lockscreen wallpapers.
 
 > [!NOTE]
-> This application operates on a strict zero-knowledge, client-side architecture. It connects directly to the official university portal API on the student's browser with zero intermediate servers or third-party credential storage.
+> Student login requests pass through a stateless Cloudflare Pages Function before reaching the official USAS UMC API. The app does not keep a project database, but the browser stores the session for the current tab and a timetable cache on the device. See the [Privacy Notice](docs/PRIVACY.md) for data flow and storage details.
 
 ## Core Features & Capabilities
 
-* **Direct University API Integration**: Connects straight to official USAS UMC portal endpoints with client-side credential dispatch and localized storage isolation.
+* **University API Integration**: Connects to official USAS UMC portal endpoints through the Cloudflare Pages Function proxy.
 * **Document & Wallpaper Exports**:
   * **Print-Ready A4 PDF & PNG**: High-resolution landscape documents formatted with student matric identity, course codes, locations, and timestamps.
   * **Device Lockscreen Wallpapers**: Tailored presets for Phone (9:16), Tablet (4:3), Desktop (16:9), and Square (1:1) with vertical clock offset adjustment and 5 color themes.
@@ -40,10 +40,10 @@ USAS Class Timetable is a modern, client-side academic schedule portal designed 
 
 Because the portal processes student academic schedules, security and privacy are implemented at every layer:
 
-* **Minimal Proxy, No Credential Storage**: API requests are relayed to `https://mobile.usas.edu.my` through a stateless Cloudflare Pages Function proxy (`/api/usas/*`). The proxy forwards requests and never persists student credentials or session tokens.
-* **Server-Side Bot Protection**: Login is protected by Cloudflare Turnstile. The captcha token is verified server-side in the Pages Function before the login request is proxied upstream.
-* **Strict Content Security Policy (CSP)**: Hardened headers mitigating Cross-Site Scripting (XSS), framing, and unauthorized resource injection.
-* **Local Storage Isolation**: Offline snapshots and user notes are kept in the browser's session/local storage and never leave the device.
+* **Stateless API Proxy**: Requests pass through a Cloudflare Pages Function to `https://mobile.usas.edu.my`. The app code does not write credentials or sessions to a project database or function logs.
+* **Server-Side Bot Protection**: When `TURNSTILE_SECRET_KEY` is configured, the Pages Function verifies the login challenge before proxying the request.
+* **Content Security Policy (CSP)**: Restricts script, frame, and connection sources to reduce injection and framing risks.
+* **Browser Storage**: The session is kept in `sessionStorage`; the timetable cache and preferences use `localStorage`. These remain on the device until logout or browser storage is cleared. See the [Privacy Notice](docs/PRIVACY.md).
 
 ## Tech Stack
 
@@ -51,7 +51,7 @@ Because the portal processes student academic schedules, security and privacy ar
 - [React 18](https://react.dev/)
 - [TypeScript 5](https://www.typescriptlang.org/)
 - [Vite 5](https://vitejs.dev/)
-- [Tailwind CSS 3](https://tailwindcss.com/)
+- [Tailwind CSS 4](https://tailwindcss.com/)
 - [Lucide React](https://lucide.dev/)
 - [Lenis](https://lenis.darkroom.engineering/)
 
@@ -168,6 +168,7 @@ USAS Class Timetable/
 | [Contributing](docs/CONTRIBUTING.md) | How to contribute. |
 | [Code of Conduct](docs/CODE_OF_CONDUCT.md) | Community expectations. |
 | [Security Policy](docs/SECURITY.md) | How to report vulnerabilities. |
+| [Privacy Notice](docs/PRIVACY.md) | Data flow, browser storage, and third-party services. |
 
 ## Contributing
 

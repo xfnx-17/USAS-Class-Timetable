@@ -23,14 +23,14 @@ https://mobile.usas.edu.my/umc_v2   (official USAS UMC API)
 - The USAS API is not CORS-enabled for browsers.
 - The Turnstile **secret key** must stay server-side.
 - All outbound endpoints are allowlisted in `src/shared/lib/usasProxy.ts`.
-- The proxy never persists credentials or session tokens.
+- The function code does not persist credentials or session tokens to a project database or log request bodies. Cloudflare still processes requests as the hosting and proxy provider.
 
 ## Authentication
 
 1. `LoginForm` renders a Cloudflare Turnstile widget; the token is passed to `AuthProvider.login(userId, password, false, captchaToken)`.
 2. `loginStudentAPI` POSTs to `/api/usas/student/login_student.php` with the `x-turnstile-token` header.
-3. The Pages Function verifies the token via `siteverify` (when `TURNSTILE_SECRET_KEY` is set) and then proxies the request upstream.
-4. On success, `sid_1`/`sid_2`/`sid_3` are stored in `sessionStorage` and the timetable is cached in `localStorage`.
+3. The Pages Function verifies the token via `siteverify` when `TURNSTILE_SECRET_KEY` is set, then removes the one-time token header and proxies the request upstream. If the secret is absent, server-side challenge verification is skipped.
+4. On success, `sid_1`/`sid_2`/`sid_3` are stored in `sessionStorage` and the timetable is cached in `localStorage`. The cache can remain after the browser tab closes; logout or clearing site storage removes it.
 5. Login throttling state lives in `sessionStorage`.
 
 ## Data layer
@@ -51,7 +51,7 @@ https://mobile.usas.edu.my/umc_v2   (official USAS UMC API)
 
 ## Monitoring
 
-- The Pages Function logs `console.warn` for captcha rejections, rate-limit hits and upstream errors (visible in Cloudflare Functions logs / `wrangler pages deployment tail`).
+- The Pages Function logs captcha rejection metadata (including request IP when available) and upstream path/status errors, but not request bodies. Logs are visible in Cloudflare Functions logs / `wrangler pages deployment tail`.
 - `.github/workflows/api-schema-check.yml` runs `scripts/check-usas-schema.mjs` daily to detect upstream schema drift.
 - Cloudflare Web Analytics (traffic) and optional Sentry (errors).
 

@@ -3,6 +3,7 @@ import {
   copyTextToClipboard,
   evaluateLoginThrottle,
   getEmptyThrottleState,
+  getOwnRecordValue,
   isValidLoginUserId,
   recordLoginFailure,
   recordLoginSuccess,
@@ -12,6 +13,16 @@ import {
 } from '../src/shared/lib/security';
 
 describe('security helpers', () => {
+  it('reads own data properties only', () => {
+    const record = Object.create({ inherited: 'unsafe' }) as Record<string, unknown>;
+    record.own = 'safe';
+    Object.defineProperty(record, 'accessor', { get: () => 'unsafe' });
+
+    expect(getOwnRecordValue<string>(record, 'own')).toBe('safe');
+    expect(getOwnRecordValue(record, 'inherited')).toBeUndefined();
+    expect(getOwnRecordValue(record, 'accessor')).toBeUndefined();
+  });
+
   it('sanitizes single line text', () => {
     expect(sanitizeSingleLine('  Hello\nWorld\t<script>  ', 20)).toBe('Hello World <script>');
   });

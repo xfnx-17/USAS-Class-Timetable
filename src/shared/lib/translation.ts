@@ -1,3 +1,5 @@
+import { getOwnRecordValue } from './security';
+
 export function lookupTranslationValue(root: unknown, key: string): string | undefined {
   if (typeof key !== 'string' || !key.trim()) return undefined;
 
@@ -7,7 +9,7 @@ export function lookupTranslationValue(root: unknown, key: string): string | und
   for (const part of keys) {
     if (typeof value !== 'object' || value === null) return undefined;
     if (!Object.prototype.hasOwnProperty.call(value, part)) return undefined;
-    value = (value as Record<string, unknown>)[part];
+    value = getOwnRecordValue(value, part);
   }
 
   return typeof value === 'string' ? value : undefined;

@@ -35,8 +35,8 @@ export default function ExamCountdownWidget({ courses, isDemo = false, onOpenExa
         if (diffDays >= 0 && diffDays < minDiff) {
           minDiff = diffDays;
           nearest = {
-            id: c.course_id || c.kod_kursus,
-            name: c.course_name || c.kursus,
+            id: c.course_id || c.kod_kursus || c.id,
+            name: c.course_name || c.kursus || c.name || c.id,
             countdownDays: diffDays,
           };
         }
@@ -53,8 +53,8 @@ export default function ExamCountdownWidget({ courses, isDemo = false, onOpenExa
       const firstCourse = courses[0];
 
       return {
-        name: `${firstCourse.course_name || firstCourse.kursus} [Demo]`,
-        id: firstCourse.course_id || firstCourse.kod_kursus,
+        name: `${firstCourse.course_name || firstCourse.kursus || firstCourse.name || firstCourse.id} [Demo]`,
+        id: firstCourse.course_id || firstCourse.kod_kursus || firstCourse.id,
         countdownDays: diffDays,
       };
     }

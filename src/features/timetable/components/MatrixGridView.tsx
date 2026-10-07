@@ -4,6 +4,7 @@ import { useLanguage } from '@/app/providers/LanguageProvider';
 import type { TimetableItem } from '@/shared/types/usas';
 import { extractDayName, formatDayDisplay, isSameDay } from '@/shared/lib/dayFormat';
 import { buildCourseColorMap, getCourseColorSlot } from '@/shared/lib/courseColors';
+import { getOwnRecordValue } from '@/shared/lib/security';
 import { MapPin, User, GraduationCap } from 'lucide-react';
 import AttendanceMeter from './AttendanceMeter';
 import {
@@ -44,7 +45,9 @@ const getDayColors = (day: string | undefined, isLight: boolean) => {
   };
 
   const key = extractDayName(day) || 'ISNIN';
-  return (isLight ? lightColors[key] : darkColors[key]) || (isLight ? lightColors['ISNIN'] : darkColors['ISNIN']);
+  const colors = isLight ? lightColors : darkColors;
+  return getOwnRecordValue<Record<string, string>>(colors, key)
+    || getOwnRecordValue<Record<string, string>>(colors, 'ISNIN')!;
 };
 
 const ALL_TIME_SLOTS = [
@@ -94,7 +97,7 @@ const getSlotLabel = (slot: string) => {
     '05:00 PM': '17-18',
     '06:00 PM': '18-19'
   };
-  return slotMap[slot] || slot;
+  return getOwnRecordValue<string>(slotMap, slot) || slot;
 };
 
 export default function MatrixGridView({
