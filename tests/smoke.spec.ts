@@ -116,13 +116,23 @@ test('wallpaper export converts OKLab gradient colors for PNG rendering', async 
   }, { png: image.toString('base64'), ...gridPosition });
   expect(cornerPixel).toEqual(backgroundPixel);
 
-  const positionSlider = page.getByRole('slider', { name: 'Laraskan posisi jadual pada lockscreen' });
-  const originalGridBottom = await page.locator('[data-wallpaper-grid]').evaluate((grid) => grid.getBoundingClientRect().bottom);
-  await positionSlider.focus();
-  await positionSlider.press('Home');
-  await expect(positionSlider).toHaveValue('-84');
-  const raisedGridBottom = await page.locator('[data-wallpaper-grid]').evaluate((grid) => grid.getBoundingClientRect().bottom);
-  expect(raisedGridBottom).toBeLessThan(originalGridBottom - 80);
+  const grid = page.locator('[data-wallpaper-grid]');
+  const topSlider = page.getByRole('slider', { name: 'Laraskan ruang atas jadual pada lockscreen' });
+  const bottomSlider = page.getByRole('slider', { name: 'Laraskan ruang bawah jadual pada lockscreen' });
+  const originalGrid = await grid.evaluate((element) => element.getBoundingClientRect().toJSON());
+
+  await bottomSlider.focus();
+  await bottomSlider.press('End');
+  await expect(bottomSlider).toHaveValue('138');
+  const lowerGrid = await grid.evaluate((element) => element.getBoundingClientRect().toJSON());
+  expect(lowerGrid.bottom).toBeLessThan(originalGrid.bottom - 80);
+
+  await topSlider.focus();
+  await topSlider.press('Home');
+  await expect(topSlider).toHaveValue('12');
+  const adjustedGrid = await grid.evaluate((element) => element.getBoundingClientRect().toJSON());
+  expect(adjustedGrid.top).toBeLessThan(lowerGrid.top - 80);
+  expect(adjustedGrid.bottom).toBeCloseTo(lowerGrid.bottom, 0);
 });
 
 test('unknown route shows branded 404 screen', async ({ page }) => {

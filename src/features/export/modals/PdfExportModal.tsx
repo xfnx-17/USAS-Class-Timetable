@@ -335,7 +335,8 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
   const [userZoom, setUserZoom] = useState(1);
   const [exportTheme, setExportTheme] = useState<ExportTheme>('light');
   const [themeDropdownOpen, setThemeDropdownOpen] = useState(false);
-  const [wallpaperYOffset, setWallpaperYOffset] = useState(0);
+  const [wallpaperTopAdjustment, setWallpaperTopAdjustment] = useState(0);
+  const [wallpaperBottomAdjustment, setWallpaperBottomAdjustment] = useState(0);
 
   useEffect(() => {
     if (isOpen) {
@@ -721,18 +722,22 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
     );
   };
 
-  const getSpacerHeights = (preset: WallpaperPreset, offset = 0) => {
+  const getSpacerHeights = (preset: WallpaperPreset, topAdjustment = 0, bottomAdjustment = 0) => {
     const top = preset === 'desktop' ? 56 : preset === 'square' ? 64 : preset === 'tablet' ? 104 : 96;
     const bottom = preset === 'desktop' ? 28 : preset === 'square' ? 24 : preset === 'tablet' ? 22 : 18;
-    const clampedOffset = Math.max(-84, Math.min(120, offset));
+    const topOffset = Math.max(12 - top, Math.min(120, topAdjustment));
+    const bottomOffset = Math.max(-bottom, Math.min(120, bottomAdjustment));
     return {
-      top: Math.max(12, top + clampedOffset),
-      bottom: Math.max(8, bottom - clampedOffset),
-      offset: clampedOffset,
+      top: top + topOffset,
+      bottom: bottom + bottomOffset,
+      topBase: top,
+      bottomBase: bottom,
+      topMax: top + 120,
+      bottomMax: bottom + 120,
     };
   };
 
-  const currentSpacers = getSpacerHeights(wallpaperPreset, wallpaperYOffset);
+  const currentSpacers = getSpacerHeights(wallpaperPreset, wallpaperTopAdjustment, wallpaperBottomAdjustment);
   const lockscreenConfig = getLockscreenThemeConfig(exportTheme);
 
   return (
@@ -994,42 +999,64 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                 </div>
 
                 {exportMode === 'WALLPAPER' && (
-                  <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start relative z-20">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto relative z-20">
                     <span className={`text-[10px] font-bold uppercase tracking-wider flex-shrink-0 ${isLight ? 'text-amber-800' : 'text-amber-400/90'
-                      }`}>Posisi:</span>
-                    <div className={`flex items-center gap-2 rounded-lg border px-2 py-1 ${isLight
-                        ? 'bg-white border-slate-200'
-                        : 'bg-white/[0.04] border-white/10'
-                      }`}>
-                      <input
-                        type="range"
-                        min={-84}
-                        max={120}
-                        step={1}
-                        value={wallpaperYOffset}
-                        onChange={(e) => setWallpaperYOffset(Number(e.target.value))}
-                        className={`usas-range w-24 cursor-pointer ${isLight ? '' : 'usas-range-dark'}`}
-                        aria-label="Laraskan posisi jadual pada lockscreen"
-                      />
-                      <span className={`w-9 text-right text-[10px] font-semibold tabular-nums ${isLight ? 'text-slate-500' : 'text-white/55'
+                      }`}>Posisi jadual:</span>
+                    <div className="grid grid-cols-2 gap-2 flex-1 sm:flex-none">
+                      <label className={`min-w-0 rounded-lg border px-2 py-1 ${isLight
+                          ? 'bg-white border-slate-200'
+                          : 'bg-white/[0.04] border-white/10'
                         }`}>
-                        {currentSpacers.offset > 0 ? '+' : ''}{currentSpacers.offset}
-                      </span>
-                      {wallpaperYOffset !== 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setWallpaperYOffset(0)}
-                          className={`rounded p-0.5 transition-colors ${isLight
-                              ? 'text-slate-400 hover:bg-slate-100 hover:text-slate-700'
-                              : 'text-white/40 hover:bg-white/[0.08] hover:text-white/80'
-                            }`}
-                          aria-label="Reset posisi lockscreen"
-                          title="Reset posisi"
-                        >
-                          <RotateCw className="h-3 w-3" />
-                        </button>
-                      )}
+                        <span className={`flex justify-between gap-1 text-[9px] font-semibold ${isLight ? 'text-slate-500' : 'text-white/55'}`}>
+                          <span>Atas</span><span>{currentSpacers.top}px</span>
+                        </span>
+                        <input
+                          type="range"
+                          min={12}
+                          max={currentSpacers.topMax}
+                          step={1}
+                          value={currentSpacers.top}
+                          onChange={(e) => setWallpaperTopAdjustment(Number(e.target.value) - currentSpacers.topBase)}
+                          className={`usas-range w-full sm:w-24 cursor-pointer ${isLight ? '' : 'usas-range-dark'}`}
+                          aria-label="Laraskan ruang atas jadual pada lockscreen"
+                        />
+                      </label>
+                      <label className={`min-w-0 rounded-lg border px-2 py-1 ${isLight
+                          ? 'bg-white border-slate-200'
+                          : 'bg-white/[0.04] border-white/10'
+                        }`}>
+                        <span className={`flex justify-between gap-1 text-[9px] font-semibold ${isLight ? 'text-slate-500' : 'text-white/55'}`}>
+                          <span>Bawah</span><span>{currentSpacers.bottom}px</span>
+                        </span>
+                        <input
+                          type="range"
+                          min={0}
+                          max={currentSpacers.bottomMax}
+                          step={1}
+                          value={currentSpacers.bottom}
+                          onChange={(e) => setWallpaperBottomAdjustment(Number(e.target.value) - currentSpacers.bottomBase)}
+                          className={`usas-range w-full sm:w-24 cursor-pointer ${isLight ? '' : 'usas-range-dark'}`}
+                          aria-label="Laraskan ruang bawah jadual pada lockscreen"
+                        />
+                      </label>
                     </div>
+                    {(wallpaperTopAdjustment !== 0 || wallpaperBottomAdjustment !== 0) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setWallpaperTopAdjustment(0);
+                          setWallpaperBottomAdjustment(0);
+                        }}
+                        className={`self-end sm:self-auto rounded p-1 transition-colors ${isLight
+                            ? 'text-slate-400 hover:bg-slate-100 hover:text-slate-700'
+                            : 'text-white/40 hover:bg-white/[0.08] hover:text-white/80'
+                          }`}
+                        aria-label="Reset posisi lockscreen"
+                        title="Reset posisi"
+                      >
+                        <RotateCw className="h-3 w-3" />
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
