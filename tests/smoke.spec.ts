@@ -115,6 +115,14 @@ test('wallpaper export converts OKLab gradient colors for PNG rendering', async 
     return [sample(x + 2, y + 2), sample(x + 2, y - 3)];
   }, { png: image.toString('base64'), ...gridPosition });
   expect(cornerPixel).toEqual(backgroundPixel);
+
+  const positionSlider = page.getByRole('slider', { name: 'Laraskan posisi jadual pada lockscreen' });
+  const originalGridBottom = await page.locator('[data-wallpaper-grid]').evaluate((grid) => grid.getBoundingClientRect().bottom);
+  await positionSlider.focus();
+  await positionSlider.press('Home');
+  await expect(positionSlider).toHaveValue('-84');
+  const raisedGridBottom = await page.locator('[data-wallpaper-grid]').evaluate((grid) => grid.getBoundingClientRect().bottom);
+  expect(raisedGridBottom).toBeLessThan(originalGridBottom - 80);
 });
 
 test('unknown route shows branded 404 screen', async ({ page }) => {
