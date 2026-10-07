@@ -143,6 +143,19 @@ test('wallpaper export converts OKLab gradient colors for PNG rendering', async 
   await page.getByRole('button', { name: /eksport pdf & wallpaper|export pdf & wallpaper/i }).click();
   await page.getByRole('button', { name: /wallpaper lockscreen/i }).click();
   await expect(page.locator('[data-wallpaper-grid]')).toHaveCSS('border-top-left-radius', '12px');
+  const headerColumns = await page.locator('[data-export-time-label]').evaluateAll((labels) => labels.map((label) => {
+    const header = label.closest('th')!;
+    return {
+      label: label.textContent,
+      width: header.getBoundingClientRect().width,
+      availableWidth: label.parentElement!.clientWidth,
+      labelWidth: label.scrollWidth,
+    };
+  }));
+  expect(headerColumns.length).toBeGreaterThan(0);
+  expect(headerColumns.length).toBeLessThanOrEqual(8);
+  expect(Math.max(...headerColumns.map(({ width }) => width)) - Math.min(...headerColumns.map(({ width }) => width))).toBeLessThanOrEqual(1);
+  expect(headerColumns.every(({ availableWidth, labelWidth }) => availableWidth >= labelWidth), JSON.stringify(headerColumns)).toBe(true);
   const gridPosition = await page.evaluate(() => {
     const root = document.querySelector<HTMLElement>('[data-export-root="wallpaper-export-root"]')!;
     const grid = document.querySelector<HTMLElement>('[data-wallpaper-grid]')!;

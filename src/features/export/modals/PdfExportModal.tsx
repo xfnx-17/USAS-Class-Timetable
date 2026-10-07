@@ -1276,50 +1276,20 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                             const wallpaperPadding = wallpaperPreset === 'phone' ? 12 : wallpaperPreset === 'square' ? 14 : 16;
                             const gridInnerWidth = w - (wallpaperPadding * 2) - 2;
 
-                            // Use class boundaries as columns. Compress long empty gaps, while
-                            // keeping occupied widths proportional to the real class duration.
+                            // Use class boundaries as equal-width columns to keep labels and
+                            // cells tidy. Long empty gaps stay compressed into one column.
+                            const maxColumns = wallpaperPreset === 'phone' ? 8 : wallpaperPreset === 'square' ? 9 : wallpaperPreset === 'tablet' ? 10 : 12;
                             const slots = buildWallpaperGridSlots(allCourses.flatMap((course) => {
-                                const start = parseTimeToMinutes(course.start_time || course.jadual || '');
-                                if (start == null) return [];
-                                const end = parseTimeToMinutes(course.end_time || '');
-                                return [{ start, end: end != null && end > start ? end : start + 60 }];
-                              }));
-                            const slotIndexAt = (minutes: number) => slots.findIndex(
-                              (slot) => minutes >= slot.start && minutes < slot.end,
-                            );
-                            const findCourseForSlot = (day: string, slot: typeof slots[number]): TimetableItem | null => {
-                              const targetDay = extractDayName(day);
-                              return allCourses.find((c) => {
-                                if (extractDayName(c.day) !== targetDay) return false;
-                                const startMinutes = parseTimeToMinutes(c.start_time || c.jadual || '');
-                                if (startMinutes == null) return false;
-                                return startMinutes === slot.start;
-                              }) || null;
-                            };
-                            const slotSpanFor = (course: TimetableItem): number => {
-                              const startMinutes = parseTimeToMinutes(course.start_time || course.jadual || '');
-                              const endMinutes = parseTimeToMinutes(course.end_time || '');
-                              if (startMinutes == null) return 1;
-                              const safeEnd = Math.min(24 * 60, endMinutes != null && endMinutes > startMinutes ? endMinutes : startMinutes + 60);
-                              const startIndex = slotIndexAt(startMinutes);
-                              const endIndex = slots.findIndex((slot) => slot.end === safeEnd);
-                              return startIndex < 0 || endIndex < startIndex ? 1 : endIndex - startIndex + 1;
-                            };
-                            const isSlotCovered = (day: string, slot: typeof slots[number]): boolean => {
-                              const targetDay = extractDayName(day);
-                              return allCourses.some((c) => {
-                                if (extractDayName(c.day) !== targetDay) return false;
-                                const startMinutes = parseTimeToMinutes(c.start_time || c.jadual || '');
-                                const endMinutes = parseTimeToMinutes(c.end_time || '');
-                                if (startMinutes == null) return false;
-                                const safeEnd = Math.min(24 * 60, endMinutes != null && endMinutes > startMinutes ? endMinutes : startMinutes + 60);
-                                return startMinutes < slot.start && safeEnd > slot.start;
-                              });
-                            };
-                            const widthPerWeight = (gridInnerWidth - 38) / slots.reduce((sum, slot) => sum + slot.weight, 0);
-                            const slotWidth = (slotIndex: number, span = 1) => slots
-                              .slice(slotIndex, slotIndex + span)
-                              .reduce((sum, slot) => sum + widthPerWeight * slot.weight, 0);
+                              const start = parseTimeToMinutes(course.start_time || course.jadual || '');
+                              if (start == null) return [];
+                              const end = parseTimeToMinutes(course.end_time || '');
+                              return [{ start, end: end != null && end > start ? end : start + 60 }];
+                            }), maxColumns);
+                            const axisStart = slots[0].start;
+                            const axisEnd = slots[slots.length - 1].end;
+                            const axisDuration = axisEnd - axisStart;
+                            const gridContentWidth = gridInnerWidth - 38;
+                            const widthPerSlot = gridContentWidth / slots.length;
 
                             return (
                               <table className={`w-full h-full table-fixed border-collapse ${style.tableFontSize}`}>
@@ -1336,14 +1306,18 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                             <span className="leading-none">&nbsp;</span>
                                           </div>
                                         </th>
-                                        {slots.map((slot, slotIndex) => (
+                                        {slots.map((slot) => (
                                           <th
                                             key={slot.start}
                                             className={`p-0 font-black uppercase tracking-wider align-middle border-r ${lockscreenConfig.headerBorder} ${lockscreenConfig.headerText}`}
-                                            style={{ height: `${headerHeightPx}px`, width: `${slotWidth(slotIndex)}px` }}
+                                            style={{ height: `${headerHeightPx}px`, width: `${widthPerSlot}px` }}
                                           >
                                             <div className="w-full h-full flex items-center justify-center text-center leading-none" style={{ height: `${headerHeightPx}px` }}>
-                                              <span data-export-time-label className="leading-none">{formatWallpaperSlotLabel(slot.start, slot.end)}</span>
+                                              {(() => {
+                                                const label = formatWallpaperSlotLabel(slot.start, slot.end);
+                                                const fontSize = Math.max(4, Math.min(8, widthPerSlot / (label.length * 0.62)));
+                                                return <span data-export-time-label className="leading-none whitespace-nowrap" style={{ fontSize: `${fontSize}px` }}>{label}</span>;
+                                              })()}
                                             </div>
                                           </th>
                                         ))}
@@ -1363,32 +1337,37 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                             <span className="text-[10px] break-words whitespace-pre-wrap">{extractDayName(d) ? t(`shortDays.${extractDayName(d)}`) : formatDayDisplay(d, t, { short: true })}</span>
                                           </div>
                                         </td>
-                                        {slots.map((slot, slotIndex) => {
-                                          const course = findCourseForSlot(d, slot);
-                                          const covered = isSlotCovered(d, slot);
-                                          if (covered) return null;
-                                          if (course) {
-                                            const courseSpan = slotSpanFor(course);
-                                            const courseWidth = slotWidth(slotIndex, courseSpan);
+                                        <td colSpan={slots.length} className="relative p-0 overflow-hidden" style={{ height: `${rowHeightPx}px` }}>
+                                          <div className="absolute inset-0 grid" style={{ gridTemplateColumns: `repeat(${slots.length}, minmax(0, 1fr))` }} aria-hidden="true">
+                                            {slots.map((slot) => (
+                                              <div key={slot.start} className={`border-r last:border-r-0 ${lockscreenConfig.cellBorder}`} />
+                                            ))}
+                                          </div>
+                                          {allCourses.map((course) => {
+                                            if (extractDayName(course.day) !== extractDayName(d)) return null;
+                                            const start = parseTimeToMinutes(course.start_time || course.jadual || '');
+                                            if (start == null || start < axisStart || start >= axisEnd) return null;
+                                            const rawEnd = parseTimeToMinutes(course.end_time || '');
+                                            const end = Math.min(axisEnd, rawEnd != null && rawEnd > start ? rawEnd : start + 60);
+                                            if (end <= start) return null;
+                                            const left = ((start - axisStart) / axisDuration) * 100;
+                                            const width = ((end - start) / axisDuration) * 100;
+                                            const courseWidth = gridContentWidth * (end - start) / axisDuration;
                                             const courseColor = getModalDayColors(
                                               getCourseColorSlot(courseColorMap, course.course_id || course.kod_kursus),
                                               exportTheme,
                                             );
                                             return (
-                                              <td
-                                                key={slot.start}
-                                                colSpan={courseSpan}
-                                                className={`border-r align-middle p-0.5 overflow-visible ${lockscreenConfig.cellBorder} ${courseColor.bg} ${courseColor.border}`}
-                                                style={{ height: `${rowHeightPx}px`, width: `${courseWidth}px` }}
+                                              <div
+                                                key={`${course.course_id || course.kod_kursus}-${start}`}
+                                                className={`absolute inset-y-0.5 border-r align-middle p-0.5 overflow-hidden ${lockscreenConfig.cellBorder} ${courseColor.bg} ${courseColor.border}`}
+                                                style={{ left: `${left}%`, width: `${width}%` }}
                                               >
-                                                {renderWallpaperCourseContent(course, courseSpan, courseWidth, rowHeightPx, lockscreenConfig.isLight, style)}
-                                              </td>
+                                                {renderWallpaperCourseContent(course, 1, courseWidth, rowHeightPx, lockscreenConfig.isLight, style)}
+                                              </div>
                                             );
-                                          }
-                                          return (
-                                            <td key={slot.start} style={{ width: `${slotWidth(slotIndex)}px` }} className={`border-r align-middle p-0 ${lockscreenConfig.cellBorder}`} />
-                                          );
-                                        })}
+                                          })}
+                                        </td>
                                       </tr>
                                     );
                                   })}
