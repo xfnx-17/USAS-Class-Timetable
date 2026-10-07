@@ -750,7 +750,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
         <div className={`p-3 sm:p-4 border-b flex items-start sm:items-center justify-between gap-3 flex-shrink-0 ${isLight ? 'border-slate-200 bg-slate-50/50' : 'border-white/[0.06] bg-[#0A1428]/95'
           }`}>
           <div className="flex items-start sm:items-center gap-3 min-w-0">
-            <img src="/usas-logo.png" alt="USAS Logo" className="w-6 h-6 sm:w-7 sm:h-7 object-contain flex-shrink-0 mt-0.5 sm:mt-0" />
+            <img src={isLight ? '/usas-logo-light.png' : '/usas-logo-dark.png'} alt="USAS Logo" className="w-6 h-6 sm:w-7 sm:h-7 object-contain flex-shrink-0 mt-0.5 sm:mt-0" />
             <div className="min-w-0">
               <h3 className={`text-xs font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>{t('exportPdfTitle')}</h3>
               <p className={`text-[10px] sm:text-xs mt-1 transition-colors ${isLight ? 'text-slate-500' : 'text-white/50'}`}>
@@ -1073,7 +1073,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                   {/* Official Branding Header */}
                   <div className="border-b-2 border-slate-900 pb-2 mb-3 flex justify-between items-end">
                     <div className="flex items-center gap-3">
-                      <img src="/usas-logo.png" alt="USAS Crest" className="w-10 h-10 object-contain" />
+                      <img src={exportTheme === 'light' ? '/usas-logo-light.png' : '/usas-logo-dark.png'} alt="USAS Crest" className="w-10 h-10 object-contain" />
                       <div>
                         <h1 className="text-xs font-black tracking-tight text-slate-900 uppercase leading-tight whitespace-nowrap">
                           UNIVERSITI SULTAN AZLAN SHAH (USAS)

@@ -9,7 +9,7 @@
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 
 <p align="center">
-  <img src="./public/usas-logo.png" alt="USAS Logo" width="100px">
+  <img src="./public/usas-logo-dark.png" alt="USAS Logo" width="100px">
 </p>
 
 USAS Class Timetable is a modern, client-side academic schedule portal designed for Universiti Sultan Azlan Shah (USAS) students. Built on React 18, TypeScript, and Vite with custom glassmorphism styling, it enables students to fetch, view, and export their class timetables directly into standard calendar feeds (.ICS), official A4 printable PDF documents, and high-resolution device lockscreen wallpapers.
@@ -128,7 +128,9 @@ USAS Class Timetable/
 │   ├── error.css              # Glassmorphic error pages stylesheet
 │   ├── error-page.js          # Error page hydration script
 │   ├── sw.js                  # PWA offline service worker
-│   └── usas-logo.png          # Official USAS emblem asset
+│   ├── usas-logo-dark.png     # Dark theme logo
+│   ├── usas-logo-light.png    # Light theme logo
+│   └── usas-logo.png          # Dark theme compatibility asset
 ├── functions/
 │   └── api/usas/
 │       └── _middleware.ts     # Cloudflare Pages Function proxy to the USAS API (Turnstile gate)

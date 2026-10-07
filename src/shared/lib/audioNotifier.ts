@@ -102,8 +102,8 @@ export function sendPushNotification(title: string, body: string): void {
     try {
       new Notification(title, {
         body,
-        icon: '/usas-logo.png',
-        badge: '/usas-logo.png',
+        icon: '/usas-logo-dark.png',
+        badge: '/usas-logo-dark.png',
       } satisfies NotificationOptions);
     } catch (e) {}
   } else if (Notification.permission !== 'denied') {
@@ -112,8 +112,8 @@ export function sendPushNotification(title: string, body: string): void {
         try {
           new Notification(title, {
             body,
-            icon: '/usas-logo.png',
-            badge: '/usas-logo.png',
+            icon: '/usas-logo-dark.png',
+            badge: '/usas-logo-dark.png',
           } satisfies NotificationOptions);
         } catch (e) {}
       }

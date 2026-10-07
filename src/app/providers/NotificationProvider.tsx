@@ -70,7 +70,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           // Fire notification
           new Notification('Class Starting Soon!', {
             body: `${course.course_name} starts in ${Math.ceil(diffMs / 60000)} minutes at ${course.location}`,
-            icon: '/usas-logo.png'
+            icon: '/usas-logo-dark.png'
           });
           
         }

@@ -3,6 +3,13 @@ import { test, expect } from '@playwright/test';
 test('demo login opens timetable and export modal', async ({ page }) => {
   await page.goto('/');
 
+  const brandLogo = page.getByRole('img', { name: 'USAS Emblem' });
+  await expect(brandLogo).toHaveAttribute('src', '/usas-logo-dark.png');
+  await page.getByRole('button', { name: 'Toggle theme' }).click();
+  await expect(brandLogo).toHaveAttribute('src', '/usas-logo-light.png');
+  await page.getByRole('button', { name: 'Toggle theme' }).click();
+  await expect(brandLogo).toHaveAttribute('src', '/usas-logo-dark.png');
+
   await expect(page.getByText(/Portal Jadual Waktu Kuliah|Student Class Timetable Portal/i)).toBeVisible();
   await page.getByRole('button', { name: /log in|log masuk/i }).first().click();
   await expect(page).toHaveURL(/\/login$/);

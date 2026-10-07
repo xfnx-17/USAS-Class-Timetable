@@ -13,7 +13,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['usas-logo.png', 'seo-preview.svg', 'manifest.json'],
+      includeAssets: ['usas-logo.png', 'usas-logo-dark.png', 'usas-logo-light.png', 'seo-preview.svg', 'manifest.json'],
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,ttf}'],
         navigateFallback: '/index.html',
@@ -29,16 +29,16 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: '/usas-logo.png',
+            src: '/usas-logo-dark.png',
             sizes: '192x192',
             type: 'image/png',
-            purpose: 'any maskable'
+            purpose: 'any'
           },
           {
-            src: '/usas-logo.png',
+            src: '/usas-logo-dark.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable'
+            purpose: 'any'
           }
         ]
       }

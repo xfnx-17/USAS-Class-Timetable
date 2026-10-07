@@ -101,7 +101,7 @@ export default function ToolsDrawer({
         {session && (
           <div className={`px-4 py-3 border-b ${isLight ? 'bg-slate-50/50 border-slate-200' : 'border-white/[0.06]'}`}>
             <div className="flex items-center gap-3 min-w-0">
-              <img src="/usas-logo.png" alt="USAS" className="w-7 h-7 object-contain" />
+              <img src={isLight ? '/usas-logo-light.png' : '/usas-logo-dark.png'} alt="USAS" className="w-7 h-7 object-contain" />
               <div className="min-w-0">
                 <p className={`text-xs font-semibold truncate ${isLight ? 'text-slate-800' : 'text-white/80'}`}>{timetableData?.studentName || session.user_id}</p>
                 <p className={`text-[10px] flex items-center gap-1 min-w-0 ${isLight ? 'text-slate-500' : 'text-white/30'}`}>
