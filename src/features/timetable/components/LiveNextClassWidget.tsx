@@ -3,7 +3,13 @@ import { useLanguage } from '@/app/providers/LanguageProvider';
 import { useTheme } from '@/app/providers/ThemeProvider';
 
 import { playClassChime, sendPushNotification } from '@/shared/lib/audioNotifier';
-import { buildDayScopedNotificationKey, getLocalDateStamp, pruneDayScopedNotificationKeys } from '@/shared/lib/notificationKeys';
+import {
+  buildDayScopedNotificationKey,
+  getLocalDateStamp,
+  persistDayScopedNotificationKeys,
+  pruneDayScopedNotificationKeys,
+  readDayScopedNotificationKeys,
+} from '@/shared/lib/notificationKeys';
 import { Clock, CheckCircle2, Bell, BellOff } from 'lucide-react';
 import type { TimetableItem } from '@/shared/types/usas';
 import { extractDayName } from '@/shared/lib/dayFormat';
@@ -18,6 +24,8 @@ type NextClassItem = TimetableItem & {
   endMin?: number;
 };
 
+const NOTIFIED_CLASSES_KEY = 'usas_auto_notified_classes';
+
 export default function LiveNextClassWidget({ timetable = [] }: LiveNextClassWidgetProps) {
   const { t } = useLanguage();
   const { theme } = useTheme();
@@ -25,7 +33,7 @@ export default function LiveNextClassWidget({ timetable = [] }: LiveNextClassWid
   const [autoNotifyEnabled, setAutoNotifyEnabled] = useState(() => {
     try { return localStorage.getItem('usas_auto_notify') === 'true'; } catch (e) { return false; }
   });
-  const notifiedRef = useRef(new Set<string>());
+  const notifiedRef = useRef(readDayScopedNotificationKeys(NOTIFIED_CLASSES_KEY, new Date()));
   const activeDayStampRef = useRef('');
   const isLight = theme === 'light';
 
@@ -39,6 +47,7 @@ export default function LiveNextClassWidget({ timetable = [] }: LiveNextClassWid
     if (activeDayStampRef.current === dayStamp) return;
     activeDayStampRef.current = dayStamp;
     notifiedRef.current = pruneDayScopedNotificationKeys(notifiedRef.current, now);
+    persistDayScopedNotificationKeys(NOTIFIED_CLASSES_KEY, notifiedRef.current);
   }, [now]);
 
   const toggleAutoNotify = () => {
@@ -128,6 +137,7 @@ export default function LiveNextClassWidget({ timetable = [] }: LiveNextClassWid
       const key = buildDayScopedNotificationKey(now, nextClass.course_id, nextClass.day, nextClass.start_time);
       if (!notifiedRef.current.has(key)) {
         notifiedRef.current.add(key);
+        persistDayScopedNotificationKeys(NOTIFIED_CLASSES_KEY, notifiedRef.current);
         playClassChime();
         sendPushNotification(
           `Peringatan Kuliah USAS: ${nextClass.course_id}`,

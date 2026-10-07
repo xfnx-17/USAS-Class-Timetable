@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useAuth } from './AuthProvider';
+import { buildDayScopedNotificationKey, getLocalDateStamp, persistDayScopedNotificationKeys, pruneDayScopedNotificationKeys, readDayScopedNotificationKeys } from '@/shared/lib/notificationKeys';
 import { extractDayName } from '@/shared/lib/dayFormat';
 import { playClassChime } from '@/shared/lib/audioNotifier';
 import { isWithinClassNotificationWindow } from '@/shared/lib/notificationTiming';
@@ -11,6 +12,7 @@ type NotificationContextType = {
 };
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
+const NOTIFIED_CLASSES_KEY = 'usas_notification_notified_classes';
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const { timetableData } = useAuth();
@@ -20,7 +22,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(() => {
     return localStorage.getItem('usas_notifications_enabled') === 'true';
   });
-  const notifiedClasses = useRef(new Set<string>());
+  const notifiedClasses = useRef(readDayScopedNotificationKeys(NOTIFIED_CLASSES_KEY, new Date()));
+  const activeDayStamp = useRef('');
 
   useEffect(() => {
     if (!isNotificationsEnabled || permissionStatus !== 'granted') return;
@@ -29,6 +32,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       if (!timetableData?.timetable) return;
 
       const now = new Date();
+      const dayStamp = getLocalDateStamp(now);
+      if (activeDayStamp.current !== dayStamp) {
+        activeDayStamp.current = dayStamp;
+        notifiedClasses.current = pruneDayScopedNotificationKeys(notifiedClasses.current, now);
+        persistDayScopedNotificationKeys(NOTIFIED_CLASSES_KEY, notifiedClasses.current);
+      }
+
       // Check every class
       const courses = timetableData.timetable;
       
@@ -62,10 +72,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         const diffMs = classTime.getTime() - now.getTime();
 
         // Notify once while the class is within its 15-minute reminder window.
-        const classKey = `${course.course_id}-${now.toDateString()}`;
+        const classKey = buildDayScopedNotificationKey(now, course.course_id, course.day, startStr);
         
         if (isWithinClassNotificationWindow(diffMs) && !notifiedClasses.current.has(classKey)) {
           notifiedClasses.current.add(classKey);
+          persistDayScopedNotificationKeys(NOTIFIED_CLASSES_KEY, notifiedClasses.current);
           playClassChime();
           // Fire notification
           new Notification('Class Starting Soon!', {

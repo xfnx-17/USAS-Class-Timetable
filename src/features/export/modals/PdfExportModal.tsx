@@ -683,6 +683,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
 
     return (
       <div
+        data-export-course-content
         className="w-full flex flex-col justify-center items-center text-center p-0.5"
         style={{ height: `${badgeHeightPx - 2}px` }}
       >
@@ -843,10 +844,10 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                 />
               )}
 
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center w-full justify-between sm:justify-start relative z-40">
+              <div data-wallpaper-controls className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 items-center gap-3 w-full relative z-40">
                 {/* 1. Device Ratio Selector (WALLPAPER only) */}
                 {exportMode === 'WALLPAPER' && (
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-start relative z-40 min-w-0">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full min-w-0 relative z-40">
                     <span className={`text-[10px] font-bold uppercase tracking-wider flex-shrink-0 ${isLight ? 'text-amber-800' : 'text-amber-400/90'
                       }`}>{t('deviceRatio')}:</span>
                     <div className="relative w-full sm:w-auto">
@@ -898,7 +899,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                 )}
 
                 {/* 2. Content Detail Selector */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-start relative z-20 min-w-0">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full min-w-0 relative z-20">
                   <span className={`text-[10px] font-bold uppercase tracking-wider flex-shrink-0 ${isLight ? 'text-amber-800' : 'text-amber-400/90'
                     }`}>{t('cardContent')}:</span>
                   <div className="relative w-full sm:w-auto">
@@ -947,7 +948,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                 </div>
 
                 {/* 3. Timetable Theme Selector */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-start relative z-20 min-w-0">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full min-w-0 relative z-20">
                   <span className={`text-[10px] font-bold uppercase tracking-wider flex-shrink-0 ${isLight ? 'text-amber-800' : 'text-amber-400/90'
                     }`}>{t('tableTheme')}:</span>
                   <div className="relative w-full sm:w-auto">
@@ -999,7 +1000,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                 </div>
 
                 {exportMode === 'WALLPAPER' && (
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto relative z-20">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full min-w-0 relative z-20">
                     <span className={`text-[10px] font-bold uppercase tracking-wider flex-shrink-0 ${isLight ? 'text-amber-800' : 'text-amber-400/90'
                       }`}>Posisi jadual:</span>
                     <div className="grid grid-cols-2 gap-2 flex-1 sm:flex-none">

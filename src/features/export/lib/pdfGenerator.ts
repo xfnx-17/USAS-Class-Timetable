@@ -130,6 +130,12 @@ async function captureElement(elementRef: ExportElement | null, scale = 2, backg
         });
       }
 
+      if (isWallpaper) {
+        clonedRoot.querySelectorAll<HTMLElement>('[data-export-course-content]').forEach((el) => {
+          el.style.transform = 'translateY(-6px)';
+        });
+      }
+
       if (!isApple || isWallpaper) {
         const textNodes = clonedRoot.querySelectorAll(isWallpaper ? '[data-export-time-label]' : 'span, h1, h2, p');
         textNodes.forEach((node) => {
@@ -142,7 +148,7 @@ async function captureElement(elementRef: ExportElement | null, scale = 2, backg
             }
           }
           const fontSize = parseFloat(view.getComputedStyle(el).fontSize) || 12;
-          const shift = Math.max(1, Math.round(fontSize * (isWallpaper ? (isApple ? 0.72 : 0.85) : 0.36)));
+          const shift = Math.max(1, Math.round(fontSize * (isWallpaper ? (isApple ? 0.55 : 0.62) : 0.36)));
           el.style.transform = `translateY(-${shift}px)`;
         });
       }
