@@ -7,6 +7,7 @@ import { generateTimetablePdf, generateElementPng, generateLockscreenImage } fro
 import { extractDayName, formatDayDisplay, sortDayLabels } from '@/shared/lib/dayFormat';
 import { buildCourseColorMap, getCourseColorSlot } from '@/shared/lib/courseColors';
 import { getOwnRecordValue } from '@/shared/lib/security';
+import { buildHourlyTimeSlots } from '@/shared/lib/timetableTime';
 import type { TimetableItem } from '@/shared/types/usas';
 import {
   X, Download, Smartphone, RotateCw, ChevronDown, Plus, Minus, FileBadge
@@ -292,7 +293,7 @@ const formatDurationRange = (startTime?: string, endTime?: string) => {
 
 const formatWallpaperSlotLabel = (hour: number, size = 1) => {
   const start = String(hour).padStart(2, '0');
-  const end = String(hour + size).padStart(2, '0');
+  const end = String(Math.min(24, hour + size)).padStart(2, '0');
   return `${start}-${end}`;
 };
 
@@ -1269,9 +1270,8 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                             const wallpaperPadding = wallpaperPreset === 'phone' ? 12 : wallpaperPreset === 'square' ? 14 : 16;
                             const gridInnerWidth = w - (wallpaperPadding * 2) - 2;
 
-                            // Only render the hours that contain classes. When the
-                            // range is wide, widen each column (slot) so the grid
-                            // stays readable instead of squeezing many thin columns.
+                            // Keep one column per hour so class widths match their real
+                            // duration, and stop at the latest class instead of passing midnight.
                             const { hourStarts, slotSize } = (() => {
                               let minH = Infinity;
                               let maxH = -Infinity;
@@ -1285,15 +1285,9 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                               if (!Number.isFinite(minH) || !Number.isFinite(maxH) || maxH <= minH) {
                                 return { hourStarts: WALLPAPER_HOUR_STARTS, slotSize: 1 };
                               }
-                              const maxColumns =
-                                wallpaperPreset === 'phone' ? 8
-                                  : wallpaperPreset === 'square' ? 9
-                                    : wallpaperPreset === 'tablet' ? 10
-                                      : 12;
-                              const size = Math.max(1, Math.ceil((maxH - minH) / maxColumns));
-                              const starts: number[] = [];
-                              for (let h = minH; h < maxH; h += size) starts.push(h);
-                              return { hourStarts: starts, slotSize: size };
+                              const starts = buildHourlyTimeSlots(minH, Math.min(24, maxH) - 1)
+                                .map((slot) => Number(slot.slice(0, 2)));
+                              return { hourStarts: starts, slotSize: 1 };
                             })();
                             const baseMinutes = hourStarts[0] * 60;
                             const stepMinutes = slotSize * 60;

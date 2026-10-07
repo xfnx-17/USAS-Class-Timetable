@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { TimetableItem } from '../src/shared/types/usas';
 import {
+  buildHourlyTimeSlots,
   getActiveCourseHighlights,
   getCourseHighlightKey,
   getDayKeyFromDate,
@@ -16,6 +17,15 @@ describe('timetableTime', () => {
     expect(parseTimeToMinutes('08:30 AM')).toBe(510);
     expect(parseTimeToMinutes('14:15')).toBe(855);
     expect(parseTimeToMinutes('12:00 AM')).toBe(0);
+  });
+
+  it('builds grid slots through late evening classes', () => {
+    expect(buildHourlyTimeSlots(13, 13)).toEqual(['13:00']);
+    expect(buildHourlyTimeSlots(22, 22)).toEqual(['22:00']);
+    expect(buildHourlyTimeSlots(20, 22)).toEqual(['20:00', '21:00', '22:00']);
+    expect(buildHourlyTimeSlots(17, 22)).toEqual([
+      '17:00', '18:00', '19:00', '20:00', '21:00', '22:00',
+    ]);
   });
 
   it('rejects text that only contains a time-like number', () => {

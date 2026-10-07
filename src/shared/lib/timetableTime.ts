@@ -24,6 +24,15 @@ export const parseTo24hHour = (timeStr?: string): number | null => {
   return hour;
 };
 
+export const buildHourlyTimeSlots = (startHour: number, endHour: number) => {
+  const firstHour = Math.max(0, Math.ceil(startHour));
+  const lastHour = Math.min(23, Math.floor(endHour));
+  return Array.from(
+    { length: Math.max(0, lastHour - firstHour + 1) },
+    (_, index) => `${String(firstHour + index).padStart(2, '0')}:00`,
+  );
+};
+
 export const parseTimeToMinutes = (timeStr?: string): number | null => {
   if (!timeStr) return null;
   const raw = String(timeStr).trim();

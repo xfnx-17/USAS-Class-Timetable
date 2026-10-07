@@ -8,6 +8,7 @@ import { getOwnRecordValue } from '@/shared/lib/security';
 import { MapPin, User, GraduationCap } from 'lucide-react';
 import AttendanceMeter from './AttendanceMeter';
 import {
+  buildHourlyTimeSlots,
   getCourseHighlightKey,
   parseTo24hHour,
   parseTimeToMinutes,
@@ -50,11 +51,6 @@ const getDayColors = (day: string | undefined, isLight: boolean) => {
     || getOwnRecordValue<Record<string, string>>(colors, 'ISNIN')!;
 };
 
-const ALL_TIME_SLOTS = [
-  '08:00 AM', '09:00 AM', '10:00 AM', '11:00 AM',
-  '12:00 PM', '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM', '06:00 PM'
-];
-
 const getDurationLabel = (startTime?: string, endTime?: string, lang?: string) => {
   const startMin = parseTimeToMinutes(startTime);
   const endMin = parseTimeToMinutes(endTime);
@@ -84,20 +80,8 @@ const getDurationLabel = (startTime?: string, endTime?: string, lang?: string) =
 };
 
 const getSlotLabel = (slot: string) => {
-  const slotMap: Record<string, string> = {
-    '08:00 AM': '8-9',
-    '09:00 AM': '9-10',
-    '10:00 AM': '10-11',
-    '11:00 AM': '11-12',
-    '12:00 PM': '12-13',
-    '01:00 PM': '13-14',
-    '02:00 PM': '14-15',
-    '03:00 PM': '15-16',
-    '04:00 PM': '16-17',
-    '05:00 PM': '17-18',
-    '06:00 PM': '18-19'
-  };
-  return getOwnRecordValue<string>(slotMap, slot) || slot;
+  const hour = parseTo24hHour(slot);
+  return hour === null ? slot : `${hour}-${hour + 1}`;
 };
 
 export default function MatrixGridView({
@@ -148,7 +132,7 @@ export default function MatrixGridView({
   // Show only the time slots that actually contain classes, so a day starting
   // at 11am doesn't render empty 8-9/9-10/10-11 columns.
   const activeTimeSlots = useMemo(() => {
-    if (timetable.length === 0) return ALL_TIME_SLOTS.slice(0, 4);
+    if (timetable.length === 0) return buildHourlyTimeSlots(8, 11);
 
     let minHour = Infinity;
     let maxHour = -Infinity;
@@ -165,15 +149,12 @@ export default function MatrixGridView({
     });
 
     if (!Number.isFinite(minHour) || !Number.isFinite(maxHour)) {
-      return ALL_TIME_SLOTS.slice(0, 4);
+      return buildHourlyTimeSlots(8, 11);
     }
 
-    const slots = ALL_TIME_SLOTS.filter(slot => {
-      const hour = parseTo24hHour(slot);
-      return hour !== null && hour >= minHour && hour <= maxHour;
-    });
+    const slots = buildHourlyTimeSlots(minHour, maxHour);
 
-    return slots.length > 0 ? slots : ALL_TIME_SLOTS.slice(0, 4);
+    return slots.length > 0 ? slots : buildHourlyTimeSlots(8, 11);
   }, [timetable]);
 
   // Constant column widths + fixed text sizing: on small screens the grid
