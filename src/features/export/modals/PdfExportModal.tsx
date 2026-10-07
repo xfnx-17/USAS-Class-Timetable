@@ -775,6 +775,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
             }`}>
             <button
               onClick={() => setExportMode('FORMAL_A4')}
+              aria-label={lang === 'en' ? 'Formal document' : 'Dokumen rasmi'}
               className={`py-2 px-3 rounded-lg text-[10px] sm:text-[11px] font-bold flex items-center justify-center gap-2 transition-all min-w-0 ${exportMode === 'FORMAL_A4'
                   ? (isLight ? 'bg-[#0B1E43] text-white shadow-md' : 'bg-amber-400 text-slate-950 shadow-md')
                   : (isLight ? 'text-slate-500 hover:text-slate-800' : 'text-white/40 hover:text-white')
@@ -786,6 +787,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
 
             <button
               onClick={() => setExportMode('WALLPAPER')}
+              aria-label={lang === 'en' ? 'Wallpaper lockscreen' : 'Wallpaper skrin kunci'}
               className={`py-2 px-3 rounded-lg text-[10px] sm:text-[11px] font-bold flex items-center justify-center gap-2 transition-all min-w-0 ${exportMode === 'WALLPAPER'
                   ? (isLight ? 'bg-[#0B1E43] text-white shadow-md' : 'bg-amber-400 text-slate-950 shadow-md')
                   : (isLight ? 'text-slate-500 hover:text-slate-800' : 'text-white/40 hover:text-white')

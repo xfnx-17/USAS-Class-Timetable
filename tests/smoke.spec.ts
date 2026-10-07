@@ -53,6 +53,38 @@ test('png export flow downloads an image file', async ({ page }) => {
   expect(image.byteLength).toBeGreaterThan(20_000);
 });
 
+test('wallpaper export converts OKLab gradient colors for PNG rendering', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+
+  await page.getByRole('button', { name: /log in|log masuk/i }).first().click();
+  await page.getByRole('button', { name: /log masuk tanpa akaun|demo/i }).click();
+  await page.getByRole('button', { name: /open tools and export/i }).click();
+  await page.getByRole('button', { name: /eksport pdf & wallpaper|export pdf & wallpaper/i }).click();
+  await page.getByRole('button', { name: /wallpaper lockscreen/i }).click();
+
+  await page.locator('[data-export-root="wallpaper-export-root"]').evaluate((root) => {
+    root.style.setProperty('--tw-gradient-from', 'oklab(0.35 0.08 -0.12)');
+    root.style.setProperty('--tw-gradient-to', 'oklab(0.7 0.12 0.08)');
+    root.style.setProperty('--tw-gradient-stops', 'var(--tw-gradient-from), var(--tw-gradient-to)');
+    root.style.backgroundImage = 'linear-gradient(90deg, var(--tw-gradient-stops))';
+  });
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: /^download$|^muat turun$/i }).click();
+  const download = await downloadPromise;
+
+  expect(download.suggestedFilename().toLowerCase()).toContain('lockscreen');
+  const stream = await download.createReadStream();
+  if (!stream) throw new Error('Wallpaper download has no stream.');
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+  const image = Buffer.concat(chunks);
+  expect(image.subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+  expect(image.readUInt32BE(16)).toBeGreaterThan(500);
+  expect(image.readUInt32BE(20)).toBeGreaterThan(500);
+});
+
 test('unknown route shows branded 404 screen', async ({ page }) => {
   await page.goto('/does-not-exist');
 

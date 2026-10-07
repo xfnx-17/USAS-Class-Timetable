@@ -79,25 +79,27 @@ async function captureElement(elementRef: ExportElement | null, scale = 2, backg
       const clonedRoot = clonedDoc.querySelector(`[data-export-root="${exportRootId}"]`) as HTMLElement | null;
       if (!clonedRoot) return;
 
-      // html2canvas cannot parse modern OKLCH colors emitted by Tailwind 4.
+      // html2canvas cannot parse modern OKLCH/OKLab colors emitted by Tailwind 4.
       // Convert only affected computed declarations in the export clone.
-      const colorContext = clonedDoc.createElement('canvas').getContext('2d');
+      const colorContext = clonedDoc.createElement('canvas').getContext('2d', { willReadFrequently: true });
       const view = clonedDoc.defaultView || window;
       if (colorContext) {
-        const oklchPattern = /oklch\([^)]*\)/gi;
+        const modernColorPattern = /(?:oklch|oklab)\([^)]*\)/gi;
         const colorProperties = new Set([
           'color', 'background-color', 'background-image', 'outline-color', 'text-decoration-color',
           'text-emphasis-color', 'column-rule-color', 'caret-color', 'accent-color', 'fill', 'stroke',
-          'box-shadow', 'text-shadow',
+          'box-shadow', 'text-shadow', '--tw-gradient-from', '--tw-gradient-via', '--tw-gradient-to',
+          '--tw-gradient-stops',
         ]);
         const colorCache = new Map<string, string>();
         [clonedRoot, ...clonedRoot.querySelectorAll<HTMLElement>('*')].forEach((el) => {
           const computed = view.getComputedStyle(el);
-          Array.from(computed).forEach((property) => {
+          const properties = new Set([...Array.from(computed), ...colorProperties]);
+          properties.forEach((property) => {
             if (!colorProperties.has(property) && !(property.startsWith('border-') && property.endsWith('-color'))) return;
             const value = computed.getPropertyValue(property);
-            if (!value.includes('oklch(')) return;
-            const compatibleValue = value.replace(oklchPattern, (color) => {
+            if (!value.includes('oklch(') && !value.includes('oklab(')) return;
+            const compatibleValue = value.replace(modernColorPattern, (color) => {
               const cached = colorCache.get(color);
               if (cached) return cached;
               colorContext.clearRect(0, 0, 1, 1);
