@@ -393,6 +393,8 @@ test('wallpaper export converts OKLab gradient colors for PNG rendering', async 
   await page.getByRole('button', { name: /eksport pdf & wallpaper|export pdf & wallpaper/i }).click();
   await page.getByRole('button', { name: /wallpaper lockscreen/i }).click();
   await expect(page.locator('[data-wallpaper-grid]')).toHaveCSS('border-top-left-radius', '12px');
+  await expect(page.locator('[data-wallpaper-grid]')).toHaveCSS('border-left-width', '0px');
+  await expect(page.locator('[data-wallpaper-grid]')).toHaveCSS('border-right-width', '0px');
   const courseColors = await page.locator('[data-export-course-color-code]').evaluateAll((blocks) => blocks.map((block) => ({
     course: block.getAttribute('data-export-course-color-code')!,
     color: getComputedStyle(block).backgroundColor,

@@ -1434,7 +1434,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                         <div
                           data-wallpaper-grid
                           data-wallpaper-grid-radius="12px"
-                          className={`relative z-10 border p-0 flex-1 min-h-0 flex flex-col justify-start overflow-hidden ${lockscreenConfig.gridBg}`}
+                          className={`relative z-10 border border-x-0 p-0 flex-1 min-h-0 flex flex-col justify-start overflow-hidden ${lockscreenConfig.gridBg}`}
                           style={{
                             borderRadius: '12px',
                             isolation: 'isolate',
