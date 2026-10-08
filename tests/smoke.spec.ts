@@ -201,6 +201,12 @@ test('time format preference persists for the signed-in user', async ({ page }) 
 
   await page.reload();
   await expect(page.getByRole('button', { name: /time format 12h/i })).toBeVisible();
+  await page.getByTitle('Paparan Grid').click();
+  const gridPeriods = page.locator('[data-matrix-time-slot]');
+  await expect(gridPeriods.first()).toBeVisible();
+  expect((await gridPeriods.allTextContents()).join(' ')).not.toMatch(/\b(AM|PM)\b/i);
+  const gridCourseTimes = page.locator('[data-matrix-course-start-label], [data-matrix-course-end-label]');
+  expect((await gridCourseTimes.allTextContents()).join(' ')).toMatch(/\b(AM|PM)\b/i);
   await page.getByRole('button', { name: /open tools and export/i }).click();
   await page.getByRole('button', { name: /eksport pdf & wallpaper|export pdf & wallpaper/i }).click();
   await page.getByRole('button', { name: /wallpaper lockscreen/i }).click();

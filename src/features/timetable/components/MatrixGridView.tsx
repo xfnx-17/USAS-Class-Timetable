@@ -85,7 +85,9 @@ const getDurationLabel = (startTime?: string, endTime?: string, lang?: string) =
 
 const getSlotLabel = (slot: string, timeFormat: '12h' | '24h') => {
   const hour = parseTo24hHour(slot);
-  return hour === null ? slot : formatHourSlot(hour, hour + 1, timeFormat);
+  if (hour === null) return slot;
+  if (timeFormat === '12h') return `${hour % 12 || 12}-${(hour + 1) % 12 || 12}`;
+  return formatHourSlot(hour, hour + 1, timeFormat);
 };
 
 export default function MatrixGridView({
