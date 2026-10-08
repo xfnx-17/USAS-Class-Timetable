@@ -183,6 +183,12 @@ async function captureElement(
         });
       }
 
+      if (isApple && isWallpaper) {
+        clonedRoot.querySelectorAll<HTMLElement>('[data-export-course-time]').forEach((el) => {
+          el.style.transform = 'translateY(1px)';
+        });
+      }
+
       if (!isApple || isWallpaper) {
         const textNodes = clonedRoot.querySelectorAll(isWallpaper ? '[data-export-time-label]' : 'span, h1, h2, p');
         textNodes.forEach((node) => {
