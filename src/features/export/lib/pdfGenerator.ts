@@ -67,6 +67,7 @@ async function captureElement(
   const height = elementRef.scrollHeight || elementRef.offsetHeight || undefined;
   const exportWidth = isWallpaper && width ? width + 2 : width;
   const exportHeight = isWallpaper && height ? height + 2 : height;
+  const temporaryUrls: string[] = [];
 
   const captureOptions: Parameters<typeof html2canvas>[1] = {
     scale,
@@ -112,7 +113,13 @@ async function captureElement(
           blurContext.imageSmoothingEnabled = true;
           blurContext.imageSmoothingQuality = 'high';
           blurContext.drawImage(wallpaperImage, 0, 0, blurCanvas.width, blurCanvas.height);
-          nativeBlurLayer.style.backgroundImage = `url("${blurCanvas.toDataURL('image/png')}")`;
+          const sourceScale = Math.max(nativeBlurLayer.offsetWidth / wallpaperImage.naturalWidth, nativeBlurLayer.offsetHeight / wallpaperImage.naturalHeight);
+          const blurRadius = Math.max(1, Math.min(64, 16 / sourceScale * downscale));
+          const imageData = blurCanvas.toDataURL('image/png');
+          const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${blurCanvas.width}" height="${blurCanvas.height}" viewBox="0 0 ${blurCanvas.width} ${blurCanvas.height}"><defs><filter id="blur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="${blurRadius}"/></filter></defs><image href="${imageData}" width="100%" height="100%" filter="url(#blur)"/></svg>`;
+          const blurUrl = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+          temporaryUrls.push(blurUrl);
+          nativeBlurLayer.style.backgroundImage = `url("${blurUrl}")`;
           nativeBlurLayer.style.filter = 'none';
           nativeBlurLayer.style.webkitFilter = 'none';
         }
@@ -237,7 +244,12 @@ async function captureElement(
     }
   };
 
-  const canvas = await html2canvas(elementRef, captureOptions);
+  let canvas: HTMLCanvasElement;
+  try {
+    canvas = await html2canvas(elementRef, captureOptions);
+  } finally {
+    temporaryUrls.forEach((url) => URL.revokeObjectURL(url));
+  }
   onProgress?.(82);
   return canvas;
 }

@@ -140,6 +140,15 @@ test('custom lockscreen background stays sharp outside the blurred glass timetab
       get: () => 'none',
       set: () => {},
     });
+    const createObjectURL = URL.createObjectURL.bind(URL);
+    URL.createObjectURL = ((object: Blob | MediaSource) => {
+      if (object instanceof Blob && object.type === 'image/svg+xml') {
+        void object.text().then((svg) => {
+          (window as Window & { __wallpaperBlurSvg?: string }).__wallpaperBlurSvg = svg;
+        });
+      }
+      return createObjectURL(object);
+    }) as typeof URL.createObjectURL;
   });
   await page.goto('/');
   await page.getByRole('button', { name: /log in|log masuk/i }).first().click();
@@ -190,6 +199,8 @@ test('custom lockscreen background stays sharp outside the blurred glass timetab
   const png = Buffer.concat(chunks);
   expect(png.readUInt32BE(16)).toBeGreaterThan(1700);
   expect(png.readUInt32BE(20)).toBeGreaterThan(3000);
+  await expect.poll(() => page.evaluate(() => (window as Window & { __wallpaperBlurSvg?: string }).__wallpaperBlurSvg))
+    .toContain('<feGaussianBlur');
 });
 
 test('time format preference persists for the signed-in user', async ({ page }) => {
