@@ -96,6 +96,29 @@ async function captureElement(
       const clonedRoot = clonedDoc.querySelector(`[data-export-root="${exportRootId}"]`) as HTMLElement | null;
       if (!clonedRoot) return;
 
+      const nativeBlurLayer = clonedRoot.querySelector<HTMLElement>('[data-wallpaper-native-blur="true"]');
+      const wallpaperImage = clonedRoot.querySelector<HTMLImageElement>('[data-wallpaper-background-layer]');
+      if (nativeBlurLayer && wallpaperImage) {
+        await wallpaperImage.decode().catch(() => undefined);
+      }
+      if (nativeBlurLayer && wallpaperImage?.naturalWidth && wallpaperImage.naturalHeight) {
+        const blurCanvas = clonedDoc.createElement('canvas');
+        const downscale = Math.min(1, 96 / Math.max(wallpaperImage.naturalWidth, wallpaperImage.naturalHeight));
+        blurCanvas.width = Math.max(1, Math.round(wallpaperImage.naturalWidth * downscale));
+        blurCanvas.height = Math.max(1, Math.round(wallpaperImage.naturalHeight * downscale));
+        const blurContext = blurCanvas.getContext('2d');
+        if (blurContext) {
+          blurContext.imageSmoothingEnabled = true;
+          blurContext.imageSmoothingQuality = 'high';
+          blurContext.drawImage(wallpaperImage, 0, 0, blurCanvas.width, blurCanvas.height);
+          nativeBlurLayer.style.backgroundImage = `url("${blurCanvas.toDataURL('image/png')}")`;
+          nativeBlurLayer.style.filter = 'none';
+          nativeBlurLayer.style.webkitFilter = 'none';
+        }
+        blurCanvas.width = 0;
+        blurCanvas.height = 0;
+      }
+
       // html2canvas cannot parse modern OKLCH/OKLab colors emitted by Tailwind 4.
       // Convert only affected computed declarations in the export clone.
       const colorContext = clonedDoc.createElement('canvas').getContext('2d', { willReadFrequently: true });

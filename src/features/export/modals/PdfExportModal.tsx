@@ -1384,6 +1384,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                             <>
                               <div
                                 data-wallpaper-background-blur
+                                data-wallpaper-native-blur={useNativeGlassBlur ? 'true' : undefined}
                                 aria-hidden="true"
                                 className="absolute inset-0 z-0"
                                 style={{

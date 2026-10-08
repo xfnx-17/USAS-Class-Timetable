@@ -149,6 +149,7 @@ test('custom lockscreen background stays sharp outside the blurred glass timetab
   const glassOverlay = page.locator('[data-wallpaper-glass-overlay]');
   await expect(background).toBeVisible();
   await expect(blurredBackground).toBeVisible();
+  await expect(blurredBackground).toHaveAttribute('data-wallpaper-native-blur', 'true');
   await expect(glassOverlay).toBeVisible();
   await expect.poll(() => blurredBackground.evaluate((element) => getComputedStyle(element).filter))
     .toBe('blur(16px)');
