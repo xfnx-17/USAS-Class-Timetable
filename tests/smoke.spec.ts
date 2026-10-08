@@ -206,6 +206,9 @@ test('time format preference persists for the signed-in user', async ({ page }) 
   const wallpaperTimes = page.locator('[data-export-time-label], [data-export-course-time]');
   await expect(wallpaperTimes.first()).toBeVisible();
   expect((await wallpaperTimes.allTextContents()).join(' ')).not.toMatch(/\b(AM|PM)\b/i);
+  const periodLabels = await page.locator('[data-export-time-label]').allTextContents();
+  expect(periodLabels.some((label) => /\d\s-\s\d/.test(label))).toBe(true);
+  expect(periodLabels.every((label) => !label.includes('-') || /\s-\s/.test(label))).toBe(true);
 });
 
 test('class reminder chime does not replay after a page refresh', async ({ page, context }) => {

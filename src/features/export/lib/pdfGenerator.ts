@@ -152,6 +152,14 @@ async function captureElement(
         });
       }
 
+      // Android Chrome places the block start/end labels slightly high. Keep
+      // this separate from header period labels so their baseline stays fixed.
+      if (isAndroid && isWallpaper) {
+        clonedRoot.querySelectorAll<HTMLElement>('[data-export-course-time]').forEach((el) => {
+          el.style.transform = 'translateY(0.5px)';
+        });
+      }
+
       if (!isApple || isWallpaper) {
         const textNodes = clonedRoot.querySelectorAll(isWallpaper ? '[data-export-time-label]' : 'span, h1, h2, p');
         textNodes.forEach((node) => {
