@@ -276,9 +276,10 @@ const formatDurationRange = (startTime?: string, endTime?: string, timeFormat: '
 const formatWallpaperSlotLabel = (startMinutes: number, endMinutes: number, timeFormat: '12h' | '24h') => {
   const format = (minutes: number) => {
     if (timeFormat === '24h' && minutes % 60 === 0) return String(Math.floor(minutes / 60));
+    if (timeFormat === '12h') return String(Math.floor(minutes / 60) % 12 || 12);
     return formatTimeFromMinutes(minutes, timeFormat).replace(/\s?(AM|PM)$/i, '');
   };
-  if (endMinutes - startMinutes <= 30 && timeFormat === '24h') return format(startMinutes);
+  if (endMinutes - startMinutes <= 30) return format(startMinutes);
   const start = format(startMinutes);
   const end = format(Math.min(24 * 60, endMinutes));
   return timeFormat === '12h' ? `${start} - ${end}` : `${start}-${end}`;

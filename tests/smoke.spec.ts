@@ -208,6 +208,7 @@ test('time format preference persists for the signed-in user', async ({ page }) 
   expect((await wallpaperTimes.allTextContents()).join(' ')).not.toMatch(/\b(AM|PM)\b/i);
   const periodLabels = await page.locator('[data-export-time-label]').allTextContents();
   expect(periodLabels.some((label) => /\d\s-\s\d/.test(label))).toBe(true);
+  expect(periodLabels.every((label) => !label.includes(':'))).toBe(true);
   expect(periodLabels.every((label) => !label.includes('-') || /\s-\s/.test(label))).toBe(true);
 });
 
