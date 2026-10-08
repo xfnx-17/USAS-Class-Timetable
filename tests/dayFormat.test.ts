@@ -58,6 +58,7 @@ describe('day formatting', () => {
     expect(sortDayLabels([
       '06-10-2026 (SELASA)',
       '07-10-2026 (RABU)',
+      'RABU',
       '08-10-2026 (KHAMIS)',
       '12-10-2026 (ISNIN)',
     ])).toEqual([

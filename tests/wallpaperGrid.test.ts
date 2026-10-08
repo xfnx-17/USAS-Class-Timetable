@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildWallpaperGridSlots, getWallpaperAxisOffset } from '../src/features/export/lib/wallpaperGrid';
+import { buildWallpaperGridSlots, getWallpaperAxisPosition } from '../src/features/export/lib/wallpaperGrid';
 
 describe('buildWallpaperGridSlots', () => {
   it('skips empty hours and keeps one-hour periods', () => {
@@ -42,17 +42,18 @@ describe('buildWallpaperGridSlots', () => {
   });
 });
 
-describe('getWallpaperAxisOffset', () => {
-  it('compresses empty time gaps but preserves class duration', () => {
+describe('getWallpaperAxisPosition', () => {
+  it('compresses gaps and gives each displayed period equal width', () => {
     const slots = [
-      { start: 8 * 60, end: 9 * 60 },
-      { start: 10 * 60, end: 11 * 60 },
+      { start: 8 * 60, end: 10 * 60 },
+      { start: 10 * 60, end: 12 * 60 },
+      { start: 22 * 60, end: 23 * 60 },
     ];
 
-    expect(getWallpaperAxisOffset(8 * 60 + 30, slots)).toBe(30);
-    expect(getWallpaperAxisOffset(9 * 60, slots)).toBe(60);
-    expect(getWallpaperAxisOffset(10 * 60, slots)).toBe(60);
-    expect(getWallpaperAxisOffset(10 * 60 + 30, slots)).toBe(90);
-    expect(getWallpaperAxisOffset(11 * 60, slots)).toBe(120);
+    expect(getWallpaperAxisPosition(9 * 60, slots)).toBe(0.5);
+    expect(getWallpaperAxisPosition(10 * 60, slots)).toBe(1);
+    expect(getWallpaperAxisPosition(11 * 60, slots)).toBe(1.5);
+    expect(getWallpaperAxisPosition(22 * 60 + 30, slots)).toBe(2.5);
+    expect(getWallpaperAxisPosition(23 * 60, slots)).toBe(3);
   });
 });

@@ -104,11 +104,19 @@ export function parseDisplayDate(value?: string): Date | null {
  * keeps the UI stable regardless of the week offset.
  */
 export function sortDayLabels(days: string[]): string[] {
+  const seen = new Set<string>();
   const rank = (value: string) => {
     const index = WEEKDAY_ORDER.indexOf(extractDayName(value));
     return index === -1 ? WEEKDAY_ORDER.length : index;
   };
-  return [...days].sort((a, b) => rank(a) - rank(b));
+  return days
+    .filter((day) => {
+      const key = extractDayName(day);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => rank(a) - rank(b));
 }
 
 /**

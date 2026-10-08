@@ -32,13 +32,13 @@ export const buildWallpaperGridSlots = (ranges: WallpaperTimeRange[], maxColumns
   return slots;
 };
 
-export const getWallpaperAxisOffset = (time: number, slots: WallpaperGridSlot[]) => {
+export const getWallpaperAxisPosition = (time: number, slots: WallpaperGridSlot[]) => {
   let offset = 0;
 
   for (const slot of slots) {
     if (time <= slot.start) return offset;
-    if (time < slot.end) return offset + time - slot.start;
-    offset += slot.end - slot.start;
+    if (time < slot.end) return offset + (time - slot.start) / (slot.end - slot.start);
+    offset += 1;
   }
 
   return offset;

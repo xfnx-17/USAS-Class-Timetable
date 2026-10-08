@@ -8,10 +8,10 @@ import { extractDayName, formatDayDisplay, sortDayLabels } from '@/shared/lib/da
 import { buildCourseColorMap, getCourseColorSlot } from '@/shared/lib/courseColors';
 import { getOwnRecordValue } from '@/shared/lib/security';
 import { getShortTimeRange } from '@/shared/lib/timetableTime';
-import { buildWallpaperGridSlots, getWallpaperAxisOffset } from '@/features/export/lib/wallpaperGrid';
+import { buildWallpaperGridSlots, getWallpaperAxisPosition } from '@/features/export/lib/wallpaperGrid';
 import type { TimetableItem } from '@/shared/types/usas';
 import {
-  X, Download, Smartphone, RotateCw, ChevronDown, Plus, Minus, FileBadge
+  X, Download, Smartphone, RotateCw, ChevronDown, Plus, Minus, FileBadge, ImagePlus
 } from 'lucide-react';
 
 type PdfExportModalProps = {
@@ -342,8 +342,74 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
   const [userZoom, setUserZoom] = useState(1);
   const [exportTheme, setExportTheme] = useState<ExportTheme>('light');
   const [themeDropdownOpen, setThemeDropdownOpen] = useState(false);
+  const [wallpaperBackground, setWallpaperBackground] = useState('');
+  const [wallpaperBackgroundBlurred, setWallpaperBackgroundBlurred] = useState('');
+  const [wallpaperBackgroundName, setWallpaperBackgroundName] = useState('');
+  const [wallpaperBackgroundError, setWallpaperBackgroundError] = useState('');
+  const wallpaperBackgroundInputRef = useRef<HTMLInputElement>(null);
+  const wallpaperBackgroundUrlsRef = useRef<string[]>([]);
   const [wallpaperTopAdjustment, setWallpaperTopAdjustment] = useState(0);
   const [wallpaperBottomAdjustment, setWallpaperBottomAdjustment] = useState(0);
+
+  useEffect(() => () => {
+    wallpaperBackgroundUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+  }, []);
+
+  const loadWallpaperBackground = async (file?: File) => {
+    setWallpaperBackgroundError('');
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setWallpaperBackgroundError('wallpaperImageLoadFailed');
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      setWallpaperBackgroundError('wallpaperImageTooLarge');
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    let blurredCanvas: HTMLCanvasElement | null = null;
+    let blurredUrl = '';
+    let retainedUrls = false;
+    try {
+      const image = new Image();
+      image.src = objectUrl;
+      await image.decode();
+      const maxDimension = Math.max(image.naturalWidth, image.naturalHeight);
+      const blurScale = Math.min(1, 1600 / maxDimension);
+      const blurWidth = Math.max(1, Math.round(image.naturalWidth * blurScale));
+      const blurHeight = Math.max(1, Math.round(image.naturalHeight * blurScale));
+      blurredCanvas = document.createElement('canvas');
+      blurredCanvas.width = blurWidth;
+      blurredCanvas.height = blurHeight;
+      const blurredContext = blurredCanvas.getContext('2d');
+      if (!blurredContext) throw new Error('Canvas unavailable');
+      blurredContext.filter = 'blur(16px)';
+      blurredContext.drawImage(image, -16, -16, blurWidth + 32, blurHeight + 32);
+
+      const blurredBlob = await new Promise<Blob | null>((resolve) => blurredCanvas!.toBlob(resolve, 'image/png'));
+      if (!blurredBlob) throw new Error('Could not encode wallpaper background.');
+
+      blurredUrl = URL.createObjectURL(blurredBlob);
+      wallpaperBackgroundUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+      wallpaperBackgroundUrlsRef.current = [objectUrl, blurredUrl];
+      retainedUrls = true;
+      setWallpaperBackground(objectUrl);
+      setWallpaperBackgroundBlurred(blurredUrl);
+      setWallpaperBackgroundName(file.name);
+    } catch {
+      setWallpaperBackgroundError('wallpaperImageLoadFailed');
+      if (!retainedUrls) {
+        URL.revokeObjectURL(objectUrl);
+        if (blurredUrl) URL.revokeObjectURL(blurredUrl);
+      }
+    } finally {
+      if (blurredCanvas) {
+        blurredCanvas.width = 0;
+        blurredCanvas.height = 0;
+      }
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -394,12 +460,12 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
   const pdfRef = useRef<HTMLDivElement | null>(null);
   const previewShellRef = useRef<HTMLDivElement | null>(null);
   const wallpaperRef = useRef<HTMLDivElement | null>(null);
-  const exportIntervalRef = useRef<number | null>(null);
   const exportSettledTimeoutRef = useRef<number | null>(null);
   const isMountedRef = useRef(true);
 
   const timetableDays = timetableData?.days;
   const allCourses = useMemo(() => timetableData?.timetable || [], [timetableData?.timetable]);
+  const courseColorMap = useMemo(() => buildCourseColorMap(allCourses), [allCourses]);
   const studentName = timetableData?.studentName || session?.user_id || '';
   const matricNo = session?.user_id || '';
   const programName = timetableData?.program || '';
@@ -428,7 +494,6 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
   // Courses sorted by weekday then start time, so the formal table can merge
   // consecutive rows of the same day into a single day cell (rowSpan).
   // Stable unique colour per course (shared with the card and grid views).
-  const courseColorMap = useMemo(() => buildCourseColorMap(allCourses), [allCourses]);
 
   const pdfCourses = useMemo(() => {
     const order = ['ISNIN', 'SELASA', 'RABU', 'KHAMIS', 'JUMAAT', 'SABTU', 'AHAD'];
@@ -464,10 +529,6 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
-      if (exportIntervalRef.current !== null) {
-        clearInterval(exportIntervalRef.current);
-        exportIntervalRef.current = null;
-      }
       if (exportSettledTimeoutRef.current !== null) {
         clearTimeout(exportSettledTimeoutRef.current);
         exportSettledTimeoutRef.current = null;
@@ -519,50 +580,36 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
 
   const handleDownload = async () => {
     setExporting(true);
-    setProgress(15);
+    setProgress(10);
     setProgressStatus(lang === 'en' ? 'Initializing render engine...' : 'Memulakan enjin jana...');
 
-    if (exportIntervalRef.current !== null) {
-      clearInterval(exportIntervalRef.current);
-      exportIntervalRef.current = null;
-    }
     if (exportSettledTimeoutRef.current !== null) {
       clearTimeout(exportSettledTimeoutRef.current);
       exportSettledTimeoutRef.current = null;
     }
 
-    try {
-      exportIntervalRef.current = window.setInterval(() => {
-        setProgress((prev) => {
-          const next = prev < 45 ? prev + 10 : prev < 80 ? prev + 5 : Math.min(92, prev + 2);
-          if (next < 35) {
-            setProgressStatus(lang === 'en' ? 'Initializing render engine...' : 'Memulakan enjin jana...');
-          } else if (next < 75) {
-            setProgressStatus(lang === 'en' ? 'Rendering high-resolution elements...' : 'Menjana grafik resolusi tinggi...');
-          } else {
-            setProgressStatus(lang === 'en' ? 'Compiling download package...' : 'Menyusun fail muat turun...');
-          }
-          return next;
-        });
-      }, 150);
+    const updateExportProgress = (next: number) => {
+      if (!isMountedRef.current) return;
+      setProgress(next);
+      setProgressStatus(next < 30
+        ? lang === 'en' ? 'Initializing render engine...' : 'Memulakan enjin jana...'
+        : next < 85
+          ? lang === 'en' ? 'Rendering high-resolution elements...' : 'Menjana grafik resolusi tinggi...'
+          : lang === 'en' ? 'Compiling download package...' : 'Menyusun fail muat turun...');
+    };
 
-      // Yield control to browser
-      await new Promise((resolve) => setTimeout(resolve, 80));
+    try {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 
       if (exportMode === 'WALLPAPER') {
         const filename = `USAS_Lockscreen_${wallpaperPreset.toUpperCase()}_${exportTheme.toUpperCase()}_${matricNo || 'USAS'}.png`;
-        await generateLockscreenImage(wallpaperRef.current, filename);
+        await generateLockscreenImage(wallpaperRef.current, filename, updateExportProgress);
       } else if (exportFileType === 'PNG') {
         const filename = `Jadual_USAS_Formal_${matricNo || 'USAS'}_LANDSCAPE.png`;
-        await generateElementPng(pdfRef.current, filename, 5, '#FFFFFF');
+        await generateElementPng(pdfRef.current, filename, 5, '#FFFFFF', updateExportProgress);
       } else {
         const filename = `Jadual_USAS_Formal_${matricNo || 'USAS'}_LANDSCAPE.pdf`;
-        await generateTimetablePdf(pdfRef.current, 'landscape', filename);
-      }
-
-      if (exportIntervalRef.current !== null) {
-        clearInterval(exportIntervalRef.current);
-        exportIntervalRef.current = null;
+        await generateTimetablePdf(pdfRef.current, 'landscape', filename, updateExportProgress);
       }
 
       if (!isMountedRef.current) return;
@@ -577,18 +624,10 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
         }, 350);
       });
     } catch (err) {
-      if (exportIntervalRef.current !== null) {
-        clearInterval(exportIntervalRef.current);
-        exportIntervalRef.current = null;
-      }
       console.error('Export Error:', err);
       if (!isMountedRef.current) return;
       alert(lang === 'ms' ? 'Gagal menjana fail. Sila cuba lagi.' : 'Failed to generate file. Please try again.');
     } finally {
-      if (exportIntervalRef.current !== null) {
-        clearInterval(exportIntervalRef.current);
-        exportIntervalRef.current = null;
-      }
       if (exportSettledTimeoutRef.current !== null) {
         clearTimeout(exportSettledTimeoutRef.current);
         exportSettledTimeoutRef.current = null;
@@ -651,7 +690,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
     const timeInfo = (
       <>
         {startTimeLabel && <span data-export-course-time="start" title={duration} className={`absolute left-0.5 top-0.5 z-20 whitespace-nowrap font-semibold leading-none ${isLightMode ? 'text-slate-600' : 'text-white/70'}`} style={{ fontSize: `${timeInfoFontSize}px` }}>{startTimeLabel}</span>}
-        {endTimeLabel && <span data-export-course-time="end" title={duration} className={`absolute right-0.5 bottom-0.5 z-20 whitespace-nowrap font-semibold leading-none ${isLightMode ? 'text-slate-600' : 'text-white/70'}`} style={{ fontSize: `${timeInfoFontSize}px` }}>{endTimeLabel}</span>}
+        {endTimeLabel && <span data-export-course-time="end" title={duration} className={`absolute right-px bottom-px z-20 whitespace-nowrap font-semibold leading-none ${isLightMode ? 'text-slate-600' : 'text-white/70'}`} style={{ fontSize: `${timeInfoFontSize}px` }}>{endTimeLabel}</span>}
       </>
     );
     const durationInfo = shortDuration && (
@@ -707,7 +746,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
       >
         {timeInfo}
         {contentDetail === 'DETAILS' ? (
-          <div className="w-full flex flex-col justify-center items-center text-center gap-0.5">
+          <div className="w-full flex flex-col justify-center items-center text-center gap-0">
             {durationInfo}
             <div className="w-full text-center">
               <span
@@ -725,7 +764,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
             </div>
           </div>
         ) : (
-          <div className="w-full flex flex-col items-center justify-center text-center gap-0.5">
+          <div className="w-full flex flex-col items-center justify-center text-center gap-0">
             {durationInfo}
             <span
               data-export-course-code
@@ -862,10 +901,10 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                 />
               )}
 
-              <div data-wallpaper-controls className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[1.1fr_1fr_1fr_1.5fr] items-center gap-3 w-full relative z-40">
+              <div data-wallpaper-controls className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.5fr)] items-center gap-3 xl:gap-4 w-full relative z-40">
                 {/* 1. Device Ratio Selector (WALLPAPER only) */}
                 {exportMode === 'WALLPAPER' && (
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full min-w-0 relative z-40">
+                  <div className="flex flex-col items-stretch gap-1.5 w-full min-w-0 xl:max-w-[230px] relative z-40">
                     <span className={`text-[10px] font-bold uppercase tracking-wider flex-shrink-0 ${isLight ? 'text-amber-800' : 'text-amber-400/90'
                       }`}>{t('deviceRatio')}:</span>
                     <div className="relative w-full sm:w-auto">
@@ -876,7 +915,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                           setDetailDropdownOpen(false);
                           setThemeDropdownOpen(false);
                         }}
-                        className={`flex items-center justify-between gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] font-semibold transition-all shadow-sm w-full sm:w-auto ${isLight
+                        className={`flex items-center justify-between gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] font-semibold transition-all shadow-sm w-full ${isLight
                             ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                             : 'bg-white/[0.04] border-white/10 text-white/90 hover:bg-white/[0.08]'
                           }`}
@@ -917,7 +956,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                 )}
 
                 {/* 2. Content Detail Selector */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full min-w-0 relative z-20">
+                <div className="flex flex-col items-stretch gap-1.5 w-full min-w-0 xl:max-w-[230px] relative z-20">
                   <span className={`text-[10px] font-bold uppercase tracking-wider flex-shrink-0 ${isLight ? 'text-amber-800' : 'text-amber-400/90'
                     }`}>{t('cardContent')}:</span>
                   <div className="relative w-full sm:w-auto">
@@ -928,7 +967,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                         setRatioDropdownOpen(false);
                         setThemeDropdownOpen(false);
                       }}
-                      className={`flex items-center justify-between gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] font-semibold transition-all shadow-sm w-full sm:w-auto ${isLight
+                      className={`flex items-center justify-between gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] font-semibold transition-all shadow-sm w-full ${isLight
                           ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                           : 'bg-white/[0.04] border-white/10 text-white/90 hover:bg-white/[0.08]'
                         }`}
@@ -966,7 +1005,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                 </div>
 
                 {/* 3. Timetable Theme Selector */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full min-w-0 relative z-20">
+                <div className="flex flex-col items-stretch gap-1.5 w-full min-w-0 xl:max-w-[230px] relative z-20">
                   <span className={`text-[10px] font-bold uppercase tracking-wider flex-shrink-0 ${isLight ? 'text-amber-800' : 'text-amber-400/90'
                     }`}>{t('tableTheme')}:</span>
                   <div className="relative w-full sm:w-auto">
@@ -977,7 +1016,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                         setRatioDropdownOpen(false);
                         setDetailDropdownOpen(false);
                       }}
-                      className={`flex items-center justify-between gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] font-semibold transition-all shadow-sm w-full sm:w-auto ${isLight
+                      className={`flex items-center justify-between gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] font-semibold transition-all shadow-sm w-full ${isLight
                           ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                           : 'bg-white/[0.04] border-white/10 text-white/90 hover:bg-white/[0.08]'
                         }`}
@@ -1015,19 +1054,68 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                       </div>
                     )}
                   </div>
+                  <input
+                    ref={wallpaperBackgroundInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    aria-label={t('chooseWallpaperBackground')}
+                    onChange={(event) => {
+                      const file = event.currentTarget.files?.[0];
+                      event.currentTarget.value = '';
+                      void loadWallpaperBackground(file);
+                    }}
+                  />
+                  <div className="flex gap-1.5 min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => wallpaperBackgroundInputRef.current?.click()}
+                      title={wallpaperBackgroundName || t('chooseWallpaperBackground')}
+                      className={`flex min-w-0 flex-1 items-center gap-1.5 rounded-lg border px-2 py-1 text-[10px] font-semibold ${isLight
+                        ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                        : 'bg-white/[0.04] border-white/10 text-white/80 hover:bg-white/[0.08]'
+                      }`}
+                    >
+                      <ImagePlus className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{wallpaperBackgroundName || t('chooseWallpaperBackground')}</span>
+                    </button>
+                    {wallpaperBackground && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          wallpaperBackgroundUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+                          wallpaperBackgroundUrlsRef.current = [];
+                          setWallpaperBackground('');
+                          setWallpaperBackgroundBlurred('');
+                          setWallpaperBackgroundName('');
+                          setWallpaperBackgroundError('');
+                        }}
+                        aria-label={t('removeWallpaperBackground')}
+                        title={t('removeWallpaperBackground')}
+                        className={`rounded-lg border px-2 ${isLight
+                          ? 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                          : 'bg-white/[0.04] border-white/10 text-white/60 hover:bg-white/[0.08]'
+                        }`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                  {wallpaperBackgroundError && <span role="alert" className="text-[9px] text-rose-400">{t(wallpaperBackgroundError)}</span>}
                 </div>
 
                 {exportMode === 'WALLPAPER' && (
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full min-w-0 relative z-20">
+                  <div className="flex flex-col gap-1.5 w-full min-w-0 relative z-20">
                     <span className={`text-[10px] font-bold uppercase tracking-wider flex-shrink-0 ${isLight ? 'text-amber-800' : 'text-amber-400/90'
-                      }`}>Posisi jadual:</span>
-                    <div className="grid grid-cols-2 gap-2 flex-1 sm:flex-none">
+                      }`}>{t('tablePosition')}:</span>
+                    <div className="flex items-center gap-2">
+                      <div className="grid grid-cols-2 gap-2 flex-1 min-w-0">
                       <label className={`min-w-0 rounded-lg border px-2 py-1 ${isLight
                           ? 'bg-white border-slate-200'
                           : 'bg-white/[0.04] border-white/10'
                         }`}>
-                        <span className={`flex justify-between gap-1 text-[9px] font-semibold ${isLight ? 'text-slate-500' : 'text-white/55'}`}>
-                          <span>Atas</span><span>{currentSpacers.top}px</span>
+                          <span className={`flex justify-between gap-1 text-[9px] font-semibold ${isLight ? 'text-slate-500' : 'text-white/55'}`}>
+                          <span>{t('positionTop')}</span><span>{currentSpacers.top}px</span>
                         </span>
                         <input
                           type="range"
@@ -1036,16 +1124,16 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                           step={1}
                           value={currentSpacers.top}
                           onChange={(e) => setWallpaperTopAdjustment(Number(e.target.value) - currentSpacers.topBase)}
-                          className={`usas-range w-full sm:w-24 cursor-pointer ${isLight ? '' : 'usas-range-dark'}`}
-                          aria-label="Laraskan ruang atas jadual pada lockscreen"
+                          className={`usas-range w-full cursor-pointer ${isLight ? '' : 'usas-range-dark'}`}
+                          aria-label={t('adjustWallpaperTopAria')}
                         />
                       </label>
                       <label className={`min-w-0 rounded-lg border px-2 py-1 ${isLight
                           ? 'bg-white border-slate-200'
                           : 'bg-white/[0.04] border-white/10'
                         }`}>
-                        <span className={`flex justify-between gap-1 text-[9px] font-semibold ${isLight ? 'text-slate-500' : 'text-white/55'}`}>
-                          <span>Bawah</span><span>{currentSpacers.bottom}px</span>
+                          <span className={`flex justify-between gap-1 text-[9px] font-semibold ${isLight ? 'text-slate-500' : 'text-white/55'}`}>
+                          <span>{t('positionBottom')}</span><span>{currentSpacers.bottom}px</span>
                         </span>
                         <input
                           type="range"
@@ -1054,11 +1142,11 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                           step={1}
                           value={currentSpacers.bottom}
                           onChange={(e) => setWallpaperBottomAdjustment(Number(e.target.value) - currentSpacers.bottomBase)}
-                          className={`usas-range w-full sm:w-24 cursor-pointer ${isLight ? '' : 'usas-range-dark'}`}
-                          aria-label="Laraskan ruang bawah jadual pada lockscreen"
+                          className={`usas-range w-full cursor-pointer ${isLight ? '' : 'usas-range-dark'}`}
+                          aria-label={t('adjustWallpaperBottomAria')}
                         />
                       </label>
-                    </div>
+                      </div>
                     {(wallpaperTopAdjustment !== 0 || wallpaperBottomAdjustment !== 0) && (
                       <button
                         type="button"
@@ -1066,16 +1154,17 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                           setWallpaperTopAdjustment(0);
                           setWallpaperBottomAdjustment(0);
                         }}
-                        className={`self-end sm:self-auto rounded p-1 transition-colors ${isLight
+                        className={`self-center rounded p-1 transition-colors ${isLight
                             ? 'text-slate-400 hover:bg-slate-100 hover:text-slate-700'
                             : 'text-white/40 hover:bg-white/[0.08] hover:text-white/80'
                           }`}
-                        aria-label="Reset posisi lockscreen"
-                        title="Reset posisi"
+                        aria-label={t('resetWallpaperPositionAria')}
+                        title={t('resetPosition')}
                       >
                         <RotateCw className="h-3 w-3" />
                       </button>
                     )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1151,25 +1240,25 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                     </div>
                   </div>
 
-                  <table className="w-full table-fixed border-collapse border border-slate-400 text-[10px]">
+                  <table className="w-full table-fixed border-separate border-spacing-0 border-l border-t border-slate-400 text-[10px]">
                     <thead>
                       <tr className="bg-slate-900 text-white font-bold" style={{ height: '32px' }}>
-                        <th className="border border-slate-400 px-2 py-1.5 text-center align-middle w-20">
+                        <th className="border-r border-b border-slate-400 px-2 py-1.5 text-center align-middle w-20">
                           <span>{lang === 'en' ? 'DAY' : 'HARI'}</span>
                         </th>
-                        <th className="border border-slate-400 px-2 py-1.5 text-center align-middle w-28">
+                        <th className="border-r border-b border-slate-400 px-2 py-1.5 text-center align-middle w-28">
                           <span>{lang === 'en' ? 'TIME' : 'WAKTU'}</span>
                         </th>
-                        <th className="border border-slate-400 px-2.5 py-1.5 text-left align-middle w-24">
+                        <th className="border-r border-b border-slate-400 px-2.5 py-1.5 text-left align-middle w-24">
                           <span>{lang === 'en' ? 'CODE' : 'KOD'}</span>
                         </th>
-                        <th className="border border-slate-400 px-2.5 py-1.5 text-left align-middle">
+                        <th className="border-r border-b border-slate-400 px-2.5 py-1.5 text-left align-middle">
                           <span>{lang === 'en' ? 'COURSE NAME' : 'NAMA KURSUS'}</span>
                         </th>
-                        <th className="border border-slate-400 px-2.5 py-1.5 text-center align-middle w-16">
+                        <th className="border-r border-b border-slate-400 px-2.5 py-1.5 text-center align-middle w-16">
                           <span>{lang === 'en' ? 'GROUP' : 'GROUP'}</span>
                         </th>
-                        <th className="border border-slate-400 px-2.5 py-1.5 text-left align-middle w-36">
+                        <th className="border-r border-b border-slate-400 px-2.5 py-1.5 text-left align-middle w-36">
                           <span>{lang === 'en' ? 'LOCATION' : 'LOKASI'}</span>
                         </th>
                       </tr>
@@ -1186,25 +1275,25 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                           }
                         }
                         return (
-                          <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50'} style={{ height: '30px' }}>
+                          <tr key={i} style={{ height: '30px' }}>
                             {isFirstOfDay && (
-                              <td rowSpan={span} className="border border-slate-300 px-2 py-1 text-center align-middle font-bold text-amber-800">
+                              <td data-export-formal-day-cell rowSpan={span} className="border-r border-b border-slate-300 bg-white px-2 py-1 text-center align-middle font-bold text-amber-800">
                                 <span>{formatDayDisplay(c.day, t)}</span>
                               </td>
                             )}
-                            <td className="border border-slate-300 px-2 py-1 text-center align-middle font-medium">
+                            <td className={`border-r border-b border-slate-300 ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50'} px-2 py-1 text-center align-middle font-medium`}>
                               <span>{formatDurationRange(c.start_time || c.jadual, c.end_time)}</span>
                             </td>
-                            <td className="border border-slate-300 px-2.5 py-1 text-left align-middle font-bold text-blue-900">
+                            <td className={`border-r border-b border-slate-300 ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50'} px-2.5 py-1 text-left align-middle font-bold text-blue-900`}>
                               <span>{c.course_id || c.kod_kursus}</span>
                             </td>
-                            <td className="border border-slate-300 px-2.5 py-1 text-left align-middle font-semibold text-slate-900">
+                            <td className={`border-r border-b border-slate-300 ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50'} px-2.5 py-1 text-left align-middle font-semibold text-slate-900`}>
                               <span>{c.course_name || c.kursus}</span>
                             </td>
-                            <td className="border border-slate-300 px-2.5 py-1 text-center align-middle font-bold">
+                            <td className={`border-r border-b border-slate-300 ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50'} px-2.5 py-1 text-center align-middle font-bold`}>
                               <span>{normalizeGroup(c.group || c.kumpulan) || '—'}</span>
                             </td>
-                            <td className="border border-slate-300 px-2.5 py-1 text-left align-middle text-slate-800">
+                            <td className={`border-r border-b border-slate-300 ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50'} px-2.5 py-1 text-left align-middle text-slate-800`}>
                               <span>{c.location || ''}</span>
                             </td>
                           </tr>
@@ -1251,7 +1340,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                       <div
                         ref={wallpaperRef}
                         data-export-root="wallpaper-export-root"
-                        className="font-sans flex flex-col justify-start gap-2 select-none border absolute top-0 left-0 origin-top-left"
+                        className="font-sans flex flex-col justify-start gap-2 select-none border absolute top-0 left-0 origin-top-left overflow-hidden"
                         style={{
                           width: `${w}px`,
                           height: `${h}px`,
@@ -1263,16 +1352,50 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                           color: lockscreenConfig.textColor
                         }}
                       >
+                        {wallpaperBackground && (
+                          <img
+                            data-wallpaper-background-layer
+                            aria-hidden="true"
+                            draggable={false}
+                            src={wallpaperBackground}
+                            className="absolute inset-0 z-0 h-full w-full object-cover"
+                          />
+                        )}
                         {/* Top Reserved Clock Area */}
-                        <div style={{ height: `${currentSpacers.top}px` }} className="flex-shrink-0" />
+                        <div style={{ height: `${currentSpacers.top}px` }} className="relative z-10 flex-shrink-0" />
 
                         {/* Lock Screen Matrix Grid */}
                         <div
                           data-wallpaper-grid
                           data-wallpaper-grid-radius="12px"
-                          className={`border p-0 flex-1 min-h-0 flex flex-col justify-start overflow-hidden ${lockscreenConfig.gridBg}`}
-                          style={{ borderRadius: '12px' }}
+                          className={`relative z-10 border p-0 flex-1 min-h-0 flex flex-col justify-start overflow-hidden ${lockscreenConfig.gridBg}`}
+                          style={{
+                            borderRadius: '12px',
+                            backgroundColor: wallpaperBackground
+                              ? lockscreenConfig.isLight ? 'rgba(248,250,252,0.24)' : exportTheme === 'oled' ? 'rgba(0,0,0,0.24)' : 'rgba(10,20,40,0.24)'
+                              : undefined,
+                          }}
                         >
+                          {wallpaperBackgroundBlurred && (
+                            <>
+                              <div
+                                data-wallpaper-background-blur
+                                aria-hidden="true"
+                                className="absolute inset-0 z-0"
+                                style={{
+                                  backgroundImage: `url(${wallpaperBackgroundBlurred})`,
+                                  backgroundPosition: 'center',
+                                  backgroundSize: 'cover',
+                                }}
+                              />
+                              <div
+                                data-wallpaper-glass-overlay
+                                aria-hidden="true"
+                                className="absolute inset-0 z-[1]"
+                                style={{ backgroundColor: lockscreenConfig.isLight ? 'rgba(255,255,255,0.42)' : 'rgba(0,0,0,0.42)' }}
+                              />
+                            </>
+                          )}
                           {/* DYNAMIC SCALING WALLPAPER GRID VIEW TABLE */}
                           {(() => {
                             const style = getPresetStyle(wallpaperPreset, contentDetail);
@@ -1292,12 +1415,12 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                             }), maxColumns);
                             const axisStart = slots[0].start;
                             const axisEnd = slots[slots.length - 1].end;
-                            const axisDuration = slots.reduce((total, slot) => total + slot.end - slot.start, 0);
+                            const axisDuration = slots.length;
                             const gridContentWidth = gridInnerWidth - 38;
-                            const widthPerSlot = (slot: { start: number; end: number }) => gridContentWidth * (slot.end - slot.start) / axisDuration;
+                            const widthPerSlot = () => gridContentWidth / axisDuration;
 
                             return (
-                              <table className={`w-full h-full table-fixed border-collapse ${style.tableFontSize}`}>
+                              <table className={`relative z-10 w-full h-full table-fixed border-collapse ${style.tableFontSize}`}>
                                 <thead>
                                       <tr style={{ height: `${headerHeightPx}px` }}>
                                         <th
@@ -1313,12 +1436,12 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                             key={slot.start}
                                             data-export-time-duration={slot.end - slot.start}
                                             className={`p-0 font-black uppercase tracking-wider align-middle border-r ${lockscreenConfig.headerBorder} ${lockscreenConfig.headerText}`}
-                                            style={{ height: `${headerHeightPx}px`, width: `${widthPerSlot(slot)}px` }}
+                                            style={{ height: `${headerHeightPx}px`, width: `${widthPerSlot()}px` }}
                                           >
                                             <div className="w-full h-full flex items-center justify-center text-center leading-none" style={{ height: `${headerHeightPx}px` }}>
                                               {(() => {
                                                 const label = formatWallpaperSlotLabel(slot.start, slot.end);
-                                                const fontSize = Math.max(3.5, Math.min(8, widthPerSlot(slot) / (label.length * 0.9)));
+                                                const fontSize = Math.max(3.5, Math.min(8, widthPerSlot() / (label.length * 0.9)));
                                                 return <span data-export-time-label className="leading-none whitespace-nowrap" style={{ fontSize: `${fontSize}px` }}>{label}</span>;
                                               })()}
                                             </div>
@@ -1339,7 +1462,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                           </div>
                                         </td>
                                         <td colSpan={slots.length} className="relative p-0 overflow-hidden" style={{ height: `${rowHeightPx}px`, minHeight: `${rowHeightPx}px` }}>
-                                          <div className="absolute inset-0 grid" style={{ gridTemplateColumns: slots.map((slot) => `${slot.end - slot.start}fr`).join(' ') }} aria-hidden="true">
+                                          <div className="absolute inset-0 grid" style={{ gridTemplateColumns: `repeat(${slots.length}, minmax(0, 1fr))` }} aria-hidden="true">
                                             {slots.map((slot) => (
                                               <div key={slot.start} className={`border-r last:border-r-0 ${lockscreenConfig.cellBorder}`} />
                                             ))}
@@ -1351,8 +1474,8 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                             const rawEnd = parseTimeToMinutes(course.end_time || '');
                                             const end = Math.min(axisEnd, rawEnd != null && rawEnd > start ? rawEnd : start + 60);
                                             if (end <= start) return null;
-                                            const courseStart = getWallpaperAxisOffset(start, slots);
-                                            const courseEnd = getWallpaperAxisOffset(end, slots);
+                                            const courseStart = getWallpaperAxisPosition(start, slots);
+                                            const courseEnd = getWallpaperAxisPosition(end, slots);
                                             const left = (courseStart / axisDuration) * 100;
                                             const width = ((courseEnd - courseStart) / axisDuration) * 100;
                                             const courseWidth = gridContentWidth * (courseEnd - courseStart) / axisDuration;
@@ -1363,6 +1486,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                             return (
                                               <div
                                                 key={`${course.course_id || course.kod_kursus}-${start}`}
+                                                data-export-course-color-code={course.course_id || course.kod_kursus || ''}
                                                 className={`absolute inset-0 border-r align-middle p-0.5 overflow-hidden ${lockscreenConfig.cellBorder} ${courseColor.bg} ${courseColor.border}`}
                                                 style={{ left: `${left}%`, width: `${width}%`, top: '-0.5px', bottom: '-0.5px' }}
                                               >
@@ -1471,7 +1595,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
               </svg>
               {/* Center percentage counter */}
               <div className="absolute flex flex-col items-center justify-center">
-                <span className="text-lg font-black tracking-tight">{progress}%</span>
+                <span data-export-progress-value className="text-lg font-black tracking-tight">{progress}%</span>
               </div>
             </div>
 
@@ -1485,8 +1609,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
               </p>
             </div>
 
-            {/* Simulated bar loader for secondary visual hint */}
-            <div className={`w-full h-1 rounded-full overflow-hidden ${isLight ? 'bg-slate-100' : 'bg-white/[0.04]'}`}>
+            <div className={`relative w-full h-1 rounded-full overflow-hidden ${isLight ? 'bg-slate-100' : 'bg-white/[0.04]'}`}>
               <div
                 className="h-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-300 ease-out rounded-full"
                 style={{ width: `${progress}%` }}

@@ -239,8 +239,7 @@ export default function MatrixGridView({
                         : 'idle';
                       const durationText = getDurationLabel(course.start_time, course.end_time, lang);
                       const timeRangeText = getShortTimeRange(course.start_time || course.jadual, course.end_time);
-                      const courseWidthPx = activeTimeSlots.length * SLOT_COL_WIDTH * position.width / 100;
-                      const timeFontSize = Math.max(4, Math.min(8, (courseWidthPx - 16) / (timeRangeText.length * 0.58)));
+                      const [startTimeLabel, endTimeLabel] = timeRangeText.split('-');
                       const fs = (value: number) => `${value}px`;
 
                       return (
@@ -259,6 +258,8 @@ export default function MatrixGridView({
                           className={`absolute top-1 bottom-1 z-10 px-2 py-2 rounded-md border flex flex-col justify-center gap-1 cursor-pointer outline-none transition-all duration-300 hover:brightness-105 overflow-hidden ${courseColor.bg} ${courseColor.border} ${isDimmedRow ? 'opacity-30 blur-[1.5px]' : ''}`}
                           style={{ left: `${position.left}%`, width: `${position.width}%` }}
                         >
+                          <span data-matrix-course-start-label className={`absolute right-2 bottom-4 z-20 font-mono font-semibold leading-none whitespace-nowrap ${isLight ? 'text-slate-600' : 'text-white/65'}`} style={{ fontSize: fs(8) }}>{startTimeLabel}</span>
+                          <span data-matrix-course-end-label className={`absolute right-2 bottom-1.5 z-20 font-mono font-semibold leading-none whitespace-nowrap ${isLight ? 'text-slate-600' : 'text-white/65'}`} style={{ fontSize: fs(8) }}>{endTimeLabel}</span>
                           <div className="flex items-center justify-between gap-1 mb-0.5 min-w-0">
                             <div className={`font-bold ${courseColor.text} flex items-center gap-1.5 min-w-0`} style={{ fontSize: fs(12) }}>
                               <span className="truncate">{course.course_id || course.kod_kursus}</span>
@@ -266,15 +267,12 @@ export default function MatrixGridView({
                             </div>
                             {durationText && <div className={`font-extrabold uppercase shrink-0 flex items-center justify-center text-center px-1 py-0.5 rounded leading-none ${isLight ? 'bg-slate-100 text-slate-600 border border-slate-200/50' : 'bg-white/10 text-white/80 border border-white/5'}`} style={{ fontSize: fs(8) }}>{durationText}</div>}
                           </div>
-                          <div className={`w-full text-center font-mono font-semibold leading-none whitespace-nowrap overflow-hidden text-ellipsis ${isLight ? 'text-slate-600' : 'text-white/65'}`} style={{ fontSize: `${timeFontSize}px` }} title={timeRangeText}>
-                            {timeRangeText}
-                          </div>
                           <div className={`font-medium leading-snug break-words line-clamp-2 ${isLight ? 'text-slate-700' : 'text-white/80'}`} style={{ fontSize: fs(10) }}>
                             {course.course_name || course.kursus}
                           </div>
-                          <div className={`flex items-center gap-1 leading-none min-w-0 ${isLight ? 'text-slate-500' : 'text-white/50'}`} style={{ fontSize: fs(10.5) }}>
+                          <div className={`flex items-center gap-1 leading-tight min-w-0 ${isLight ? 'text-slate-500' : 'text-white/50'}`} style={{ fontSize: fs(10.5) }}>
                             <MapPin style={{ width: fs(10.5), height: fs(10.5), color: '#ed4134' }} className="flex-shrink-0 self-center" />
-                            <span className="leading-none self-center truncate">{course.location}</span>
+                            <span className="leading-tight self-center truncate">{course.location}</span>
                           </div>
                         </div>
                       );

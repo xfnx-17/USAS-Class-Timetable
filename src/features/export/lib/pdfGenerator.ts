@@ -4,6 +4,7 @@ import html2canvas from 'html2canvas';
 type ExportElement = HTMLElement & {
   getAttribute?: (name: string) => string | null;
 };
+type ExportProgress = (progress: number) => void;
 
 export function sanitizeDownloadFileName(value: unknown, fallback: string): string {
   const raw = String(value ?? '').trim();
@@ -37,15 +38,26 @@ export function sanitizeDownloadFileName(value: unknown, fallback: string): stri
   return safeName;
 }
 
-async function captureElement(elementRef: ExportElement | null, scale = 2, backgroundColor: string | null = '#FFFFFF') {
+async function captureElement(
+  elementRef: ExportElement | null,
+  scale = 2,
+  backgroundColor: string | null = '#FFFFFF',
+  onProgress?: ExportProgress,
+) {
   if (!elementRef) {
     throw new Error('Element template not found for export.');
   }
+
+  const yieldToPaint = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  onProgress?.(15);
+  await yieldToPaint();
 
   // Ensure all fonts are loaded before capturing so metrics match the browser preview.
   if (typeof document !== 'undefined' && document.fonts && document.fonts.ready) {
     await document.fonts.ready;
   }
+  onProgress?.(30);
+  await yieldToPaint();
 
   const exportRootId = elementRef.getAttribute?.('data-export-root');
   const isWallpaper = exportRootId === 'wallpaper-export-root';
@@ -56,7 +68,7 @@ async function captureElement(elementRef: ExportElement | null, scale = 2, backg
   const exportWidth = isWallpaper && width ? width + 2 : width;
   const exportHeight = isWallpaper && height ? height + 2 : height;
 
-  return html2canvas(elementRef, {
+  const captureOptions: Parameters<typeof html2canvas>[1] = {
     scale,
     useCORS: true,
     logging: false,
@@ -67,7 +79,12 @@ async function captureElement(elementRef: ExportElement | null, scale = 2, backg
     height: exportHeight,
     windowWidth: exportWidth || window.innerWidth,
     windowHeight: exportHeight || window.innerHeight,
-    onclone: (clonedDoc) => {
+    ignoreElements: (element) => {
+      const head = element.ownerDocument.head;
+      if (element === head || head.contains(element)) return false;
+      return element !== elementRef && !element.contains(elementRef) && !elementRef.contains(element);
+    },
+    onclone: async (clonedDoc) => {
       // Sync all style and link tags from document.head to clonedDoc.head
       // so html2canvas uses the exact same web fonts and font metrics as the live preview
       const styles = document.head.querySelectorAll('style, link[rel="stylesheet"]');
@@ -85,18 +102,16 @@ async function captureElement(elementRef: ExportElement | null, scale = 2, backg
       const view = clonedDoc.defaultView || window;
       if (colorContext) {
         const modernColorPattern = /(?:oklch|oklab)\([^)]*\)/gi;
-        const colorProperties = new Set([
+        const colorProperties = [
           'color', 'background-color', 'background-image', 'outline-color', 'text-decoration-color',
           'text-emphasis-color', 'column-rule-color', 'caret-color', 'accent-color', 'fill', 'stroke',
           'box-shadow', 'text-shadow', '--tw-gradient-from', '--tw-gradient-via', '--tw-gradient-to',
-          '--tw-gradient-stops',
-        ]);
+          '--tw-gradient-stops', 'border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color',
+        ];
         const colorCache = new Map<string, string>();
         [clonedRoot, ...clonedRoot.querySelectorAll<HTMLElement>('*')].forEach((el) => {
           const computed = view.getComputedStyle(el);
-          const properties = new Set([...Array.from(computed), ...colorProperties]);
-          properties.forEach((property) => {
-            if (!colorProperties.has(property) && !(property.startsWith('border-') && property.endsWith('-color'))) return;
+          colorProperties.forEach((property) => {
             const value = computed.getPropertyValue(property);
             if (!value.includes('oklch(') && !value.includes('oklab(')) return;
             const compatibleValue = value.replace(modernColorPattern, (color) => {
@@ -184,8 +199,15 @@ async function captureElement(elementRef: ExportElement | null, scale = 2, backg
         current.style.overflow = 'visible';
         current = current.parentElement;
       }
+
+      onProgress?.(55);
+      await yieldToPaint();
     }
-  });
+  };
+
+  const canvas = await html2canvas(elementRef, captureOptions);
+  onProgress?.(82);
+  return canvas;
 }
 
 /**
@@ -195,10 +217,12 @@ export async function generateTimetablePdf(
   elementRef: ExportElement | null,
   orientation: 'portrait' | 'landscape' = 'portrait',
   fileName = 'Jadual_Kuliah_USAS.pdf',
+  onProgress?: ExportProgress,
 ) {
-  const canvas = await captureElement(elementRef, 4, '#FFFFFF');
+  const canvas = await captureElement(elementRef, 4, '#FFFFFF', onProgress);
 
   const imgData = canvas.toDataURL('image/png');
+  onProgress?.(90);
   const isLandscape = orientation === 'landscape';
 
   const pdf = new jsPDF({
@@ -209,10 +233,13 @@ export async function generateTimetablePdf(
 
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
-  const imgWidth = pageWidth;
-  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+  const imageScale = Math.min(pageWidth / canvas.width, pageHeight / canvas.height);
+  const imgWidth = canvas.width * imageScale;
+  const imgHeight = canvas.height * imageScale;
+  const imgX = (pageWidth - imgWidth) / 2;
+  const imgY = (pageHeight - imgHeight) / 2;
 
-  pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, Math.min(imgHeight, pageHeight));
+  pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth, imgHeight);
   pdf.save(sanitizeDownloadFileName(fileName, 'Jadual_Kuliah_USAS.pdf'));
 }
 
@@ -224,25 +251,28 @@ export async function generateElementPng(
   fileName = 'Jadual_Kuliah_USAS.png',
   scale = 3,
   backgroundColor: string | null = '#FFFFFF',
+  onProgress?: ExportProgress,
 ) {
-  const canvas = await captureElement(elementRef, scale, backgroundColor);
+  const canvas = await captureElement(elementRef, scale, backgroundColor, onProgress);
   const safeFileName = sanitizeDownloadFileName(fileName, 'Jadual_Kuliah_USAS.png');
+  onProgress?.(88);
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+  canvas.width = 0;
+  canvas.height = 0;
+  if (!blob) throw new Error('Could not encode exported image.');
   
   // Mobile in-app browsers (Google, FB) block <a> downloads. Use native iOS/Android Share Sheet instead.
   const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   
   if (isMobile && navigator.share && navigator.canShare) {
     try {
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
-      if (blob) {
-        const file = new File([blob], safeFileName, { type: 'image/png' });
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            files: [file],
-            title: 'Jadual Kuliah USAS'
-          });
-          return; // Successfully opened native share sheet (Save Image)
-        }
+      const file = new File([blob], safeFileName, { type: 'image/png' });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Jadual Kuliah USAS'
+        });
+        return; // Successfully opened native share sheet (Save Image)
       }
     } catch (err: unknown) {
       console.warn('Share API failed or cancelled:', err);
@@ -252,20 +282,27 @@ export async function generateElementPng(
 
   // Fallback for Desktop, standard browsers, or if Share API fails
   const link = document.createElement('a');
+  const objectUrl = URL.createObjectURL(blob);
+  onProgress?.(96);
   link.download = safeFileName;
-  link.href = canvas.toDataURL('image/png');
+  link.href = objectUrl;
   document.body.appendChild(link);
   try {
     link.click();
   } finally {
     document.body.removeChild(link);
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
   }
 }
 
 /**
  * Generates a high-resolution PNG image for Device Lock Screen / Phone Wallpaper
  */
-export async function generateLockscreenImage(elementRef: ExportElement | null, fileName = 'Jadual_USAS_Lockscreen.png') {
-  await generateElementPng(elementRef, fileName, 5, null);
+export async function generateLockscreenImage(
+  elementRef: ExportElement | null,
+  fileName = 'Jadual_USAS_Lockscreen.png',
+  onProgress?: ExportProgress,
+) {
+  await generateElementPng(elementRef, fileName, 5, null, onProgress);
 }
 

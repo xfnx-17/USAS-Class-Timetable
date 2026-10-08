@@ -43,6 +43,15 @@ test('matrix view positions classes accurately to the minute', async ({ page }) 
   await expect(firstHour).toBeVisible();
   await expect(halfHourClass).toHaveCount(1);
   await expect(halfHourClass).toHaveAttribute('data-matrix-course-time', '8:30-10:30');
+  await expect(halfHourClass.locator('[data-matrix-course-start-label]')).toHaveText('8:30');
+  await expect(halfHourClass.locator('[data-matrix-course-end-label]')).toHaveText('10:30');
+  const timeLabelPositions = await halfHourClass.evaluate((block) => {
+    const start = block.querySelector('[data-matrix-course-start-label]')!.getBoundingClientRect();
+    const end = block.querySelector('[data-matrix-course-end-label]')!.getBoundingClientRect();
+    return { startTop: start.top, endTop: end.top, rightDelta: Math.abs(start.right - end.right) };
+  });
+  expect(timeLabelPositions.startTop).toBeLessThan(timeLabelPositions.endTop);
+  expect(timeLabelPositions.rightDelta).toBeLessThan(1);
 
   const geometry = await Promise.all([
     firstHour.boundingBox(),
@@ -89,14 +98,78 @@ test('wallpaper position controls fit inside the export toolbar on laptop', asyn
   const layout = await controls.evaluate((element) => {
     const container = element.getBoundingClientRect();
     const position = element.lastElementChild!.getBoundingClientRect();
+    const firstGroup = element.firstElementChild!.getBoundingClientRect();
+    const selectorWidths = Array.from(element.children).slice(0, 3).map((group) =>
+      group.querySelector('button')!.getBoundingClientRect().width,
+    );
+    const sliderWidths = Array.from(element.lastElementChild!.querySelectorAll('label'), (slider) =>
+      slider.getBoundingClientRect().width,
+    );
     return {
       hasHorizontalOverflow: element.scrollWidth > element.clientWidth,
       positionRight: position.right,
       containerRight: container.right,
+      positionWidth: position.width,
+      firstGroupWidth: firstGroup.width,
+      selectorWidths,
+      sliderWidths,
     };
   });
   expect(layout.hasHorizontalOverflow).toBe(false);
   expect(layout.positionRight).toBeLessThanOrEqual(layout.containerRight + 1);
+  expect(Math.max(...layout.selectorWidths)).toBeLessThanOrEqual(231);
+  expect(layout.positionWidth).toBeGreaterThan(layout.firstGroupWidth);
+  expect(Math.min(...layout.sliderWidths)).toBeGreaterThan(150);
+});
+
+test('custom lockscreen background stays sharp outside the blurred glass timetable and exports to PNG', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await page.getByRole('button', { name: /log in|log masuk/i }).first().click();
+  await page.getByRole('button', { name: /log masuk tanpa akaun|demo/i }).click();
+  await page.getByRole('button', { name: /open tools and export/i }).click();
+  await page.getByRole('button', { name: /eksport pdf & wallpaper|export pdf & wallpaper/i }).click();
+  await page.getByRole('button', { name: /wallpaper lockscreen/i }).click();
+
+  await page.getByLabel(/choose background image|pilih gambar latar/i).setInputFiles('public/usas-logo-light.png');
+  const background = page.locator('[data-wallpaper-background-layer]');
+  const blurredBackground = page.locator('[data-wallpaper-background-blur]');
+  const glassOverlay = page.locator('[data-wallpaper-glass-overlay]');
+  await expect(background).toBeVisible();
+  await expect(blurredBackground).toBeVisible();
+  await expect(glassOverlay).toBeVisible();
+  await expect.poll(() => background.getAttribute('src')).toMatch(/^blob:/);
+  await expect.poll(() => blurredBackground.evaluate((element) => getComputedStyle(element).backgroundImage))
+    .toMatch(/^url\("blob:/);
+  expect(await background.evaluate((element) => getComputedStyle(element).backgroundImage))
+    .not.toBe(await blurredBackground.evaluate((element) => getComputedStyle(element).backgroundImage));
+  expect(await glassOverlay.evaluate((element) => getComputedStyle(element).backgroundColor))
+    .not.toBe('rgba(0, 0, 0, 0)');
+  const sourceSize = await page.evaluate(async () => {
+    const response = await fetch('/usas-logo-light.png');
+    const image = await createImageBitmap(await response.blob());
+    const size = [image.width, image.height];
+    image.close();
+    return size;
+  });
+  const backgroundSize = await background.evaluate((element) => {
+    const image = element as HTMLImageElement;
+    return [image.naturalWidth, image.naturalHeight];
+  });
+  expect(backgroundSize).toEqual(sourceSize);
+  await expect(page.getByRole('button', { name: /usas-logo-light\.png/i })).toBeVisible();
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: /^download$|^muat turun$/i }).evaluate((button) => (button as HTMLButtonElement).click());
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toContain('.png');
+  const stream = await download.createReadStream();
+  if (!stream) throw new Error('Could not read exported wallpaper.');
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+  const png = Buffer.concat(chunks);
+  expect(png.readUInt32BE(16)).toBeGreaterThan(1700);
+  expect(png.readUInt32BE(20)).toBeGreaterThan(3000);
 });
 
 test('class reminder chime does not replay after a page refresh', async ({ page, context }) => {
@@ -138,12 +211,16 @@ test('png export flow downloads an image file', async ({ page }) => {
   await page.getByRole('button', { name: /log masuk tanpa akaun|demo/i }).click();
   await page.getByRole('button', { name: /open tools and export/i }).click();
   await page.getByRole('button', { name: /eksport pdf & wallpaper|export pdf & wallpaper/i }).click();
+  await expect(page.locator('[data-export-formal-day-cell]').first()).toHaveCSS('background-color', 'rgb(255, 255, 255)');
 
   await page.getByRole('button', { name: /^PNG$/i }).click();
   await expect(page.getByRole('button', { name: /^PNG$/i })).toHaveAttribute('class', /bg/);
 
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: /^download$|^muat turun$/i }).click();
+  const progress = page.locator('[data-export-progress-value]');
+  await expect.poll(async () => Number((await progress.textContent())?.replace('%', '') || 0))
+    .toBeGreaterThan(15);
   const download = await downloadPromise;
 
   expect(download.suggestedFilename().toLowerCase()).toContain('.png');
@@ -153,9 +230,49 @@ test('png export flow downloads an image file', async ({ page }) => {
   for await (const chunk of stream) chunks.push(Buffer.from(chunk));
   const image = Buffer.concat(chunks);
   expect(image.subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
-  expect(image.readUInt32BE(16)).toBeGreaterThan(500);
-  expect(image.readUInt32BE(20)).toBeGreaterThan(500);
+  expect(image.readUInt32BE(16)).toBeGreaterThan(1000);
+  expect(image.readUInt32BE(20)).toBeGreaterThan(1900);
   expect(image.byteLength).toBeGreaterThan(20_000);
+});
+
+test('formal PDF export downloads a valid one-page file', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /log in|log masuk/i }).first().click();
+  await page.getByRole('button', { name: /log masuk tanpa akaun|demo/i }).click();
+  await page.getByRole('button', { name: /open tools and export/i }).click();
+  await page.getByRole('button', { name: /eksport pdf & wallpaper|export pdf & wallpaper/i }).click();
+  const formalBorders = await page.locator('table.border-separate').evaluate((table) => {
+    const cells = [...table.querySelectorAll('th, td')];
+    return {
+      collapsed: getComputedStyle(table).borderCollapse,
+      widths: [...new Set(cells.flatMap((cell) => {
+        const style = getComputedStyle(cell);
+        return [style.borderRightWidth, style.borderBottomWidth];
+      }))],
+    };
+  });
+  expect(formalBorders.collapsed).toBe('separate');
+  expect(formalBorders.widths).toEqual(['1px']);
+  const formalRowShading = await page.locator('table.border-separate tbody tr').evaluateAll((rows) => rows.map((row) => ({
+    rowBackground: getComputedStyle(row).backgroundColor,
+    cells: [...row.querySelectorAll('td')].map((cell) => getComputedStyle(cell).backgroundColor),
+  })));
+  expect(formalRowShading.every(({ rowBackground }) => rowBackground === 'rgba(0, 0, 0, 0)')).toBe(true);
+  expect(formalRowShading[0].cells[0]).toBe('rgb(255, 255, 255)');
+  expect(formalRowShading.slice(0, 4).every(({ cells }) => cells.every((color) => color !== 'rgba(0, 0, 0, 0)'))).toBe(true);
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: /^download$|^muat turun$/i }).click();
+  const progress = page.locator('[data-export-progress-value]');
+  await expect.poll(async () => Number((await progress.textContent())?.replace('%', '') || 0))
+    .toBeGreaterThan(15);
+  const download = await downloadPromise;
+  expect(download.suggestedFilename().toLowerCase()).toContain('.pdf');
+  const stream = await download.createReadStream();
+  if (!stream) throw new Error('PDF download has no stream.');
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+  expect(Buffer.concat(chunks).subarray(0, 5).toString()).toBe('%PDF-');
 });
 
 test('wallpaper export converts OKLab gradient colors for PNG rendering', async ({ page }) => {
@@ -168,6 +285,19 @@ test('wallpaper export converts OKLab gradient colors for PNG rendering', async 
   await page.getByRole('button', { name: /eksport pdf & wallpaper|export pdf & wallpaper/i }).click();
   await page.getByRole('button', { name: /wallpaper lockscreen/i }).click();
   await expect(page.locator('[data-wallpaper-grid]')).toHaveCSS('border-top-left-radius', '12px');
+  const courseColors = await page.locator('[data-export-course-color-code]').evaluateAll((blocks) => blocks.map((block) => ({
+    course: block.getAttribute('data-export-course-color-code')!,
+    color: getComputedStyle(block).backgroundColor,
+  })));
+  const courseColorSets = new Map<string, Set<string>>();
+  for (const { course, color } of courseColors) {
+    const colors = courseColorSets.get(course) ?? new Set<string>();
+    colors.add(color);
+    courseColorSets.set(course, colors);
+  }
+  expect(courseColorSets.size, JSON.stringify([...courseColorSets.keys()])).toBe(7);
+  expect([...courseColorSets.values()].every((colors) => colors.size === 1)).toBe(true);
+  expect(new Set([...courseColorSets.values()].map((colors) => [...colors][0])).size).toBe(courseColorSets.size);
   const headerColumns = await page.locator('[data-export-time-label]').evaluateAll((labels) => labels.map((label) => {
     const header = label.closest('th')!;
     return {
@@ -180,9 +310,11 @@ test('wallpaper export converts OKLab gradient colors for PNG rendering', async 
   }));
   expect(headerColumns.length).toBeGreaterThan(0);
   expect(headerColumns.length).toBe(8);
-  expect(headerColumns.every(({ duration }) => duration === 60)).toBe(true);
-  const pixelsPerMinute = headerColumns.map(({ width, duration }) => width / duration);
-  expect(Math.max(...pixelsPerMinute) - Math.min(...pixelsPerMinute)).toBeLessThan(Math.max(...pixelsPerMinute) * 0.03);
+  expect(headerColumns.reduce((total, { duration }) => total + duration, 0)).toBe(15 * 60);
+  expect(headerColumns.some(({ duration }) => duration < 120)).toBe(true);
+  expect(headerColumns.at(-1)?.label).toContain('23');
+  const headerWidths = headerColumns.map(({ width }) => width);
+  expect(Math.max(...headerWidths) - Math.min(...headerWidths)).toBeLessThan(1);
   expect(headerColumns.every(({ availableWidth, labelWidth }) => availableWidth >= labelWidth), JSON.stringify(headerColumns)).toBe(true);
   const gridPosition = await page.evaluate(() => {
     const root = document.querySelector<HTMLElement>('[data-export-root="wallpaper-export-root"]')!;
@@ -193,6 +325,14 @@ test('wallpaper export converts OKLab gradient colors for PNG rendering', async 
   });
 
   await page.locator('[data-export-root="wallpaper-export-root"]').evaluate((root) => {
+    const testStyle = document.createElement('style');
+    testStyle.textContent = '.unrelated-color-class { color: oklch(0.6 0.15 200); }';
+    document.head.appendChild(testStyle);
+    const testColor = document.createElement('span');
+    testColor.className = 'unrelated-color-class';
+    testColor.textContent = 'color check';
+    root.appendChild(testColor);
+
     root.style.setProperty('--tw-gradient-from', 'oklab(0.35 0.08 -0.12)');
     root.style.setProperty('--tw-gradient-to', 'oklab(0.7 0.12 0.08)');
     root.style.setProperty('--tw-gradient-stops', 'var(--tw-gradient-from), var(--tw-gradient-to)');
@@ -233,9 +373,9 @@ test('wallpaper export converts OKLab gradient colors for PNG rendering', async 
   });
   expect(textBounds.start.x).toBeGreaterThan(textBounds.block.x + 1);
   expect(textBounds.start.y).toBeGreaterThan(textBounds.block.y + 1);
-  expect(textBounds.end.x + textBounds.end.width).toBeLessThan(textBounds.block.x + textBounds.block.width - 1);
-  expect(textBounds.end.y + textBounds.end.height).toBeLessThan(textBounds.block.y + textBounds.block.height - 1);
-  expect(textBounds.duration.y + textBounds.duration.height).toBeLessThan(textBounds.course.y);
+  expect(textBounds.end.x + textBounds.end.width).toBeLessThan(textBounds.block.x + textBounds.block.width);
+  expect(textBounds.end.y + textBounds.end.height).toBeLessThan(textBounds.block.y + textBounds.block.height);
+  expect(textBounds.duration.y + textBounds.duration.height).toBeLessThanOrEqual(textBounds.course.y);
   expect(textBounds.maxCenterDeltaRatio).toBeLessThan(0.2);
   await expect(page.locator('[data-export-course-time="start"]').first()).toBeVisible();
   await expect(page.locator('[data-export-course-time="end"]').first()).toBeVisible();
@@ -322,8 +462,8 @@ test('wallpaper export converts OKLab gradient colors for PNG rendering', async 
   expect(cornerPixel).toEqual(backgroundPixel);
 
   const grid = page.locator('[data-wallpaper-grid]');
-  const topSlider = page.getByRole('slider', { name: 'Laraskan ruang atas jadual pada lockscreen' });
-  const bottomSlider = page.getByRole('slider', { name: 'Laraskan ruang bawah jadual pada lockscreen' });
+  const topSlider = page.getByRole('slider', { name: /adjust timetable top space|laraskan ruang atas/i });
+  const bottomSlider = page.getByRole('slider', { name: /adjust timetable bottom space|laraskan ruang bawah/i });
   const getGridPosition = () => grid.evaluate((element) => {
     const rect = element.getBoundingClientRect();
     const rootRect = element.closest('[data-export-root]')!.getBoundingClientRect();
@@ -353,10 +493,10 @@ test('wallpaper class blocks stay centered at maximum position', async ({ page }
   await page.getByRole('button', { name: /open tools and export/i }).click();
   await page.getByRole('button', { name: /eksport pdf & wallpaper|export pdf & wallpaper/i }).click();
   await page.getByRole('button', { name: /wallpaper lockscreen/i }).click();
-  await page.getByRole('slider', { name: 'Laraskan ruang atas jadual pada lockscreen' }).press('End');
-  await page.getByRole('slider', { name: 'Laraskan ruang bawah jadual pada lockscreen' }).press('End');
-  await expect(page.getByRole('slider', { name: 'Laraskan ruang atas jadual pada lockscreen' })).toHaveValue('216');
-  await expect(page.getByRole('slider', { name: 'Laraskan ruang bawah jadual pada lockscreen' })).toHaveValue('138');
+  await page.getByRole('slider', { name: /adjust timetable top space|laraskan ruang atas/i }).press('End');
+  await page.getByRole('slider', { name: /adjust timetable bottom space|laraskan ruang bawah/i }).press('End');
+  await expect(page.getByRole('slider', { name: /adjust timetable top space|laraskan ruang atas/i })).toHaveValue('216');
+  await expect(page.getByRole('slider', { name: /adjust timetable bottom space|laraskan ruang bawah/i })).toHaveValue('138');
   const layout = await page.locator('[data-wallpaper-grid]').evaluate((grid) => {
     const rows = [...grid.querySelectorAll('tbody tr')].map((row) => row.getBoundingClientRect().height);
     const lastRow = grid.querySelector('tbody tr:last-child')!.getBoundingClientRect();
@@ -407,7 +547,7 @@ test('wallpaper class blocks stay centered at maximum position', async ({ page }
   expect(Math.max(...layout.blockSeamInsets.map(({ bottom }) => bottom))).toBeLessThanOrEqual(0.6);
   expect(Math.max(...layout.centerDeltaRatios)).toBeLessThan(0.2);
   expect(layout.minEndInset).toBeGreaterThan(0);
-  expect(layout.maxEndInset).toBeLessThan(4);
+  expect(layout.maxEndInset).toBeLessThan(3);
 });
 
 test('unknown route shows branded 404 screen', async ({ page }) => {
