@@ -329,6 +329,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
   const [useNativeGlassBlur, setUseNativeGlassBlur] = useState(false);
   const [wallpaperBackgroundName, setWallpaperBackgroundName] = useState('');
   const [wallpaperBackgroundError, setWallpaperBackgroundError] = useState('');
+  const [brightDayLabels, setBrightDayLabels] = useState<Set<number>>(() => new Set());
   const wallpaperBackgroundInputRef = useRef<HTMLInputElement>(null);
   const wallpaperBackgroundUrlsRef = useRef<string[]>([]);
   const [wallpaperTopAdjustment, setWallpaperTopAdjustment] = useState(0);
@@ -486,6 +487,68 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
     const extraDays = defaultOrder.filter(d => daysInCourses.has(d) && !baseDays.includes(d));
     return [...baseDays, ...extraDays];
   }, [timetableDays, allCourses]);
+
+  useEffect(() => {
+    setBrightDayLabels(new Set());
+    if (!wallpaperBackground || exportMode !== 'WALLPAPER') return;
+
+    let cancelled = false;
+    const frame = requestAnimationFrame(() => {
+      void (async () => {
+        const root = wallpaperRef.current;
+        if (!root) return;
+
+        const image = new Image();
+        image.src = wallpaperBackground;
+        try {
+          await image.decode();
+          if (cancelled) return;
+
+          const rootWidth = root.offsetWidth;
+          const rootHeight = root.offsetHeight;
+          const coverScale = Math.max(rootWidth / image.naturalWidth, rootHeight / image.naturalHeight);
+          const imageLeft = (rootWidth - image.naturalWidth * coverScale) / 2;
+          const imageTop = (rootHeight - image.naturalHeight * coverScale) / 2;
+          const canvas = document.createElement('canvas');
+          canvas.width = canvas.height = 1;
+          const context = canvas.getContext('2d', { willReadFrequently: true });
+          if (!context) return;
+
+          const rootRect = root.getBoundingClientRect();
+          const labels = [...root.querySelectorAll<HTMLElement>('[data-wallpaper-day-label]')];
+          const bright = new Set<number>();
+          const baseLuminosity = exportTheme === 'light' ? 248 : exportTheme === 'oled' ? 9 : exportTheme === 'emerald' ? 14 : exportTheme === 'warm' ? 34 : 10;
+          const glassLuminosity = exportTheme === 'light' ? 255 : 0;
+
+          labels.forEach((label) => {
+            const bounds = label.getBoundingClientRect();
+            const x = ((bounds.left + bounds.width / 2 - rootRect.left) / rootRect.width) * rootWidth;
+            const y = ((bounds.top + bounds.height / 2 - rootRect.top) / rootRect.height) * rootHeight;
+            const sourceX = Math.max(0, Math.min(image.naturalWidth - 1, Math.round((x - imageLeft) / coverScale) - 16));
+            const sourceY = Math.max(0, Math.min(image.naturalHeight - 1, Math.round((y - imageTop) / coverScale) - 16));
+            const sampleSize = Math.min(32, image.naturalWidth - sourceX, image.naturalHeight - sourceY);
+            context.clearRect(0, 0, 1, 1);
+            context.drawImage(image, sourceX, sourceY, sampleSize, sampleSize, 0, 0, 1, 1);
+            const [red, green, blue, alpha] = context.getImageData(0, 0, 1, 1).data;
+            const opacity = alpha / 255;
+            const imageLuminosity = (red * 0.2126 + green * 0.7152 + blue * 0.0722) * opacity + baseLuminosity * (1 - opacity);
+            const visibleLuminosity = imageLuminosity * 0.58 + glassLuminosity * 0.42;
+            if (visibleLuminosity >= 105) bright.add(Number(label.dataset.wallpaperDayLabel));
+          });
+
+          canvas.width = canvas.height = 0;
+          if (!cancelled) setBrightDayLabels(bright);
+        } catch {
+          if (!cancelled) setBrightDayLabels(new Set());
+        }
+      })();
+    });
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frame);
+    };
+  }, [wallpaperBackground, exportMode, exportTheme, wallpaperPreset, wallpaperTopAdjustment, wallpaperBottomAdjustment, daysList]);
 
   // Courses sorted by weekday then start time, so the formal table can merge
   // consecutive rows of the same day into a single day cell (rowSpan).
@@ -1458,7 +1521,8 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                       </tr>
                                 </thead>
                                 <tbody>
-                                  {daysList.map((d) => {
+                                  {daysList.map((d, dayIndex) => {
+                                    const brightenDayLabel = brightDayLabels.has(dayIndex);
                                     return (
                                       <tr key={d} style={{ height: `${rowHeightPx}px`, minHeight: `${rowHeightPx}px` }} className={`border-t ${lockscreenConfig.cellBorder}`}>
                                         <td
@@ -1466,7 +1530,16 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                           style={{ height: `${rowHeightPx}px`, width: '38px' }}
                                         >
                                           <div className="w-full px-1 flex items-center justify-center text-center" style={{ height: `${rowHeightPx}px` }}>
-                                            <span className="text-[10px] break-words whitespace-pre-wrap">{extractDayName(d) ? t(`shortDays.${extractDayName(d)}`) : formatDayDisplay(d, t, { short: true })}</span>
+                                            <span
+                                              data-wallpaper-day-label={dayIndex}
+                                              className="text-[10px] break-words whitespace-pre-wrap"
+                                              style={brightenDayLabel ? {
+                                                color: lockscreenConfig.isLight ? '#334155' : exportTheme === 'warm' ? '#FEF3C7' : exportTheme === 'emerald' ? '#ECFDF5' : '#FFFFFF',
+                                                textShadow: lockscreenConfig.isLight ? '0 1px 3px rgba(255,255,255,0.9)' : '0 1px 3px rgba(0,0,0,0.9)',
+                                              } : undefined}
+                                            >
+                                              {extractDayName(d) ? t(`shortDays.${extractDayName(d)}`) : formatDayDisplay(d, t, { short: true })}
+                                            </span>
                                           </div>
                                         </td>
                                         <td colSpan={slots.length} className="relative p-0 overflow-hidden" style={{ height: `${rowHeightPx}px`, minHeight: `${rowHeightPx}px` }}>

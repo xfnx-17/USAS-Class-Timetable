@@ -127,6 +127,29 @@ test('wallpaper position controls fit inside the export toolbar on laptop', asyn
   expect(Math.min(...layout.sliderWidths)).toBeGreaterThan(150);
 });
 
+test('wallpaper day labels brighten only when custom background behind them is bright', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.getByRole('button', { name: /log in|log masuk/i }).first().click();
+  await page.getByRole('button', { name: /log masuk tanpa akaun|demo/i }).click();
+  await page.getByRole('button', { name: /open tools and export/i }).click();
+  await page.getByRole('button', { name: /eksport pdf & wallpaper|export pdf & wallpaper/i }).click();
+  await page.getByRole('button', { name: /wallpaper lockscreen/i }).click();
+  await page.getByText(/light theme|dark theme|tema terang|tema gelap/i).first().click();
+  await page.getByRole('button', { name: /dark theme|tema gelap/i }).last().click();
+
+  const backgroundInput = page.getByLabel(/choose background image|pilih gambar latar/i);
+  const dayLabel = page.locator('[data-wallpaper-day-label="0"]');
+  const svg = (color: string) => Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="432" height="960"><rect width="100%" height="100%" fill="${color}"/></svg>`);
+
+  await backgroundInput.setInputFiles({ name: 'bright.svg', mimeType: 'image/svg+xml', buffer: svg('#ffffff') });
+  await expect.poll(() => dayLabel.evaluate((label) => (label as HTMLElement).style.color)).toBe('rgb(255, 255, 255)');
+  await expect.poll(() => dayLabel.evaluate((label) => (label as HTMLElement).style.textShadow)).not.toBe('');
+
+  await backgroundInput.setInputFiles({ name: 'dark.svg', mimeType: 'image/svg+xml', buffer: svg('#050505') });
+  await expect.poll(() => dayLabel.evaluate((label) => (label as HTMLElement).style.color)).toBe('');
+});
+
 test('custom lockscreen background stays sharp outside the blurred glass timetable and exports to PNG', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.addInitScript(() => {
