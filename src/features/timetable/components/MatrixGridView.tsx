@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '@/app/providers/AuthProvider';
 import { useTheme } from '@/app/providers/ThemeProvider';
 import { useLanguage } from '@/app/providers/LanguageProvider';
 import type { TimetableItem } from '@/shared/types/usas';
@@ -11,6 +12,7 @@ import {
   buildHourlyTimeSlots,
   getCourseHighlightKey,
   getShortTimeRange,
+  formatHourSlot,
   getTimeRangePosition,
   parseTo24hHour,
   parseTimeToMinutes,
@@ -81,9 +83,9 @@ const getDurationLabel = (startTime?: string, endTime?: string, lang?: string) =
   }
 };
 
-const getSlotLabel = (slot: string) => {
+const getSlotLabel = (slot: string, timeFormat: '12h' | '24h') => {
   const hour = parseTo24hHour(slot);
-  return hour === null ? slot : `${hour}-${hour + 1}`;
+  return hour === null ? slot : formatHourSlot(hour, hour + 1, timeFormat);
 };
 
 export default function MatrixGridView({
@@ -93,6 +95,7 @@ export default function MatrixGridView({
   activeHighlights,
 }: MatrixGridViewProps) {
   const { theme } = useTheme();
+  const { timeFormat } = useAuth();
   const { t, lang } = useLanguage();
   const isLight = theme === 'light';
   const [preview, setPreview] = useState<{ course: TimetableItem; x: number; y: number } | null>(null);
@@ -190,7 +193,7 @@ export default function MatrixGridView({
                   } last:border-r-0`}
                   style={{ fontSize: `${autoScale * 10}px` }}
                 >
-                  {getSlotLabel(slot)}
+                  {getSlotLabel(slot, timeFormat)}
                 </th>
               ))}
             </tr>
@@ -238,7 +241,7 @@ export default function MatrixGridView({
                         ? activeHighlights.ongoingKey === courseKey ? 'ongoing' : activeHighlights.upcomingKey === courseKey ? 'upcoming' : 'idle'
                         : 'idle';
                       const durationText = getDurationLabel(course.start_time, course.end_time, lang);
-                      const timeRangeText = getShortTimeRange(course.start_time || course.jadual, course.end_time);
+                      const timeRangeText = getShortTimeRange(course.start_time || course.jadual, course.end_time, timeFormat);
                       const [startTimeLabel, endTimeLabel] = timeRangeText.split('-');
                       const fs = (value: number) => `${value}px`;
 
@@ -306,7 +309,7 @@ export default function MatrixGridView({
               </div>
             </div>
             <div className={`text-[10px] font-semibold ${isLight ? 'text-slate-500' : 'text-white/50'}`}>
-              {formatDayDisplay(preview.course.day, t)} · {preview.course.start_time}{preview.course.end_time ? ` - ${preview.course.end_time}` : ''}
+              {formatDayDisplay(preview.course.day, t)} · {getShortTimeRange(preview.course.start_time || preview.course.jadual, preview.course.end_time, timeFormat).replace('-', ' - ')}
             </div>
             <div className={`flex items-center gap-1.5 text-[10.5px] ${isLight ? 'text-slate-600' : 'text-white/70'}`}>
               <User className="w-3 h-3 flex-shrink-0 text-emerald-500" />

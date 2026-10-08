@@ -124,6 +124,13 @@ test('wallpaper position controls fit inside the export toolbar on laptop', asyn
 
 test('custom lockscreen background stays sharp outside the blurred glass timetable and exports to PNG', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
+  await page.addInitScript(() => {
+    Object.defineProperty(CanvasRenderingContext2D.prototype, 'filter', {
+      configurable: true,
+      get: () => 'none',
+      set: () => {},
+    });
+  });
   await page.goto('/');
   await page.getByRole('button', { name: /log in|log masuk/i }).first().click();
   await page.getByRole('button', { name: /log masuk tanpa akaun|demo/i }).click();
@@ -138,6 +145,8 @@ test('custom lockscreen background stays sharp outside the blurred glass timetab
   await expect(background).toBeVisible();
   await expect(blurredBackground).toBeVisible();
   await expect(glassOverlay).toBeVisible();
+  await expect.poll(() => glassOverlay.evaluate((element) => getComputedStyle(element).backdropFilter))
+    .toBe('blur(16px)');
   await expect.poll(() => background.getAttribute('src')).toMatch(/^blob:/);
   await expect.poll(() => blurredBackground.evaluate((element) => getComputedStyle(element).backgroundImage))
     .toMatch(/^url\("blob:/);
@@ -170,6 +179,22 @@ test('custom lockscreen background stays sharp outside the blurred glass timetab
   const png = Buffer.concat(chunks);
   expect(png.readUInt32BE(16)).toBeGreaterThan(1700);
   expect(png.readUInt32BE(20)).toBeGreaterThan(3000);
+});
+
+test('time format preference persists for the signed-in user', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /log in|log masuk/i }).first().click();
+  await page.getByRole('button', { name: /log masuk tanpa akaun|demo/i }).click();
+
+  const timeFormatToggle = page.getByRole('button', { name: /time format 24h/i });
+  await timeFormatToggle.click();
+  await expect(page.getByRole('button', { name: /time format 12h/i })).toBeVisible();
+  expect(await page.evaluate(() => Object.entries(localStorage)
+    .filter(([key]) => key.startsWith('usas_time_format_'))
+    .map(([, value]) => value))).toEqual(['12h']);
+
+  await page.reload();
+  await expect(page.getByRole('button', { name: /time format 12h/i })).toBeVisible();
 });
 
 test('class reminder chime does not replay after a page refresh', async ({ page, context }) => {

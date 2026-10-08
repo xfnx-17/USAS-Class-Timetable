@@ -1,4 +1,6 @@
 import type { TimetableItem } from '@/shared/types/usas';
+import type { TimeFormat } from '@/shared/types/usas';
+import { getShortTimeRange } from '@/shared/lib/timetableTime';
 import { sanitizeSingleLine, sanitizeTextForShare } from '@/shared/lib/security';
 import { extractDayName } from '@/shared/lib/dayFormat';
 
@@ -36,12 +38,12 @@ function buildDayGroups(timetable: TimetableItem[] = []): Map<string, TimetableI
   return dayGroups;
 }
 
-function formatTimeRange(startTime: string | undefined, endTime: string | undefined): string {
+function formatTimeRange(startTime: string | undefined, endTime: string | undefined, timeFormat: TimeFormat): string {
   if (!startTime) return 'TBA';
-  return endTime ? `${startTime}-${endTime}` : startTime;
+  return getShortTimeRange(startTime, endTime, timeFormat);
 }
 
-function buildFullShareText(timetable: TimetableItem[] = [], studentName = '', matricNo = '') {
+function buildFullShareText(timetable: TimetableItem[] = [], studentName = '', matricNo = '', timeFormat: TimeFormat = '24h') {
   if (!timetable || timetable.length === 0) return '';
 
   const dayOrder = ['ISNIN', 'SELASA', 'RABU', 'KHAMIS', 'JUMAAT', 'SABTU', 'AHAD'];
@@ -56,7 +58,7 @@ function buildFullShareText(timetable: TimetableItem[] = [], studentName = '', m
     if (!classes) return;
     text += `${day}\n`;
     classes.forEach(c => {
-      const time = c.start_time ? `${sanitizeSingleLine(c.start_time, 32)}${c.end_time ? ' - ' + sanitizeSingleLine(c.end_time, 32) : ''}` : 'TBA';
+      const time = sanitizeSingleLine(formatTimeRange(c.start_time || c.jadual, c.end_time, timeFormat).replace('-', ' - '), 64);
       const code = sanitizeSingleLine(c.course_id || c.kod_kursus || '', 64);
       const name = sanitizeTextForShare(c.course_name || c.kursus || '', 160);
       const group = normalizeGroup(c.group || c.kumpulan);
@@ -73,7 +75,7 @@ function buildFullShareText(timetable: TimetableItem[] = [], studentName = '', m
   return text;
 }
 
-function buildCompactShareText(timetable: TimetableItem[] = [], matricNo = '') {
+function buildCompactShareText(timetable: TimetableItem[] = [], matricNo = '', timeFormat: TimeFormat = '24h') {
   if (!timetable || timetable.length === 0) return '';
 
   const dayOrder = ['ISNIN', 'SELASA', 'RABU', 'KHAMIS', 'JUMAAT', 'SABTU', 'AHAD'];
@@ -87,6 +89,7 @@ function buildCompactShareText(timetable: TimetableItem[] = [], matricNo = '') {
       const time = formatTimeRange(
         sanitizeSingleLine(c.start_time, 32),
         sanitizeSingleLine(c.end_time, 32),
+        timeFormat,
       );
       const code = sanitizeSingleLine(c.course_id || '', 64);
       const group = normalizeGroup(c.group || c.kumpulan);

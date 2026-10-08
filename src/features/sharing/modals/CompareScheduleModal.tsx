@@ -6,6 +6,7 @@ import { compressTimetable } from '@/features/timetable/lib/scheduleMatcher';
 import { buildFullShareText } from '@/features/export/lib/shareText';
 import { Camera, ScanLine, X, Upload, FileText, Calendar, AlertTriangle, ArrowLeft, Copy, Check, Users } from 'lucide-react';
 import { useAuth } from '@/app/providers/AuthProvider';
+import { formatTimeFromMinutes } from '@/shared/lib/timetableTime';
 import { useLanguage } from '@/app/providers/LanguageProvider';
 import { useTheme } from '@/app/providers/ThemeProvider';
 import { useModalA11y } from '@/shared/lib/useModalA11y';
@@ -22,7 +23,7 @@ type ScanState = 'idle' | 'scanning' | 'processing' | 'success' | 'error';
 
 export default function CompareScheduleModal({ isOpen, onClose, initialSharedData }: CompareScheduleModalProps) {
   const modalRef = useModalA11y(isOpen, onClose);
-  const { timetableData, session } = useAuth();
+  const { timetableData, session, timeFormat } = useAuth();
   const { t } = useLanguage();
   const { theme } = useTheme();
 
@@ -236,7 +237,7 @@ export default function CompareScheduleModal({ isOpen, onClose, initialSharedDat
   };
 
   const handleCopyText = async () => {
-    const formattedText = buildFullShareText(myTimetable, timetableData?.studentName || '', session?.user_id || '');
+    const formattedText = buildFullShareText(myTimetable, timetableData?.studentName || '', session?.user_id || '', timeFormat);
     await copyTextToClipboard(formattedText);
     if (!mountedRef.current) return;
     setCopiedText(true);
@@ -247,13 +248,13 @@ export default function CompareScheduleModal({ isOpen, onClose, initialSharedDat
   };
 
   const handleWhatsApp = () => {
-    const formattedText = buildFullShareText(myTimetable, timetableData?.studentName || '', session?.user_id || '');
+    const formattedText = buildFullShareText(myTimetable, timetableData?.studentName || '', session?.user_id || '', timeFormat);
     const encoded = encodeURIComponent(formattedText);
     openExternalUrl(`https://wa.me/?text=${encoded}`);
   };
 
   const handleTelegram = () => {
-    const formattedText = buildFullShareText(myTimetable, timetableData?.studentName || '', session?.user_id || '');
+    const formattedText = buildFullShareText(myTimetable, timetableData?.studentName || '', session?.user_id || '', timeFormat);
     const encoded = encodeURIComponent(formattedText);
     openExternalUrl(`https://t.me/share/url?url=&text=${encoded}`);
   };
@@ -348,7 +349,7 @@ export default function CompareScheduleModal({ isOpen, onClose, initialSharedDat
                 isLight ? 'bg-slate-50 border-slate-200 text-slate-700 font-medium' : 'bg-[#070F22] border-slate-800 text-slate-300'
               }`}>
                 <pre className="text-[10px] font-mono whitespace-pre-wrap leading-relaxed">
-                  {buildFullShareText(myTimetable, timetableData?.studentName || '', session?.user_id || '')}
+                  {buildFullShareText(myTimetable, timetableData?.studentName || '', session?.user_id || '', timeFormat)}
                 </pre>
               </div>
               <div className="flex justify-end gap-2 shrink-0">
@@ -479,12 +480,6 @@ export default function CompareScheduleModal({ isOpen, onClose, initialSharedDat
                     const daySlots = freeSlots.filter(s => s.dayStr === dayStr);
                     if (daySlots.length === 0) return null;
                     
-                    const formatTime = (mins: number) => {
-                      const h = Math.floor(mins / 60);
-                      const m = mins % 60;
-                      return `${h === 12 ? 12 : h % 12}:${m.toString().padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
-                    };
-
                     return (
                       <div key={dayStr} className={`p-4 rounded-xl border ${isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#0f172a] border-white/10 shadow-lg'}`}>
                         <div className="text-sm font-bold mb-3 opacity-60 uppercase tracking-widest">{dayStr}</div>
@@ -493,7 +488,7 @@ export default function CompareScheduleModal({ isOpen, onClose, initialSharedDat
                             const durationH = Math.round(((slot.endMins - slot.startMins) / 60) * 10) / 10;
                             return (
                               <div key={i} className={`px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 ${isLight ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-blue-500/15 text-blue-300 border border-blue-500/30'}`}>
-                                <span>{formatTime(slot.startMins)} - {formatTime(slot.endMins)}</span>
+                                <span>{formatTimeFromMinutes(slot.startMins, timeFormat)} - {formatTimeFromMinutes(slot.endMins, timeFormat)}</span>
                                 <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold ${isLight ? 'bg-blue-200 text-blue-800' : 'bg-blue-500/30 text-blue-100'}`}>{durationH}h</span>
                               </div>
                             );

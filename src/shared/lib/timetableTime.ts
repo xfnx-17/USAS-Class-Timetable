@@ -1,4 +1,4 @@
-import type { TimetableItem } from '../types/usas';
+import type { TimeFormat, TimetableItem } from '../types/usas';
 import { extractDayName } from './dayFormat';
 
 export type ActiveClassHighlights = {
@@ -73,16 +73,35 @@ export const parseTimeToMinutes = (timeStr?: string): number | null => {
   return null;
 };
 
-export const getShortTimeRange = (startTime?: string, endTime?: string) => {
-  const format = (minutes: number) => {
-    const hour = Math.floor(minutes / 60);
-    return `${hour}:${String(minutes % 60).padStart(2, '0')}`;
-  };
+export const formatTimeFromMinutes = (minutes: number, timeFormat: TimeFormat = '24h') => {
+  const hour = Math.floor(minutes / 60);
+  const minute = String(minutes % 60).padStart(2, '0');
+  if (timeFormat === '12h') {
+    const normalizedHour = hour % 24;
+    const suffix = normalizedHour < 12 ? 'AM' : 'PM';
+    return `${normalizedHour % 12 || 12}:${minute} ${suffix}`;
+  }
+  return `${hour}:${minute}`;
+};
+
+export const formatHourSlot = (startHour: number, endHour: number, timeFormat: TimeFormat = '24h') => {
+  if (timeFormat === '24h') return `${startHour}-${endHour}`;
+  const start = startHour % 12 || 12;
+  const end = endHour % 12 || 12;
+  const startSuffix = startHour < 12 ? 'AM' : 'PM';
+  const normalizedEndHour = endHour % 24;
+  const endSuffix = normalizedEndHour < 12 ? 'AM' : 'PM';
+  return startSuffix === endSuffix
+    ? `${start}-${end} ${startSuffix}`
+    : `${start} ${startSuffix}-${end} ${endSuffix}`;
+};
+
+export const getShortTimeRange = (startTime?: string, endTime?: string, timeFormat: TimeFormat = '24h') => {
   const start = parseTimeToMinutes(startTime);
   const end = parseTimeToMinutes(endTime);
   if (start === null) return startTime || '';
-  if (end === null) return format(start);
-  return `${format(start)}-${format(end)}`;
+  if (end === null) return formatTimeFromMinutes(start, timeFormat);
+  return `${formatTimeFromMinutes(start, timeFormat)}-${formatTimeFromMinutes(end, timeFormat)}`;
 };
 
 export const getTimeRangePosition = (start: number, end: number, axisStart: number, axisDuration: number) => ({

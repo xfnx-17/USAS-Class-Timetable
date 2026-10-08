@@ -24,7 +24,7 @@ const LANGUAGES: { code: LanguageCode; label: string; short: string; native: str
 ];
 
 export default function Navbar({ onOpenTools, onNavigateHome, onNavigateLogin, view }: NavbarProps) {
-  const { session, refreshTimetable, loading, isOffline } = useAuth();
+  const { session, refreshTimetable, loading, isOffline, timeFormat, setTimeFormat } = useAuth();
   const { lang, setLang, t } = useLanguage();
   const { theme, changeTheme, THEMES } = useTheme();
 
@@ -191,6 +191,21 @@ export default function Navbar({ onOpenTools, onNavigateHome, onNavigateLogin, v
 
           {session && (
             <>
+              <button
+                type="button"
+                onClick={() => setTimeFormat(timeFormat === '24h' ? '12h' : '24h')}
+                aria-label={lang === 'ms'
+                  ? `Format masa ${timeFormat === '24h' ? '24 jam' : '12 jam'}. Tukar format`
+                  : `Time format ${timeFormat}. Switch format`}
+                title={lang === 'ms' ? 'Tukar format jam' : 'Switch time format'}
+                className={`h-7 min-w-10 px-1.5 rounded-md border text-[10px] font-bold transition-colors ${isLight
+                  ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'
+                  : 'bg-white/[0.04] hover:bg-white/[0.08] border-white/10 text-amber-300'
+                }`}
+              >
+                {timeFormat.toUpperCase()}
+              </button>
+
               {/* Refresh */}
               <button
                 onClick={refreshTimetable}

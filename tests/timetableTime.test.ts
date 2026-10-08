@@ -6,6 +6,7 @@ import {
   getCourseHighlightKey,
   getDayKeyFromDate,
   getShortTimeRange,
+  formatHourSlot,
   getTimeRangePosition,
   parseTimeToMinutes,
   parseTo24hHour,
@@ -47,6 +48,12 @@ describe('timetableTime', () => {
     expect(getShortTimeRange('08:20 AM', '09:20 AM')).toBe('8:20-9:20');
     expect(getShortTimeRange('08:30 AM', '10:30 AM')).toBe('8:30-10:30');
     expect(getShortTimeRange('08:50 AM', '09:50 AM')).toBe('8:50-9:50');
+    expect(getShortTimeRange('08:30 AM', '10:30 AM', '12h')).toBe('8:30 AM-10:30 AM');
+    expect(getShortTimeRange('01:00 PM', '03:30 PM', '12h')).toBe('1:00 PM-3:30 PM');
+    expect(getShortTimeRange('11:30 PM', '12:30 AM', '12h')).toBe('11:30 PM-12:30 AM');
+    expect(formatHourSlot(8, 9, '12h')).toBe('8-9 AM');
+    expect(formatHourSlot(12, 13, '12h')).toBe('12-1 PM');
+    expect(formatHourSlot(23, 24, '12h')).toBe('11 PM-12 AM');
   });
 
   it('builds stable highlight keys', () => {

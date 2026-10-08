@@ -2,6 +2,7 @@ import type { Dispatch, SetStateAction } from 'react';
 
 export type LanguageCode = 'ms' | 'en' | 'zh' | 'ta';
 export type ThemeName = 'navy' | 'oled' | 'emerald' | 'light';
+export type TimeFormat = '12h' | '24h';
 
 export interface ApiErrorResponse {
   success: false;
@@ -100,6 +101,8 @@ export interface AuthContextValue {
   loading: boolean;
   error: string | null;
   isOffline: boolean;
+  timeFormat: TimeFormat;
+  setTimeFormat: (format: TimeFormat) => void;
   login: (userId: string, password: string, isDemo?: boolean, captchaToken?: string) => Promise<boolean>;
   logout: () => void;
   refreshTimetable: () => Promise<void>;

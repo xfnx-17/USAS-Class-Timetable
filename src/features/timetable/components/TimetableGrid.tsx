@@ -82,7 +82,7 @@ type TimetableGridProps = {
 };
 
 export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }: TimetableGridProps) {
-  const { timetableData, session, refreshTimetable, loading } = useAuth();
+  const { timetableData, session, refreshTimetable, loading, timeFormat } = useAuth();
   const { lang, t } = useLanguage();
   const { theme } = useTheme();
   
@@ -385,7 +385,7 @@ export default function TimetableGrid({ attendanceRefreshToken = 0, onOpenExam }
                                 </span>
                                 <div className={`flex items-center gap-1 text-[9.5px] leading-none ${isLight ? 'text-slate-500 font-semibold' : 'text-white/45'}`}>
                                   <Clock className={`w-3 h-3 flex-shrink-0 self-center ${isLight ? 'text-amber-600' : 'text-amber-400/70'}`} />
-                                  <span className="inline-flex items-center leading-none self-center">{getShortTimeRange(course.start_time, course.end_time)}</span>
+                                  <span className="inline-flex items-center leading-none self-center">{getShortTimeRange(course.start_time, course.end_time, timeFormat)}</span>
                                 </div>
                               </div>
                               <span className={`px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase shrink-0 whitespace-nowrap ${cardColor.badge}`}>

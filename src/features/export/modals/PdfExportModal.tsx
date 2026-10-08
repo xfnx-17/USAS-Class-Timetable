@@ -7,7 +7,7 @@ import { generateTimetablePdf, generateElementPng, generateLockscreenImage } fro
 import { extractDayName, formatDayDisplay, sortDayLabels } from '@/shared/lib/dayFormat';
 import { buildCourseColorMap, getCourseColorSlot } from '@/shared/lib/courseColors';
 import { getOwnRecordValue } from '@/shared/lib/security';
-import { getShortTimeRange } from '@/shared/lib/timetableTime';
+import { formatTimeFromMinutes, getShortTimeRange } from '@/shared/lib/timetableTime';
 import { buildWallpaperGridSlots, getWallpaperAxisPosition } from '@/features/export/lib/wallpaperGrid';
 import type { TimetableItem } from '@/shared/types/usas';
 import {
@@ -268,35 +268,15 @@ const parseTimeToMinutes = (timeStr?: string) => {
   return normalizedHour * 60 + minute;
 };
 
-const formatAmPmTime = (timeStr?: string) => {
-  if (!timeStr) return '';
-  const raw = String(timeStr).trim();
-  const match = raw.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-  if (!match) return timeStr;
-
-  const hour = parseInt(match[1], 10);
-  const min = parseInt(match[2], 10);
-  const ampm = match[3].toLowerCase();
-
-  const minStr = `:${String(min).padStart(2, '0')}`;
-  return `${hour}${minStr}${ampm}`;
-};
-
-const formatDurationRange = (startTime?: string, endTime?: string) => {
+const formatDurationRange = (startTime?: string, endTime?: string, timeFormat: '12h' | '24h' = '24h') => {
   if (!startTime && !endTime) return '-';
-  const start = formatAmPmTime(startTime);
-  const end = formatAmPmTime(endTime);
-  if (!start) return end;
-  if (!end) return start;
-  return `${start} - ${end}`;
+  return getShortTimeRange(startTime, endTime, timeFormat).replace('-', ' - ');
 };
 
-const formatWallpaperSlotLabel = (startMinutes: number, endMinutes: number) => {
-  const format = (minutes: number) => {
-    const hour = Math.floor(minutes / 60);
-    const minute = minutes % 60;
-    return minute === 0 ? String(hour) : `${hour}:${String(minute).padStart(2, '0')}`;
-  };
+const formatWallpaperSlotLabel = (startMinutes: number, endMinutes: number, timeFormat: '12h' | '24h') => {
+  const format = (minutes: number) => timeFormat === '24h' && minutes % 60 === 0
+    ? String(Math.floor(minutes / 60))
+    : formatTimeFromMinutes(minutes, timeFormat);
   if (endMinutes - startMinutes <= 30) return format(startMinutes);
   const start = format(startMinutes);
   const end = format(Math.min(24 * 60, endMinutes));
@@ -313,7 +293,7 @@ const formatShortDurationLabel = (startTime?: string, endTime?: string) => {
 
 export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps) {
   const modalRef = useModalA11y(isOpen, onClose);
-  const { timetableData, session } = useAuth();
+  const { timetableData, session, timeFormat } = useAuth();
   const { lang, t } = useLanguage();
   const { theme } = useTheme();
 
@@ -344,6 +324,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
   const [themeDropdownOpen, setThemeDropdownOpen] = useState(false);
   const [wallpaperBackground, setWallpaperBackground] = useState('');
   const [wallpaperBackgroundBlurred, setWallpaperBackgroundBlurred] = useState('');
+  const [useNativeGlassBlur, setUseNativeGlassBlur] = useState(false);
   const [wallpaperBackgroundName, setWallpaperBackgroundName] = useState('');
   const [wallpaperBackgroundError, setWallpaperBackgroundError] = useState('');
   const wallpaperBackgroundInputRef = useRef<HTMLInputElement>(null);
@@ -371,6 +352,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
     let blurredCanvas: HTMLCanvasElement | null = null;
     let blurredUrl = '';
     let retainedUrls = false;
+    let supportsCanvasBlur = false;
     try {
       const image = new Image();
       image.src = objectUrl;
@@ -379,6 +361,17 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
       const blurScale = Math.min(1, 1600 / maxDimension);
       const blurWidth = Math.max(1, Math.round(image.naturalWidth * blurScale));
       const blurHeight = Math.max(1, Math.round(image.naturalHeight * blurScale));
+      const blurProbe = document.createElement('canvas');
+      blurProbe.width = blurProbe.height = 5;
+      const probeContext = blurProbe.getContext('2d');
+      if (probeContext) {
+        probeContext.filter = 'blur(1px)';
+        probeContext.fillStyle = '#000';
+        probeContext.fillRect(2, 2, 1, 1);
+        supportsCanvasBlur = probeContext.getImageData(1, 2, 1, 1).data[3] > 0;
+      }
+      blurProbe.width = blurProbe.height = 0;
+
       blurredCanvas = document.createElement('canvas');
       blurredCanvas.width = blurWidth;
       blurredCanvas.height = blurHeight;
@@ -397,6 +390,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
       setWallpaperBackground(objectUrl);
       setWallpaperBackgroundBlurred(blurredUrl);
       setWallpaperBackgroundName(file.name);
+      setUseNativeGlassBlur(!supportsCanvasBlur);
     } catch {
       setWallpaperBackgroundError('wallpaperImageLoadFailed');
       if (!retainedUrls) {
@@ -682,8 +676,8 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
   ) => {
     const code = course.course_id || course.kod_kursus || '';
     const loc = course.location || '';
-    const duration = formatDurationRange(course.start_time || course.jadual, course.end_time);
-    const timeRange = getShortTimeRange(course.start_time || course.jadual, course.end_time);
+    const duration = formatDurationRange(course.start_time || course.jadual, course.end_time, timeFormat);
+    const timeRange = getShortTimeRange(course.start_time || course.jadual, course.end_time, timeFormat);
     const [startTimeLabel, endTimeLabel] = timeRange.split('-');
     const shortDuration = formatShortDurationLabel(course.start_time || course.jadual, course.end_time);
     const timeInfoFontSize = Math.max(3.6, Math.min(5, (cellWidthPx - 8) / (Math.max(startTimeLabel.length, endTimeLabel?.length || 0) * 0.58)));
@@ -1282,7 +1276,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                               </td>
                             )}
                             <td className={`border-r border-b border-slate-300 ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50'} px-2 py-1 text-center align-middle font-medium`}>
-                              <span>{formatDurationRange(c.start_time || c.jadual, c.end_time)}</span>
+                              <span>{formatDurationRange(c.start_time || c.jadual, c.end_time, timeFormat)}</span>
                             </td>
                             <td className={`border-r border-b border-slate-300 ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50'} px-2.5 py-1 text-left align-middle font-bold text-blue-900`}>
                               <span>{c.course_id || c.kod_kursus}</span>
@@ -1392,7 +1386,10 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                 data-wallpaper-glass-overlay
                                 aria-hidden="true"
                                 className="absolute inset-0 z-[1]"
-                                style={{ backgroundColor: lockscreenConfig.isLight ? 'rgba(255,255,255,0.42)' : 'rgba(0,0,0,0.42)' }}
+                                style={{
+                                  backgroundColor: lockscreenConfig.isLight ? 'rgba(255,255,255,0.42)' : 'rgba(0,0,0,0.42)',
+                                  ...(useNativeGlassBlur ? { WebkitBackdropFilter: 'blur(16px)', backdropFilter: 'blur(16px)' } : {}),
+                                }}
                               />
                             </>
                           )}
@@ -1440,7 +1437,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                           >
                                             <div className="w-full h-full flex items-center justify-center text-center leading-none" style={{ height: `${headerHeightPx}px` }}>
                                               {(() => {
-                                                const label = formatWallpaperSlotLabel(slot.start, slot.end);
+                                                const label = formatWallpaperSlotLabel(slot.start, slot.end, timeFormat);
                                                 const fontSize = Math.max(3.5, Math.min(8, widthPerSlot() / (label.length * 0.9)));
                                                 return <span data-export-time-label className="leading-none whitespace-nowrap" style={{ fontSize: `${fontSize}px` }}>{label}</span>;
                                               })()}

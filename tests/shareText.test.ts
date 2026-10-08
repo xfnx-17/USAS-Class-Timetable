@@ -28,4 +28,9 @@ describe('share text builders', () => {
     expect(text).toContain('AI210042 X');
     expect(text).not.toContain('\nINJECT');
   });
+
+  it('uses the selected time format in shared schedules', () => {
+    expect(buildFullShareText(timetable, '', '', '12h')).toContain('8:00 AM - 10:00 AM');
+    expect(buildCompactShareText(timetable, '', '12h')).toContain('8:00 AM-10:00 AM');
+  });
 });
