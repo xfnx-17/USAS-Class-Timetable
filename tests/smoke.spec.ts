@@ -313,6 +313,13 @@ test('formal PDF export downloads a valid one-page file', async ({ page }) => {
 
 test('wallpaper export converts OKLab gradient colors for PNG rendering', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (Linux; Android 13; Mi 11 Lite) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+    });
+    Object.defineProperty(navigator, 'canShare', { configurable: true, value: () => false });
+  });
   await page.goto('/');
 
   await page.getByRole('button', { name: /log in|log masuk/i }).first().click();
@@ -416,6 +423,9 @@ test('wallpaper export converts OKLab gradient colors for PNG rendering', async 
   await expect(page.locator('[data-export-course-time="start"]').first()).toBeVisible();
   await expect(page.locator('[data-export-course-time="end"]').first()).toBeVisible();
   await expect(page.locator('[data-export-course-duration]').first()).toBeVisible();
+  await page.locator('[role="status"]').evaluateAll((elements) => elements.forEach((element) => {
+    (element as HTMLElement).style.pointerEvents = 'none';
+  }));
 
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: /^download$|^muat turun$/i }).click();
@@ -471,8 +481,8 @@ test('wallpaper export converts OKLab gradient colors for PNG rendering', async 
     const previewScaleY = previewImage.canvas.height / bounds.previewHeight;
     const exportScaleX = exportImage.canvas.width / (bounds.rootWidth + 2);
     const exportScaleY = exportImage.canvas.height / (bounds.rootHeight + 2);
-    return ['time', 'course'].map((key) => {
-      const box = bounds[key as 'time' | 'course'];
+    return ['time', 'course', 'start', 'end'].map((key) => {
+      const box = bounds[key as 'time' | 'course' | 'start' | 'end'];
       const previewCenter = centerY(previewImage.context, box, previewScaleX, previewScaleY);
       const exportCenter = centerY(exportImage.context, box, exportScaleX, exportScaleY);
       return { key, delta: exportCenter - previewCenter };

@@ -138,6 +138,7 @@ async function captureElement(
 
       // Compensate for html2canvas's font-baseline offset. Wallpaper only needs it on time labels.
       const isApple = typeof navigator !== 'undefined' && (/Mac|iPod|iPhone|iPad/.test(navigator.platform) || (/MacIntel/.test(navigator.platform) && navigator.maxTouchPoints > 1) || /iPhone|iPad|iPod/i.test(navigator.userAgent));
+      const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
 
       if (isApple && isWallpaper) {
         clonedRoot.querySelectorAll('[data-export-time-label], [data-export-course-code]').forEach((node) => {
@@ -163,7 +164,7 @@ async function captureElement(
             }
           }
           const fontSize = parseFloat(view.getComputedStyle(el).fontSize) || 12;
-          const shift = Math.max(1, Math.round(fontSize * (isWallpaper ? (isApple ? 0.55 : 0.62) : 0.36)));
+          const shift = Math.max(1, Math.round(fontSize * (isWallpaper ? (isAndroid ? 0.25 : isApple ? 0.55 : 0.62) : 0.36)));
           el.style.transform = `translateY(-${shift}px)`;
         });
       }
