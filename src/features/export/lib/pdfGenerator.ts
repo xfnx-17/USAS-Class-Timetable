@@ -293,10 +293,10 @@ export async function generateElementPng(
   canvas.height = 0;
   if (!blob) throw new Error('Could not encode exported image.');
   
-  // Mobile in-app browsers (Google, FB) block <a> downloads. Use native iOS/Android Share Sheet instead.
-  const isMobile = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  // iOS browsers need the share sheet; Android Chrome should save through its Downloads flow.
+  const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent);
   
-  if (isMobile && navigator.share && navigator.canShare) {
+  if (isIOS && navigator.share && navigator.canShare) {
     try {
       const file = new File([blob], safeFileName, { type: 'image/png' });
       if (navigator.canShare({ files: [file] })) {

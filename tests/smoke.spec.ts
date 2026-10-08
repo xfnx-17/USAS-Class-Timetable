@@ -261,6 +261,16 @@ test('class reminder chime does not replay after a page refresh', async ({ page,
 
 test('png export flow downloads an image file', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (Linux; Android 13; SM-X200) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    });
+    Object.defineProperty(navigator, 'canShare', { configurable: true, value: () => true });
+    Object.defineProperty(navigator, 'share', { configurable: true, value: async () => {
+      (window as Window & { __shareCalled?: boolean }).__shareCalled = true;
+    } });
+  });
   await page.goto('/');
 
   await page.getByRole('button', { name: /log in|log masuk/i }).first().click();
@@ -278,6 +288,7 @@ test('png export flow downloads an image file', async ({ page }) => {
   await expect.poll(async () => Number((await progress.textContent())?.replace('%', '') || 0))
     .toBeGreaterThan(15);
   const download = await downloadPromise;
+  expect(await page.evaluate(() => (window as Window & { __shareCalled?: boolean }).__shareCalled)).toBeUndefined();
 
   expect(download.suggestedFilename().toLowerCase()).toContain('.png');
   const stream = await download.createReadStream();
