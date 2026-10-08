@@ -156,7 +156,7 @@ async function captureElement(
       // this separate from header period labels so their baseline stays fixed.
       if (isAndroid && isWallpaper) {
         clonedRoot.querySelectorAll<HTMLElement>('[data-export-course-time]').forEach((el) => {
-          el.style.transform = 'translateY(1px)';
+          el.style.transform = 'translateY(1.5px)';
         });
       }
 
@@ -172,7 +172,7 @@ async function captureElement(
             }
           }
           const fontSize = parseFloat(view.getComputedStyle(el).fontSize) || 12;
-          const shift = Math.max(1, Math.round(fontSize * (isWallpaper ? (isAndroid ? 0.25 : isApple ? 0.55 : 0.62) : 0.36))) + (isAndroid && isWallpaper ? 1 : 0);
+          const shift = Math.max(1, Math.round(fontSize * (isWallpaper ? (isAndroid ? 0.25 : isApple ? 0.55 : 0.62) : 0.36))) + (isAndroid && isWallpaper ? 1.5 : 0);
           el.style.transform = `translateY(-${shift}px)`;
         });
       }
