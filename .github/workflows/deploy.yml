@@ -32,6 +32,7 @@ jobs:
       - name: Build
         env:
           VITE_TURNSTILE_SITE_KEY: ${{ secrets.VITE_TURNSTILE_SITE_KEY }}
+          VITE_GIT_COMMIT: ${{ github.sha }}
         run: npm run build
 
       # Deploy is skipped automatically until the Cloudflare secrets are added,

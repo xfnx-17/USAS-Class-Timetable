@@ -1063,6 +1063,20 @@ export default function LandingPage({ onNavigateLogin, onGoToLogin }: LandingPag
             <span className="text-amber-500">STEM USAS</span>
             <span className="opacity-30 text-[8px]">-</span>
             <span className={isLight ? 'text-slate-600' : 'text-slate-400'}>zis3c</span>
+            <span className="opacity-30 text-[8px]">-</span>
+            {import.meta.env.VITE_GIT_COMMIT ? (
+              <a
+                href={`https://github.com/zis3c/USAS-Class-Timetable/commit/${import.meta.env.VITE_GIT_COMMIT}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={`Build ${import.meta.env.VITE_GIT_COMMIT}`}
+                className="text-slate-500 hover:text-amber-500"
+              >
+                build {import.meta.env.VITE_GIT_COMMIT.slice(0, 7)}
+              </a>
+            ) : (
+              <span className="text-slate-500">build local</span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <a

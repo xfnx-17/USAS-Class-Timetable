@@ -364,6 +364,7 @@ test('wallpaper export converts OKLab gradient colors for PNG rendering', async 
       duration: Number(header.getAttribute('data-export-time-duration')),
       availableWidth: label.parentElement!.clientWidth,
       labelWidth: label.scrollWidth,
+      fontSize: getComputedStyle(label).fontSize,
     };
   }));
   expect(headerColumns.length).toBeGreaterThan(0);
@@ -374,6 +375,7 @@ test('wallpaper export converts OKLab gradient colors for PNG rendering', async 
   const headerWidths = headerColumns.map(({ width }) => width);
   expect(Math.max(...headerWidths) - Math.min(...headerWidths)).toBeLessThan(1);
   expect(headerColumns.every(({ availableWidth, labelWidth }) => availableWidth >= labelWidth), JSON.stringify(headerColumns)).toBe(true);
+  expect(new Set(headerColumns.map(({ fontSize }) => fontSize)).size).toBe(1);
   const gridPosition = await page.evaluate(() => {
     const root = document.querySelector<HTMLElement>('[data-export-root="wallpaper-export-root"]')!;
     const grid = document.querySelector<HTMLElement>('[data-wallpaper-grid]')!;
