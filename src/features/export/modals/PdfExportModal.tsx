@@ -1535,7 +1535,6 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                               className="text-[10px] break-words whitespace-pre-wrap"
                                               style={brightenDayLabel ? {
                                                 color: lockscreenConfig.isLight ? '#334155' : exportTheme === 'warm' ? '#FEF3C7' : exportTheme === 'emerald' ? '#ECFDF5' : '#FFFFFF',
-                                                textShadow: lockscreenConfig.isLight ? '0 1px 3px rgba(255,255,255,0.9)' : '0 1px 3px rgba(0,0,0,0.9)',
                                               } : undefined}
                                             >
                                               {extractDayName(d) ? t(`shortDays.${extractDayName(d)}`) : formatDayDisplay(d, t, { short: true })}

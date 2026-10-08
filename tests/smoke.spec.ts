@@ -144,7 +144,7 @@ test('wallpaper day labels brighten only when custom background behind them is b
 
   await backgroundInput.setInputFiles({ name: 'bright.svg', mimeType: 'image/svg+xml', buffer: svg('#ffffff') });
   await expect.poll(() => dayLabel.evaluate((label) => (label as HTMLElement).style.color)).toBe('rgb(255, 255, 255)');
-  await expect.poll(() => dayLabel.evaluate((label) => (label as HTMLElement).style.textShadow)).not.toBe('');
+  await expect.poll(() => dayLabel.evaluate((label) => (label as HTMLElement).style.textShadow)).toBe('');
 
   await backgroundInput.setInputFiles({ name: 'dark.svg', mimeType: 'image/svg+xml', buffer: svg('#050505') });
   await expect.poll(() => dayLabel.evaluate((label) => (label as HTMLElement).style.color)).toBe('');
