@@ -1422,8 +1422,8 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                               const end = parseTimeToMinutes(course.end_time || '');
                               return [{ start, end: end != null && end > start ? end : start + 60 }];
                             }), maxColumns);
-                            const slotLabels = slots.map((slot) => formatWallpaperSlotLabel(slot.start, slot.end, timeFormat));
-                            const maxSlotLabelLength = Math.max(...slotLabels.map((label) => label.length));
+                            const slotLabels = slots.map((slot) => ({ slot, label: formatWallpaperSlotLabel(slot.start, slot.end, timeFormat) }));
+                            const maxSlotLabelLength = Math.max(...slotLabels.map(({ label }) => label.length));
                             const axisStart = slots[0].start;
                             const axisEnd = slots[slots.length - 1].end;
                             const axisDuration = slots.length;
@@ -1443,7 +1443,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                             <span className="leading-none">&nbsp;</span>
                                           </div>
                                         </th>
-                                        {slots.map((slot, index) => (
+                                        {slotLabels.map(({ slot, label }) => (
                                           <th
                                             key={slot.start}
                                             data-export-time-duration={slot.end - slot.start}
@@ -1451,7 +1451,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                             style={{ height: `${headerHeightPx}px`, width: `${widthPerSlot()}px` }}
                                           >
                                             <div className="w-full h-full flex items-center justify-center text-center leading-none" style={{ height: `${headerHeightPx}px` }}>
-                                              <span data-export-time-label className="leading-none whitespace-nowrap" style={{ fontSize: `${periodHeaderFontSize}px` }}>{slotLabels[index]}</span>
+                                              <span data-export-time-label className="leading-none whitespace-nowrap" style={{ fontSize: `${periodHeaderFontSize}px` }}>{label}</span>
                                             </div>
                                           </th>
                                         ))}
