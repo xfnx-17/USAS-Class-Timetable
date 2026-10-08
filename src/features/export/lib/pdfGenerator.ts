@@ -185,7 +185,7 @@ async function captureElement(
 
       if (isApple && isWallpaper) {
         clonedRoot.querySelectorAll<HTMLElement>('[data-export-course-time]').forEach((el) => {
-          el.style.transform = 'translateY(1.5px)';
+          el.style.transform = 'translateY(2px)';
         });
       }
 
