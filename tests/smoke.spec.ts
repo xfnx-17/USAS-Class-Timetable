@@ -130,6 +130,11 @@ test('wallpaper position controls fit inside the export toolbar on laptop', asyn
 test('custom lockscreen background stays sharp outside the blurred glass timetable and exports to PNG', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+    });
+    Object.defineProperty(navigator, 'platform', { configurable: true, value: 'iPhone' });
     Object.defineProperty(CanvasRenderingContext2D.prototype, 'filter', {
       configurable: true,
       get: () => 'none',

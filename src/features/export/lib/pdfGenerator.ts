@@ -103,7 +103,8 @@ async function captureElement(
       }
       if (nativeBlurLayer && wallpaperImage?.naturalWidth && wallpaperImage.naturalHeight) {
         const blurCanvas = clonedDoc.createElement('canvas');
-        const downscale = Math.min(1, 96 / Math.max(wallpaperImage.naturalWidth, wallpaperImage.naturalHeight));
+        // ponytail: cap fallback blur at 1024px (~4MB RGBA); raise only if mobile exports still look soft.
+        const downscale = Math.min(1, 1024 / Math.max(wallpaperImage.naturalWidth, wallpaperImage.naturalHeight));
         blurCanvas.width = Math.max(1, Math.round(wallpaperImage.naturalWidth * downscale));
         blurCanvas.height = Math.max(1, Math.round(wallpaperImage.naturalHeight * downscale));
         const blurContext = blurCanvas.getContext('2d');
@@ -175,17 +176,10 @@ async function captureElement(
         });
       }
 
-      // Android Chrome places the block start/end labels slightly high. Keep
-      // this separate from header period labels so their baseline stays fixed.
-      if (isAndroid && isWallpaper) {
+      if (isWallpaper) {
+        const courseTimeOffset = isAndroid || isApple ? 2 : 1;
         clonedRoot.querySelectorAll<HTMLElement>('[data-export-course-time]').forEach((el) => {
-          el.style.transform = 'translateY(2px)';
-        });
-      }
-
-      if (isApple && isWallpaper) {
-        clonedRoot.querySelectorAll<HTMLElement>('[data-export-course-time]').forEach((el) => {
-          el.style.transform = 'translateY(2px)';
+          el.style.transform = `translateY(${courseTimeOffset}px)`;
         });
       }
 
@@ -201,7 +195,7 @@ async function captureElement(
             }
           }
           const fontSize = parseFloat(view.getComputedStyle(el).fontSize) || 12;
-          const shift = Math.max(1, Math.round(fontSize * (isWallpaper ? (isAndroid ? 0.25 : isApple ? 0.55 : 0.62) : 0.36))) + (isAndroid && isWallpaper ? 2 : 0);
+          const shift = Math.max(1, Math.round(fontSize * (isWallpaper ? (isAndroid ? 0.25 : isApple ? 0.55 : 0.62) : 0.36))) + (isAndroid && isWallpaper ? 2.5 : 0);
           el.style.transform = `translateY(-${shift}px)`;
         });
       }
