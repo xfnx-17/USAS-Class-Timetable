@@ -13,6 +13,7 @@ import type { TimetableItem } from '@/shared/types/usas';
 import {
   X, Download, Smartphone, RotateCw, ChevronDown, Plus, Minus, FileBadge, ImagePlus
 } from 'lucide-react';
+import MinimalWeekCard from '../components/MinimalWeekCard';
 
 type PdfExportModalProps = {
   isOpen: boolean;
@@ -23,6 +24,7 @@ type ExportMode = 'FORMAL_A4' | 'WALLPAPER';
 type ExportFileType = 'PDF' | 'PNG';
 type WallpaperPreset = 'phone' | 'tablet' | 'desktop' | 'square';
 type ContentDetail = 'CODE' | 'DETAILS';
+type WallpaperDesign = 'GRID' | 'MINIMAL' | 'GLASS';
 type ExportTheme = 'light' | 'dark' | 'emerald' | 'oled' | 'warm';
 type WallpaperPresetStyle = {
   tableFontSize: string;
@@ -310,6 +312,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
 
   // Content Detail Customizer: 'CODE' | 'DETAILS'
   const [contentDetail, setContentDetail] = useState<ContentDetail>('DETAILS');
+  const [wallpaperDesign, setWallpaperDesign] = useState<WallpaperDesign>('GRID');
 
   const [ratioDropdownOpen, setRatioDropdownOpen] = useState(false);
   const [detailDropdownOpen, setDetailDropdownOpen] = useState(false);
@@ -1381,6 +1384,26 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
           {/* ── MODE 2: DEVICE LOCK SCREEN WALLPAPER (Custom Presets & Content Controls) ── */}
           {exportMode === 'WALLPAPER' && (
             <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className={`text-[10px] font-bold uppercase tracking-wider ${isLight ? 'text-amber-800' : 'text-amber-400/90'}`}>{t('wallpaperDesign')}:</span>
+                <div role="group" aria-label={t('wallpaperDesign')} className={`flex items-center gap-0.5 border rounded-lg p-0.5 ${isLight ? 'bg-slate-100/80 border-slate-200/80' : 'bg-white/[0.04] border-white/10'}`}>
+                  {([['GRID', t('wallpaperDesignGrid')], ['MINIMAL', t('wallpaperDesignMinimal')], ['GLASS', t('wallpaperDesignGlass')]] as const).map(([id, label]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      aria-pressed={wallpaperDesign === id}
+                      onClick={() => setWallpaperDesign(id)}
+                      className={`px-3 py-1 rounded-md text-[11px] font-semibold transition-colors ${
+                        wallpaperDesign === id
+                          ? (isLight ? 'bg-white text-slate-800 shadow-sm' : 'bg-amber-400/20 text-amber-300')
+                          : (isLight ? 'text-slate-500 hover:text-slate-800' : 'text-white/50 hover:text-white/80')
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div
                 data-lenis-prevent
                 className={`flex py-3 rounded-xl border overflow-x-auto overflow-y-hidden relative ${isLight ? 'border-slate-200' : 'border-white/[0.04]'
@@ -1418,6 +1441,15 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                           color: lockscreenConfig.textColor
                         }}
                       >
+                        {wallpaperDesign === 'GLASS' && !wallpaperBackground && (
+                          // Glass needs something colourful behind it to read as glass.
+                          <div
+                            data-wallpaper-glass-backdrop
+                            aria-hidden="true"
+                            className="absolute inset-0 z-0"
+                            style={{ backgroundImage: 'linear-gradient(160deg, #0F2A6B 0%, #3B2A8F 38%, #8E2C82 70%, #D2546B 100%)' }}
+                          />
+                        )}
                         {wallpaperBackground && (
                           <img
                             data-wallpaper-background-layer
@@ -1427,6 +1459,32 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                             className="absolute inset-0 z-0 h-full w-full object-cover"
                           />
                         )}
+                        {wallpaperDesign === 'MINIMAL' || wallpaperDesign === 'GLASS' ? (
+                          <>
+                            {/* Clock and photo stay visible above a compact week card */}
+                            <div className="relative z-10 flex-1 min-h-0" />
+                            <MinimalWeekCard
+                              courses={allCourses}
+                              courseColorMap={courseColorMap}
+                              isLight={lockscreenConfig.isLight}
+                              showTimes={contentDetail === 'DETAILS'}
+                              timeFormat={timeFormat}
+                              title={t('minimalWeekTitle')}
+                              t={t}
+                              glass={wallpaperDesign === 'GLASS'}
+                              width={w - 2 * (wallpaperPreset === 'phone' ? 12 : wallpaperPreset === 'square' ? 14 : 16)}
+                              background={wallpaperBackgroundBlurred ? {
+                                url: wallpaperBackgroundBlurred,
+                                nativeBlur: useNativeGlassBlur,
+                                rootWidth: w,
+                                rootHeight: h,
+                                left: (wallpaperPreset === 'phone' ? 12 : wallpaperPreset === 'square' ? 14 : 16) + 1,
+                                bottom: (wallpaperPreset === 'phone' ? 12 : wallpaperPreset === 'square' ? 14 : 16) + currentSpacers.bottom + 1,
+                              } : undefined}
+                            />
+                          </>
+                        ) : (
+                        <>
                         {/* Top Reserved Clock Area */}
                         <div style={{ height: `${currentSpacers.top}px` }} className="relative z-10 flex-shrink-0" />
 
@@ -1583,6 +1641,8 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                             );
                           })()}
                         </div>
+                        </>
+                        )}
 
                         <div style={{ height: `${currentSpacers.bottom}px` }} className="flex-shrink-0" />
                       </div>

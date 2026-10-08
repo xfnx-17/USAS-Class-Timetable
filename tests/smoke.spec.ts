@@ -671,3 +671,63 @@ test('unknown route shows branded 404 screen', async ({ page }) => {
   await expect(page.getByText(/page not found|halaman tidak dijumpai/i)).toBeVisible();
   await expect(page.getByText(/usas class timetable/i)).toBeVisible();
 });
+
+test('minimal wallpaper design shows a week card and exports to PNG', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'canShare', { configurable: true, value: () => false });
+  });
+  await page.goto('/login');
+  await page.getByRole('button', { name: /log masuk tanpa akaun|demo/i }).click();
+  await page.getByRole('button', { name: /open tools and export/i }).click();
+  await page.getByRole('button', { name: /eksport pdf & wallpaper|export pdf & wallpaper/i }).click();
+  await page.getByRole('button', { name: /wallpaper lockscreen/i }).click();
+
+  await page.getByRole('button', { name: /^(minimal|minimalis)$/i }).click();
+  const card = page.locator('[data-wallpaper-minimal-card]');
+  await expect(card).toBeVisible();
+  await expect(page.locator('[data-wallpaper-grid]')).toHaveCount(0);
+  await expect(card.locator('[data-export-course-color-code]')).toHaveCount(7);
+  // Demo data has no weekend classes, so those days are left out.
+  await expect(card.getByText(/^(sun|ahd|sat|sab)$/i)).toHaveCount(0);
+  // Time and room stay on one line inside each chip.
+  const overflow = await card.locator('[data-minimal-chip-detail]').evaluateAll((lines) =>
+    lines.filter((line) => line.getBoundingClientRect().right > line.parentElement!.getBoundingClientRect().right + 0.5
+      || line.getBoundingClientRect().height > 12).map((line) => line.textContent));
+  expect(overflow).toEqual([]);
+
+  // The card sits at the bottom so the lockscreen clock stays clear.
+  const root = page.locator('[data-export-root="wallpaper-export-root"]');
+  const rootBox = (await root.boundingBox())!;
+  const cardBox = (await card.boundingBox())!;
+  expect(cardBox.y).toBeGreaterThan(rootBox.y + rootBox.height / 2);
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: /^download$|^muat turun$/i }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename().toLowerCase()).toContain('.png');
+});
+
+test('glass wallpaper design renders a frosted card and exports to PNG', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'canShare', { configurable: true, value: () => false });
+  });
+  await page.goto('/login');
+  await page.getByRole('button', { name: /log masuk tanpa akaun|demo/i }).click();
+  await page.getByRole('button', { name: /open tools and export/i }).click();
+  await page.getByRole('button', { name: /eksport pdf & wallpaper|export pdf & wallpaper/i }).click();
+  await page.getByRole('button', { name: /wallpaper lockscreen/i }).click();
+
+  await page.getByRole('button', { name: /^(liquid glass|kaca cecair)$/i }).click();
+  const card = page.locator('[data-wallpaper-minimal-card]');
+  await expect(card).toBeVisible();
+  await expect(card.locator('[data-wallpaper-glass-sheen]')).toHaveCount(1);
+  await expect(page.locator('[data-wallpaper-glass-backdrop]')).toHaveCount(1);
+  await expect(card).toHaveCSS('background-color', 'rgba(255, 255, 255, 0.55)');
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: /^download$|^muat turun$/i }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename().toLowerCase()).toContain('.png');
+});
