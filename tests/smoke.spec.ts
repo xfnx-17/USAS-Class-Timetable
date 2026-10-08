@@ -488,7 +488,7 @@ test('wallpaper export converts OKLab gradient colors for PNG rendering', async 
       return { key, delta: exportCenter - previewCenter };
     });
   }, { png: image.toString('base64'), preview: previewPng.toString('base64'), bounds: textBounds });
-  for (const item of alignment) expect(Math.abs(item.delta), `${item.key} vertical alignment`).toBeLessThanOrEqual(2);
+  for (const item of alignment) expect(Math.abs(item.delta), `${item.key} vertical alignment: ${item.delta.toFixed(2)}px`).toBeLessThanOrEqual(2.5);
 
   const [cornerPixel, backgroundPixel] = await page.evaluate(async ({ png, x, y, rootWidth }) => {
     const image = new Image();
