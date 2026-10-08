@@ -195,7 +195,7 @@ async function captureElement(
             }
           }
           const fontSize = parseFloat(view.getComputedStyle(el).fontSize) || 12;
-          const shift = Math.max(1, Math.round(fontSize * (isWallpaper ? (isAndroid ? 0.25 : isApple ? 0.55 : 0.62) : 0.36))) + (isAndroid && isWallpaper ? 1.5 : 0);
+          const shift = Math.max(1, Math.round(fontSize * (isWallpaper ? (isAndroid ? 0.25 : isApple ? 0.55 : 0.62) : 0.36))) + (isAndroid && isWallpaper ? 0.5 : 0);
           el.style.transform = `translateY(-${shift}px)`;
         });
       }
