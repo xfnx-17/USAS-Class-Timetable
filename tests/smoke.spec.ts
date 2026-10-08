@@ -38,13 +38,13 @@ test('matrix view positions classes accurately to the minute', async ({ page }) 
   await page.getByRole('button', { name: /log masuk tanpa akaun|demo/i }).click();
   await page.getByTitle('Paparan Grid').click();
 
-  const firstHour = page.locator('[data-matrix-time-slot="08:00"]');
-  const halfHourClass = page.locator('[data-matrix-course-code="CSC2103"][data-matrix-course-start="08:30 AM"]');
+  const firstHour = page.locator('[data-matrix-time-slot="20:00"]');
+  const halfHourClass = page.locator('[data-matrix-course-code="KOM6363"][data-matrix-course-start="08:30 PM"]');
   await expect(firstHour).toBeVisible();
   await expect(halfHourClass).toHaveCount(1);
-  await expect(halfHourClass).toHaveAttribute('data-matrix-course-time', '8:30-10:30');
-  await expect(halfHourClass.locator('[data-matrix-course-start-label]')).toHaveText('8:30');
-  await expect(halfHourClass.locator('[data-matrix-course-end-label]')).toHaveText('10:30');
+  await expect(halfHourClass).toHaveAttribute('data-matrix-course-time', '20:30-23:30');
+  await expect(halfHourClass.locator('[data-matrix-course-start-label]')).toHaveText('20:30');
+  await expect(halfHourClass.locator('[data-matrix-course-end-label]')).toHaveText('23:30');
   const timeLabelPositions = await halfHourClass.evaluate((block) => {
     const start = block.querySelector('[data-matrix-course-start-label]')!.getBoundingClientRect();
     const end = block.querySelector('[data-matrix-course-end-label]')!.getBoundingClientRect();
@@ -62,8 +62,8 @@ test('matrix view positions classes accurately to the minute', async ({ page }) 
   expect(classBounds).not.toBeNull();
   expect(classBounds!.x - hourBounds!.x).toBeGreaterThan(hourBounds!.width * 0.4);
   expect(classBounds!.x - hourBounds!.x).toBeLessThan(hourBounds!.width * 0.65);
-  expect(classBounds!.width / hourBounds!.width).toBeGreaterThan(1.8);
-  expect(classBounds!.width / hourBounds!.width).toBeLessThan(2.1);
+  expect(classBounds!.width / hourBounds!.width).toBeGreaterThan(2.8);
+  expect(classBounds!.width / hourBounds!.width).toBeLessThan(3.1);
 });
 
 test('wallpaper controls wrap into two columns at tablet width', async ({ page }) => {
@@ -99,6 +99,8 @@ test('wallpaper position controls fit inside the export toolbar on laptop', asyn
     const container = element.getBoundingClientRect();
     const position = element.lastElementChild!.getBoundingClientRect();
     const firstGroup = element.firstElementChild!.getBoundingClientRect();
+    const themeHeight = element.children[2].querySelector('button')!.getBoundingClientRect().height;
+    const backgroundHeight = element.children[3].querySelector('button')!.getBoundingClientRect().height;
     const selectorWidths = Array.from(element.children).slice(0, 3).map((group) =>
       group.querySelector('button')!.getBoundingClientRect().width,
     );
@@ -111,6 +113,8 @@ test('wallpaper position controls fit inside the export toolbar on laptop', asyn
       containerRight: container.right,
       positionWidth: position.width,
       firstGroupWidth: firstGroup.width,
+      themeHeight,
+      backgroundHeight,
       selectorWidths,
       sliderWidths,
     };
@@ -119,11 +123,12 @@ test('wallpaper position controls fit inside the export toolbar on laptop', asyn
   expect(layout.positionRight).toBeLessThanOrEqual(layout.containerRight + 1);
   expect(Math.max(...layout.selectorWidths)).toBeLessThanOrEqual(231);
   expect(layout.positionWidth).toBeGreaterThan(layout.firstGroupWidth);
+  expect(layout.backgroundHeight).toBe(layout.themeHeight);
   expect(Math.min(...layout.sliderWidths)).toBeGreaterThan(150);
 });
 
 test('custom lockscreen background stays sharp outside the blurred glass timetable and exports to PNG', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.addInitScript(() => {
     Object.defineProperty(CanvasRenderingContext2D.prototype, 'filter', {
       configurable: true,
@@ -145,7 +150,7 @@ test('custom lockscreen background stays sharp outside the blurred glass timetab
   await expect(background).toBeVisible();
   await expect(blurredBackground).toBeVisible();
   await expect(glassOverlay).toBeVisible();
-  await expect.poll(() => glassOverlay.evaluate((element) => getComputedStyle(element).backdropFilter))
+  await expect.poll(() => blurredBackground.evaluate((element) => getComputedStyle(element).filter))
     .toBe('blur(16px)');
   await expect.poll(() => background.getAttribute('src')).toMatch(/^blob:/);
   await expect.poll(() => blurredBackground.evaluate((element) => getComputedStyle(element).backgroundImage))
@@ -195,12 +200,18 @@ test('time format preference persists for the signed-in user', async ({ page }) 
 
   await page.reload();
   await expect(page.getByRole('button', { name: /time format 12h/i })).toBeVisible();
+  await page.getByRole('button', { name: /open tools and export/i }).click();
+  await page.getByRole('button', { name: /eksport pdf & wallpaper|export pdf & wallpaper/i }).click();
+  await page.getByRole('button', { name: /wallpaper lockscreen/i }).click();
+  const wallpaperTimes = page.locator('[data-export-time-label], [data-export-course-time]');
+  await expect(wallpaperTimes.first()).toBeVisible();
+  expect((await wallpaperTimes.allTextContents()).join(' ')).not.toMatch(/\b(AM|PM)\b/i);
 });
 
 test('class reminder chime does not replay after a page refresh', async ({ page, context }) => {
   const nextWednesday = new Date();
   nextWednesday.setDate(nextWednesday.getDate() + ((3 - nextWednesday.getDay() + 7) % 7));
-  nextWednesday.setHours(8, 20, 0, 0);
+  nextWednesday.setHours(13, 50, 0, 0);
   await page.clock.install({ time: nextWednesday });
   await context.grantPermissions(['notifications']);
   await page.addInitScript(() => {
@@ -320,7 +331,7 @@ test('wallpaper export converts OKLab gradient colors for PNG rendering', async 
     colors.add(color);
     courseColorSets.set(course, colors);
   }
-  expect(courseColorSets.size, JSON.stringify([...courseColorSets.keys()])).toBe(7);
+  expect(courseColorSets.size, JSON.stringify([...courseColorSets.keys()])).toBe(5);
   expect([...courseColorSets.values()].every((colors) => colors.size === 1)).toBe(true);
   expect(new Set([...courseColorSets.values()].map((colors) => [...colors][0])).size).toBe(courseColorSets.size);
   const headerColumns = await page.locator('[data-export-time-label]').evaluateAll((labels) => labels.map((label) => {
@@ -334,10 +345,10 @@ test('wallpaper export converts OKLab gradient colors for PNG rendering', async 
     };
   }));
   expect(headerColumns.length).toBeGreaterThan(0);
-  expect(headerColumns.length).toBe(8);
-  expect(headerColumns.reduce((total, { duration }) => total + duration, 0)).toBe(15 * 60);
+  expect(headerColumns.length).toBe(7);
+  expect(headerColumns.reduce((total, { duration }) => total + duration, 0)).toBe(10 * 60);
   expect(headerColumns.some(({ duration }) => duration < 120)).toBe(true);
-  expect(headerColumns.at(-1)?.label).toContain('23');
+  expect(headerColumns.at(-1)?.label).toContain('24');
   const headerWidths = headerColumns.map(({ width }) => width);
   expect(Math.max(...headerWidths) - Math.min(...headerWidths)).toBeLessThan(1);
   expect(headerColumns.every(({ availableWidth, labelWidth }) => availableWidth >= labelWidth), JSON.stringify(headerColumns)).toBe(true);

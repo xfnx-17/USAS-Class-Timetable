@@ -40,6 +40,25 @@ describe('buildWallpaperGridSlots', () => {
       { start: 16 * 60, end: 18 * 60 },
     ]);
   });
+
+  it('gives a one-hour class its own column inside a grouped period', () => {
+    expect(buildWallpaperGridSlots([
+      { start: 10 * 60, end: 12 * 60 },
+      { start: 11 * 60, end: 13 * 60 },
+      { start: 14 * 60, end: 15 * 60 },
+      { start: 16 * 60, end: 17 * 60 },
+      { start: 20 * 60, end: 23 * 60 + 30 },
+      { start: 14 * 60, end: 17 * 60 },
+    ], 8)).toEqual([
+      { start: 10 * 60, end: 12 * 60 },
+      { start: 12 * 60, end: 13 * 60 },
+      { start: 14 * 60, end: 15 * 60 },
+      { start: 15 * 60, end: 16 * 60 },
+      { start: 16 * 60, end: 17 * 60 },
+      { start: 20 * 60, end: 22 * 60 },
+      { start: 22 * 60, end: 24 * 60 },
+    ]);
+  });
 });
 
 describe('getWallpaperAxisPosition', () => {

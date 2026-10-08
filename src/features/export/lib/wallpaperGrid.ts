@@ -29,7 +29,50 @@ export const buildWallpaperGridSlots = (ranges: WallpaperTimeRange[], maxColumns
     }
   }
 
-  return slots;
+  const shortRanges = [...new Map(validRanges
+    .filter(({ start, end }) => end - start <= 60)
+    .map((range) => [`${range.start}:${range.end}`, range])).values()];
+  const parts = slots.flatMap((slot) => {
+    const boundaries = [...new Set([
+      slot.start,
+      slot.end,
+      ...shortRanges.flatMap(({ start, end }) => [start, end])
+        .filter((time) => time > slot.start && time < slot.end),
+    ])].sort((a, b) => a - b);
+
+    let start = slot.start;
+    return boundaries.slice(1).map((end) => {
+      const partStart = start;
+      start = end;
+      const protectedRange = shortRanges.find((range) => partStart >= range.start && end <= range.end);
+      return { start: partStart, end, protectedKey: protectedRange ? `${protectedRange.start}:${protectedRange.end}` : undefined };
+    });
+  });
+
+  const protectedSlots = parts.reduce<typeof parts>((result, part) => {
+    const previous = result[result.length - 1];
+    if (part.protectedKey && previous?.protectedKey === part.protectedKey && previous.end === part.start) {
+      previous.end = part.end;
+    } else {
+      result.push(part);
+    }
+    return result;
+  }, []);
+
+  const packed = protectedSlots.reduce<typeof protectedSlots>((result, slot) => {
+    const previous = result[result.length - 1];
+    if (
+      !slot.protectedKey && !previous?.protectedKey && previous?.end === slot.start &&
+      slot.end - previous.start <= periodHours * 60
+    ) {
+      previous.end = slot.end;
+    } else {
+      result.push(slot);
+    }
+    return result;
+  }, []);
+
+  return packed.map(({ start, end }) => ({ start, end }));
 };
 
 export const getWallpaperAxisPosition = (time: number, slots: WallpaperGridSlot[]) => {

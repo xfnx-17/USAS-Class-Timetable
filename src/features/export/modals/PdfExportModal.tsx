@@ -274,9 +274,10 @@ const formatDurationRange = (startTime?: string, endTime?: string, timeFormat: '
 };
 
 const formatWallpaperSlotLabel = (startMinutes: number, endMinutes: number, timeFormat: '12h' | '24h') => {
-  const format = (minutes: number) => timeFormat === '24h' && minutes % 60 === 0
-    ? String(Math.floor(minutes / 60))
-    : formatTimeFromMinutes(minutes, timeFormat);
+  const format = (minutes: number) => {
+    if (timeFormat === '24h' && minutes % 60 === 0) return String(Math.floor(minutes / 60));
+    return formatTimeFromMinutes(minutes, timeFormat).replace(/\s?(AM|PM)$/i, '');
+  };
   if (endMinutes - startMinutes <= 30) return format(startMinutes);
   const start = format(startMinutes);
   const end = format(Math.min(24 * 60, endMinutes));
@@ -358,7 +359,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
       image.src = objectUrl;
       await image.decode();
       const maxDimension = Math.max(image.naturalWidth, image.naturalHeight);
-      const blurScale = Math.min(1, 1600 / maxDimension);
+      const blurScale = Math.min(1, 2048 / maxDimension);
       const blurWidth = Math.max(1, Math.round(image.naturalWidth * blurScale));
       const blurHeight = Math.max(1, Math.round(image.naturalHeight * blurScale));
       const blurProbe = document.createElement('canvas');
@@ -677,14 +678,15 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
     const code = course.course_id || course.kod_kursus || '';
     const loc = course.location || '';
     const duration = formatDurationRange(course.start_time || course.jadual, course.end_time, timeFormat);
-    const timeRange = getShortTimeRange(course.start_time || course.jadual, course.end_time, timeFormat);
+    const timeRange = getShortTimeRange(course.start_time || course.jadual, course.end_time, timeFormat)
+      .replace(/\s?(AM|PM)/gi, '');
     const [startTimeLabel, endTimeLabel] = timeRange.split('-');
     const shortDuration = formatShortDurationLabel(course.start_time || course.jadual, course.end_time);
     const timeInfoFontSize = Math.max(3.6, Math.min(5, (cellWidthPx - 8) / (Math.max(startTimeLabel.length, endTimeLabel?.length || 0) * 0.58)));
     const timeInfo = (
       <>
         {startTimeLabel && <span data-export-course-time="start" title={duration} className={`absolute left-0.5 top-0.5 z-20 whitespace-nowrap font-semibold leading-none ${isLightMode ? 'text-slate-600' : 'text-white/70'}`} style={{ fontSize: `${timeInfoFontSize}px` }}>{startTimeLabel}</span>}
-        {endTimeLabel && <span data-export-course-time="end" title={duration} className={`absolute right-px bottom-px z-20 whitespace-nowrap font-semibold leading-none ${isLightMode ? 'text-slate-600' : 'text-white/70'}`} style={{ fontSize: `${timeInfoFontSize}px` }}>{endTimeLabel}</span>}
+        {endTimeLabel && <span data-export-course-time="end" title={duration} className={`absolute right-0.5 bottom-0.5 z-20 whitespace-nowrap font-semibold leading-none ${isLightMode ? 'text-slate-600' : 'text-white/70'}`} style={{ fontSize: `${timeInfoFontSize}px` }}>{endTimeLabel}</span>}
       </>
     );
     const durationInfo = shortDuration && (
@@ -895,7 +897,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                 />
               )}
 
-              <div data-wallpaper-controls className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.5fr)] items-center gap-3 xl:gap-4 w-full relative z-40">
+              <div data-wallpaper-controls className={`grid grid-cols-1 sm:grid-cols-2 ${exportMode === 'WALLPAPER' ? 'xl:grid-cols-[minmax(0,0.85fr)_minmax(0,0.85fr)_minmax(0,0.85fr)_minmax(0,1fr)_minmax(0,1.8fr)]' : 'xl:grid-cols-2'} items-center gap-3 xl:gap-4 w-full relative z-40`}>
                 {/* 1. Device Ratio Selector (WALLPAPER only) */}
                 {exportMode === 'WALLPAPER' && (
                   <div className="flex flex-col items-stretch gap-1.5 w-full min-w-0 xl:max-w-[230px] relative z-40">
@@ -1048,55 +1050,61 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                       </div>
                     )}
                   </div>
-                  <input
-                    ref={wallpaperBackgroundInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="sr-only"
-                    aria-label={t('chooseWallpaperBackground')}
-                    onChange={(event) => {
-                      const file = event.currentTarget.files?.[0];
-                      event.currentTarget.value = '';
-                      void loadWallpaperBackground(file);
-                    }}
-                  />
-                  <div className="flex gap-1.5 min-w-0">
-                    <button
-                      type="button"
-                      onClick={() => wallpaperBackgroundInputRef.current?.click()}
-                      title={wallpaperBackgroundName || t('chooseWallpaperBackground')}
-                      className={`flex min-w-0 flex-1 items-center gap-1.5 rounded-lg border px-2 py-1 text-[10px] font-semibold ${isLight
-                        ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                        : 'bg-white/[0.04] border-white/10 text-white/80 hover:bg-white/[0.08]'
-                      }`}
-                    >
-                      <ImagePlus className="h-3.5 w-3.5 shrink-0" />
-                      <span className="truncate">{wallpaperBackgroundName || t('chooseWallpaperBackground')}</span>
-                    </button>
-                    {wallpaperBackground && (
+                </div>
+
+                {exportMode === 'WALLPAPER' && (
+                  <div className="flex flex-col items-stretch gap-1.5 w-full min-w-0 relative z-20">
+                    <span className={`text-[10px] font-bold uppercase tracking-wider flex-shrink-0 ${isLight ? 'text-amber-800' : 'text-amber-400/90'}`}>{t('wallpaperBackground')}:</span>
+                    <input
+                      ref={wallpaperBackgroundInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="sr-only"
+                      aria-label={t('chooseWallpaperBackground')}
+                      onChange={(event) => {
+                        const file = event.currentTarget.files?.[0];
+                        event.currentTarget.value = '';
+                        void loadWallpaperBackground(file);
+                      }}
+                    />
+                    <div className="flex gap-1.5 min-w-0">
                       <button
                         type="button"
-                        onClick={() => {
-                          wallpaperBackgroundUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
-                          wallpaperBackgroundUrlsRef.current = [];
-                          setWallpaperBackground('');
-                          setWallpaperBackgroundBlurred('');
-                          setWallpaperBackgroundName('');
-                          setWallpaperBackgroundError('');
-                        }}
-                        aria-label={t('removeWallpaperBackground')}
-                        title={t('removeWallpaperBackground')}
-                        className={`rounded-lg border px-2 ${isLight
-                          ? 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
-                          : 'bg-white/[0.04] border-white/10 text-white/60 hover:bg-white/[0.08]'
+                        onClick={() => wallpaperBackgroundInputRef.current?.click()}
+                        title={wallpaperBackgroundName || t('chooseWallpaperBackground')}
+                        className={`flex min-w-0 flex-1 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-left text-[11px] font-semibold ${isLight
+                          ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                          : 'bg-white/[0.04] border-white/10 text-white/80 hover:bg-white/[0.08]'
                         }`}
                       >
-                        <X className="h-3 w-3" />
+                        <ImagePlus className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{wallpaperBackgroundName || t('chooseWallpaperBackground')}</span>
                       </button>
-                    )}
+                      {wallpaperBackground && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            wallpaperBackgroundUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+                            wallpaperBackgroundUrlsRef.current = [];
+                            setWallpaperBackground('');
+                            setWallpaperBackgroundBlurred('');
+                            setWallpaperBackgroundName('');
+                            setWallpaperBackgroundError('');
+                          }}
+                          aria-label={t('removeWallpaperBackground')}
+                          title={t('removeWallpaperBackground')}
+                          className={`self-stretch rounded-lg border px-2 ${isLight
+                            ? 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                            : 'bg-white/[0.04] border-white/10 text-white/60 hover:bg-white/[0.08]'
+                          }`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                    {wallpaperBackgroundError && <span role="alert" className="text-[9px] text-rose-400">{t(wallpaperBackgroundError)}</span>}
                   </div>
-                  {wallpaperBackgroundError && <span role="alert" className="text-[9px] text-rose-400">{t(wallpaperBackgroundError)}</span>}
-                </div>
+                )}
 
                 {exportMode === 'WALLPAPER' && (
                   <div className="flex flex-col gap-1.5 w-full min-w-0 relative z-20">
@@ -1365,6 +1373,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                           className={`relative z-10 border p-0 flex-1 min-h-0 flex flex-col justify-start overflow-hidden ${lockscreenConfig.gridBg}`}
                           style={{
                             borderRadius: '12px',
+                            isolation: 'isolate',
                             backgroundColor: wallpaperBackground
                               ? lockscreenConfig.isLight ? 'rgba(248,250,252,0.24)' : exportTheme === 'oled' ? 'rgba(0,0,0,0.24)' : 'rgba(10,20,40,0.24)'
                               : undefined,
@@ -1380,6 +1389,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                   backgroundImage: `url(${wallpaperBackgroundBlurred})`,
                                   backgroundPosition: 'center',
                                   backgroundSize: 'cover',
+                                  ...(useNativeGlassBlur ? { WebkitFilter: 'blur(16px)', filter: 'blur(16px)' } : {}),
                                 }}
                               />
                               <div
@@ -1388,7 +1398,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                                 className="absolute inset-0 z-[1]"
                                 style={{
                                   backgroundColor: lockscreenConfig.isLight ? 'rgba(255,255,255,0.42)' : 'rgba(0,0,0,0.42)',
-                                  ...(useNativeGlassBlur ? { WebkitBackdropFilter: 'blur(16px)', backdropFilter: 'blur(16px)' } : {}),
+                                  pointerEvents: 'none',
                                 }}
                               />
                             </>
