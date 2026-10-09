@@ -119,7 +119,13 @@ async function captureElement(
           const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${blurCanvas.width}" height="${blurCanvas.height}" viewBox="0 0 ${blurCanvas.width} ${blurCanvas.height}"><defs><filter id="blur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="${blurRadius}"/></filter></defs><image href="${imageData}" width="100%" height="100%" filter="url(#blur)"/></svg>`;
           const blurUrl = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
           temporaryUrls.push(blurUrl);
-          nativeBlurLayer.style.backgroundImage = `url("${blurUrl}")`;
+          if (nativeBlurLayer.tagName === 'IMG') {
+            const blurImage = nativeBlurLayer as HTMLImageElement;
+            blurImage.src = blurUrl;
+            await blurImage.decode().catch(() => undefined);
+          } else {
+            nativeBlurLayer.style.backgroundImage = `url("${blurUrl}")`;
+          }
           nativeBlurLayer.style.filter = 'none';
           nativeBlurLayer.style.webkitFilter = 'none';
         }

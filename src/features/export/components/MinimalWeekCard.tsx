@@ -155,6 +155,7 @@ export default function MinimalWeekCard({
         <div aria-hidden="true" className="absolute inset-0 z-0 overflow-hidden" style={{ borderRadius: radius }}>
           <img
             data-wallpaper-background-blur
+            data-wallpaper-native-blur={background.nativeBlur ? 'true' : undefined}
             src={background.url}
             draggable={false}
             className="absolute max-w-none object-cover"

@@ -64,6 +64,10 @@ test('matrix view positions classes accurately to the minute', async ({ page }) 
   const firstHour = page.locator('[data-matrix-time-slot="20:00"]');
   const halfHourClass = page.locator('[data-matrix-course-code="KOM6363"][data-matrix-course-start="08:30 PM"]');
   await expect(firstHour).toBeVisible();
+  expect(await firstHour.textContent()).toMatch(/^20-\d{2}$/);
+  const dynamicSlots = await page.locator('[data-matrix-time-range]').evaluateAll((nodes) =>
+    nodes.map((node) => node.getAttribute('data-matrix-time-range')!.split('-').map(Number)));
+  expect(dynamicSlots.some(([start, end]) => end - start > 60)).toBe(true);
   await expect(halfHourClass).toHaveCount(1);
   await expect(halfHourClass).toHaveAttribute('data-matrix-course-time', '20:30-23:30');
   await expect(halfHourClass.locator('[data-matrix-course-start-label]')).toHaveText('20:30');
@@ -83,10 +87,26 @@ test('matrix view positions classes accurately to the minute', async ({ page }) 
   const [hourBounds, classBounds] = geometry;
   expect(hourBounds).not.toBeNull();
   expect(classBounds).not.toBeNull();
-  expect(classBounds!.x - hourBounds!.x).toBeGreaterThan(hourBounds!.width * 0.4);
-  expect(classBounds!.x - hourBounds!.x).toBeLessThan(hourBounds!.width * 0.65);
-  expect(classBounds!.width / hourBounds!.width).toBeGreaterThan(2.8);
-  expect(classBounds!.width / hourBounds!.width).toBeLessThan(3.1);
+  expect(classBounds!.x - hourBounds!.x).toBeGreaterThan(hourBounds!.width * 0.2);
+  expect(classBounds!.x - hourBounds!.x).toBeLessThan(hourBounds!.width * 0.3);
+  expect(classBounds!.width / hourBounds!.width).toBeGreaterThan(1.4);
+  expect(classBounds!.width / hourBounds!.width).toBeLessThan(1.6);
+
+  const onePeriodClass = page.locator('[data-matrix-course-code="CSE6013"][data-matrix-course-start="04:00 PM"]');
+  await expect(onePeriodClass).toHaveAttribute('data-matrix-course-compact', 'true');
+  const compactLayout = await onePeriodClass.evaluate((block) => {
+    const bounds = (selector: string) => {
+      const rect = block.querySelector(selector)!.getBoundingClientRect();
+      return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
+    };
+    const intersects = (a: ReturnType<typeof bounds>, b: ReturnType<typeof bounds>) =>
+      a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+    return {
+      startOverlapsCode: intersects(bounds('[data-matrix-course-start-label]'), bounds('[data-matrix-course-code-label]')),
+      endOverlapsLocation: intersects(bounds('[data-matrix-course-end-label]'), bounds('[data-matrix-course-location]')),
+    };
+  });
+  expect(compactLayout).toEqual({ startOverlapsCode: false, endOverlapsLocation: false });
 });
 
 test('wallpaper controls wrap into two columns at tablet width', async ({ page }) => {
@@ -247,6 +267,17 @@ test('custom lockscreen background stays sharp outside the blurred glass timetab
   expect(png.readUInt32BE(20)).toBeGreaterThan(3000);
   await expect.poll(() => page.evaluate(() => (window as Window & { __wallpaperBlurSvg?: string }).__wallpaperBlurSvg))
     .toContain('<feGaussianBlur');
+
+  for (const design of [/^(minimal|minimalis)$/i, /^(liquid glass|kaca cecair)$/i]) {
+    await page.evaluate(() => { (window as Window & { __wallpaperBlurSvg?: string }).__wallpaperBlurSvg = ''; });
+    await page.getByRole('button', { name: design }).click();
+    await expect(page.locator('[data-wallpaper-background-blur][data-wallpaper-native-blur="true"]')).toBeVisible();
+    const designDownload = page.waitForEvent('download');
+    await page.getByRole('button', { name: /^download$|^muat turun$/i }).evaluate((button) => (button as HTMLButtonElement).click());
+    expect((await designDownload).suggestedFilename()).toContain('.png');
+    await expect.poll(() => page.evaluate(() => (window as Window & { __wallpaperBlurSvg?: string }).__wallpaperBlurSvg))
+      .toContain('<feGaussianBlur');
+  }
 });
 
 test('time format preference persists for the signed-in user', async ({ page }) => {
@@ -268,9 +299,10 @@ test('time format preference persists for the signed-in user', async ({ page }) 
   await expect(gridPeriods.first()).toBeVisible();
   const gridPeriodLabels = await gridPeriods.allTextContents();
   expect(gridPeriodLabels.join(' ')).not.toMatch(/\b(AM|PM)\b/i);
-  expect(new Set(gridPeriodLabels.map((label) => label.length)).size).toBe(1);
-  expect(gridPeriodLabels).toContain('11-12');
-  expect(gridPeriodLabels).toContain('12-01');
+  expect(new Set(gridPeriodLabels.map((label) => label.length)).size).toBeGreaterThan(1);
+  expect(gridPeriodLabels).toContain('10-12');
+  expect(gridPeriodLabels).toContain('12-1');
+  expect(gridPeriodLabels).toContain('2-3');
   const gridCourseTimes = page.locator('[data-matrix-course-start-label], [data-matrix-course-end-label]');
   expect((await gridCourseTimes.allTextContents()).join(' ')).toMatch(/\b(AM|PM)\b/i);
   await page.getByRole('button', { name: /open tools and export/i }).click();

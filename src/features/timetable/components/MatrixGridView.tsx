@@ -6,15 +6,13 @@ import type { TimetableItem } from '@/shared/types/usas';
 import { extractDayName, formatDayDisplay, isSameDay } from '@/shared/lib/dayFormat';
 import { buildCourseColorMap, getCourseColorSlot } from '@/shared/lib/courseColors';
 import { getOwnRecordValue } from '@/shared/lib/security';
+import { buildAdaptiveTimeSlots, formatAdaptiveSlotLabel, getAdaptiveAxisPosition } from '@/shared/lib/adaptiveTimeGrid';
 import { MapPin, User, GraduationCap } from 'lucide-react';
 import AttendanceMeter from './AttendanceMeter';
 import {
-  buildHourlyTimeSlots,
   getCourseHighlightKey,
   getShortTimeRange,
-  formatHourSlot,
-  getTimeRangePosition,
-  parseTo24hHour,
+  formatTimeFromMinutes,
   parseTimeToMinutes,
 } from '@/shared/lib/timetableTime';
 
@@ -83,17 +81,6 @@ const getDurationLabel = (startTime?: string, endTime?: string, lang?: string) =
   }
 };
 
-const getSlotLabel = (slot: string, timeFormat: '12h' | '24h') => {
-  const hour = parseTo24hHour(slot);
-  if (hour === null) return slot;
-  if (timeFormat === '12h') {
-    const start = String(hour % 12 || 12).padStart(2, '0');
-    const end = String((hour + 1) % 12 || 12).padStart(2, '0');
-    return `${start}-${end}`;
-  }
-  return formatHourSlot(hour, hour + 1, timeFormat);
-};
-
 export default function MatrixGridView({
   timetable = [],
   days = ['ISNIN', 'SELASA', 'RABU', 'KHAMIS', 'JUMAAT'],
@@ -128,29 +115,15 @@ export default function MatrixGridView({
     setPreview({ course, x: left, y: top });
   };
 
-  // Show only the time slots that actually contain classes, so a day starting
-  // at 11am doesn't render empty 8-9/9-10/10-11 columns.
+  // Compress empty hours and group dense ranges, while keeping one-hour classes in their own slot.
   const activeTimeSlots = useMemo(() => {
-    if (timetable.length === 0) return buildHourlyTimeSlots(8, 10);
-
-    let minHour = Infinity;
-    let maxHour = -Infinity;
-    timetable.forEach(c => {
-      const start = parseTimeToMinutes(c.start_time || c.jadual || '');
-      if (start === null) return;
-      const end = parseTimeToMinutes(c.end_time);
-      const endMinutes = end !== null && end > start ? end : start + 60;
-      minHour = Math.min(minHour, Math.floor(start / 60));
-      maxHour = Math.max(maxHour, Math.ceil(endMinutes / 60));
+    const ranges = timetable.flatMap((course) => {
+      const start = parseTimeToMinutes(course.start_time || course.jadual || '');
+      if (start === null) return [];
+      const end = parseTimeToMinutes(course.end_time);
+      return [{ start, end: end !== null && end > start ? end : start + 60 }];
     });
-
-    if (!Number.isFinite(minHour) || !Number.isFinite(maxHour)) {
-      return buildHourlyTimeSlots(8, 10);
-    }
-
-    const slots = buildHourlyTimeSlots(minHour, maxHour - 1);
-
-    return slots.length > 0 ? slots : buildHourlyTimeSlots(8, 10);
+    return buildAdaptiveTimeSlots(ranges, 8);
   }, [timetable]);
 
   // Constant column widths + fixed text sizing: on small screens the grid
@@ -158,8 +131,9 @@ export default function MatrixGridView({
   const DAY_COL_WIDTH = 92;
   const SLOT_COL_WIDTH = 108;
   const tableMinWidth = DAY_COL_WIDTH + activeTimeSlots.length * SLOT_COL_WIDTH;
-  const axisStart = parseTimeToMinutes(activeTimeSlots[0]) ?? 8 * 60;
-  const axisDuration = activeTimeSlots.length * 60;
+  const axisStart = activeTimeSlots[0].start;
+  const axisEnd = activeTimeSlots[activeTimeSlots.length - 1].end;
+  const axisDuration = activeTimeSlots.length;
   const autoScale = 1;
 
   const hasDayFilter = Boolean(activeDay) && activeDay.toUpperCase() !== 'ALL';
@@ -176,8 +150,8 @@ export default function MatrixGridView({
         <table className="w-full table-fixed border-collapse flex-1 h-auto sm:h-full">
           <colgroup>
             <col style={{ width: `${DAY_COL_WIDTH}px` }} />
-            {activeTimeSlots.map(slot => (
-              <col key={slot} style={{ width: `${SLOT_COL_WIDTH}px` }} />
+            {activeTimeSlots.map((slot) => (
+              <col key={slot.start} style={{ width: `${SLOT_COL_WIDTH}px` }} />
             ))}
           </colgroup>
           {/* Head - Transposed: Time slots as columns */}
@@ -192,14 +166,15 @@ export default function MatrixGridView({
               </th>
               {activeTimeSlots.map((slot) => (
                 <th
-                  key={slot}
-                  data-matrix-time-slot={slot}
+                  key={slot.start}
+                  data-matrix-time-slot={formatTimeFromMinutes(slot.start, '24h')}
+                  data-matrix-time-range={`${slot.start}-${slot.end}`}
                   className={`px-2 sm:px-3 py-1.5 sm:py-2 text-center font-semibold font-mono tracking-wider border-r whitespace-nowrap leading-none ${
                     isLight ? 'text-slate-500 border-slate-200 bg-slate-50/10' : 'text-amber-400/70 border-white/[0.04]'
                   } last:border-r-0`}
                   style={{ fontSize: `${autoScale * 10}px` }}
                 >
-                  {getSlotLabel(slot, timeFormat)}
+                  {formatAdaptiveSlotLabel(slot.start, slot.end, timeFormat)}
                 </th>
               ))}
             </tr>
@@ -232,15 +207,22 @@ export default function MatrixGridView({
                       style={{ gridTemplateColumns: `repeat(${activeTimeSlots.length}, minmax(0, 1fr))` }}
                       aria-hidden="true"
                     >
-                      {activeTimeSlots.map((slot) => <div key={slot} />)}
+                      {activeTimeSlots.map((slot) => <div key={slot.start} />)}
                     </div>
                     {timetable.map((course) => {
                       if (extractDayName(course.day) !== extractDayName(d)) return null;
                       const start = parseTimeToMinutes(course.start_time || course.jadual || '');
-                      if (start === null || start < axisStart || start >= axisStart + axisDuration) return null;
+                      if (start === null || start < axisStart || start >= axisEnd) return null;
                       const parsedEnd = parseTimeToMinutes(course.end_time);
                       const end = parsedEnd !== null && parsedEnd > start ? parsedEnd : start + 60;
-                      const position = getTimeRangePosition(start, end, axisStart, axisDuration);
+                      const axisPosition = getAdaptiveAxisPosition(start, activeTimeSlots);
+                      const axisEndPosition = getAdaptiveAxisPosition(Math.min(end, axisEnd), activeTimeSlots);
+                      const position = {
+                        left: (axisPosition / axisDuration) * 100,
+                        width: ((axisEndPosition - axisPosition) / axisDuration) * 100,
+                      };
+                      const visualWidth = (position.width / 100) * axisDuration * SLOT_COL_WIDTH;
+                      const compact = visualWidth < 150;
                       const courseColor = getDayColors(getCourseColorSlot(courseColorMap, course.course_id || course.kod_kursus), isLight);
                       const courseKey = getCourseHighlightKey(course);
                       const courseStatus = courseKey && activeHighlights
@@ -258,29 +240,30 @@ export default function MatrixGridView({
                           data-matrix-course-code={course.course_id || course.kod_kursus || ''}
                           data-matrix-course-start={course.start_time || course.jadual || ''}
                           data-matrix-course-time={timeRangeText}
+                          data-matrix-course-compact={compact ? 'true' : undefined}
                           tabIndex={0}
                           onClick={(e) => { e.stopPropagation(); showPreview(course, e.currentTarget); }}
                           onMouseEnter={(e) => showPreview(course, e.currentTarget)}
                           onMouseLeave={() => setPreview(null)}
                           onFocus={(e) => showPreview(course, e.currentTarget)}
                           onBlur={() => setPreview(null)}
-                          className={`absolute top-1 bottom-1 z-10 px-2 py-2 rounded-md border flex flex-col justify-center gap-1 cursor-pointer outline-none transition-all duration-300 hover:brightness-105 overflow-hidden ${courseColor.bg} ${courseColor.border} ${isDimmedRow ? 'opacity-30 blur-[1.5px]' : ''}`}
+                          className={`absolute top-1 bottom-1 z-10 rounded-md border flex flex-col justify-center cursor-pointer outline-none transition-all duration-300 hover:brightness-105 overflow-hidden ${compact ? 'px-1 pt-3 pb-3 gap-0.5' : 'px-2 py-2 gap-1'} ${courseColor.bg} ${courseColor.border} ${isDimmedRow ? 'opacity-30 blur-[1.5px]' : ''}`}
                           style={{ left: `${position.left}%`, width: `${position.width}%` }}
                         >
-                          <span data-matrix-course-start-label className={`absolute right-2 bottom-4 z-20 font-mono font-semibold leading-none whitespace-nowrap ${isLight ? 'text-slate-600' : 'text-white/65'}`} style={{ fontSize: fs(8) }}>{startTimeLabel}</span>
-                          <span data-matrix-course-end-label className={`absolute right-2 bottom-1.5 z-20 font-mono font-semibold leading-none whitespace-nowrap ${isLight ? 'text-slate-600' : 'text-white/65'}`} style={{ fontSize: fs(8) }}>{endTimeLabel}</span>
-                          <div className="flex items-center justify-between gap-1 mb-0.5 min-w-0">
-                            <div className={`font-bold ${courseColor.text} flex items-center gap-1.5 min-w-0`} style={{ fontSize: fs(12) }}>
-                              <span className="truncate">{course.course_id || course.kod_kursus}</span>
-                              <span className={`inline-block rounded-full flex-shrink-0 ${courseStatus === 'ongoing' ? 'bg-emerald-400 animate-pulse' : courseStatus === 'upcoming' ? 'bg-amber-400' : 'bg-transparent'}`} style={{ width: fs(8), height: fs(8) }} aria-hidden="true" />
+                          <span data-matrix-course-start-label className={`absolute z-20 font-mono font-semibold leading-none whitespace-nowrap ${compact ? 'left-1 top-1' : 'right-2 bottom-4'} ${isLight ? 'text-slate-600' : 'text-white/65'}`} style={{ fontSize: fs(compact ? 7 : 8) }}>{startTimeLabel}</span>
+                          <span data-matrix-course-end-label className={`absolute z-20 font-mono font-semibold leading-none whitespace-nowrap ${compact ? 'right-1 bottom-1' : 'right-2 bottom-1.5'} ${isLight ? 'text-slate-600' : 'text-white/65'}`} style={{ fontSize: fs(compact ? 7 : 8) }}>{endTimeLabel}</span>
+                          <div className={`flex items-center justify-between min-w-0 ${compact ? 'gap-0.5' : 'gap-1 mb-0.5'}`}>
+                            <div className={`font-bold ${courseColor.text} flex items-center min-w-0 ${compact ? 'gap-0.5' : 'gap-1.5'}`} style={{ fontSize: fs(compact ? 10 : 12) }}>
+                              <span data-matrix-course-code-label className="truncate">{course.course_id || course.kod_kursus}</span>
+                              <span className={`inline-block rounded-full flex-shrink-0 ${compact && courseStatus === 'idle' ? 'hidden' : ''} ${courseStatus === 'ongoing' ? 'bg-emerald-400 animate-pulse' : courseStatus === 'upcoming' ? 'bg-amber-400' : 'bg-transparent'}`} style={{ width: fs(compact ? 6 : 8), height: fs(compact ? 6 : 8) }} aria-hidden="true" />
                             </div>
-                            {durationText && <div className={`font-extrabold uppercase shrink-0 flex items-center justify-center text-center px-1 py-0.5 rounded leading-none ${isLight ? 'bg-slate-100 text-slate-600 border border-slate-200/50' : 'bg-white/10 text-white/80 border border-white/5'}`} style={{ fontSize: fs(8) }}>{durationText}</div>}
+                            {durationText && <div className={`font-extrabold uppercase shrink-0 flex items-center justify-center text-center rounded leading-none ${compact ? 'px-0.5 py-0' : 'px-1 py-0.5'} ${isLight ? 'bg-slate-100 text-slate-600 border border-slate-200/50' : 'bg-white/10 text-white/80 border border-white/5'}`} style={{ fontSize: fs(compact ? 7 : 8) }}>{durationText}</div>}
                           </div>
-                          <div className={`font-medium leading-snug break-words line-clamp-2 ${isLight ? 'text-slate-700' : 'text-white/80'}`} style={{ fontSize: fs(10) }}>
+                          <div data-matrix-course-title className={`font-medium leading-tight ${compact ? 'truncate' : 'break-words line-clamp-2'} ${isLight ? 'text-slate-700' : 'text-white/80'}`} style={{ fontSize: fs(compact ? 8.5 : 10) }}>
                             {course.course_name || course.kursus}
                           </div>
-                          <div className={`flex items-center gap-1 leading-tight min-w-0 ${isLight ? 'text-slate-500' : 'text-white/50'}`} style={{ fontSize: fs(10.5) }}>
-                            <MapPin style={{ width: fs(10.5), height: fs(10.5), color: '#ed4134' }} className="flex-shrink-0 self-center" />
+                          <div data-matrix-course-location className={`flex items-center leading-tight min-w-0 ${compact ? 'gap-0.5' : 'gap-1'} ${isLight ? 'text-slate-500' : 'text-white/50'}`} style={{ fontSize: fs(compact ? 8 : 10.5) }}>
+                            <MapPin style={{ width: fs(compact ? 8 : 10.5), height: fs(compact ? 8 : 10.5), color: '#ed4134' }} className="flex-shrink-0 self-center" />
                             <span className="leading-tight self-center truncate">{course.location}</span>
                           </div>
                         </div>

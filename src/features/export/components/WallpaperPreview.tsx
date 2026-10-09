@@ -3,7 +3,7 @@ import type { TimetableItem, TimeFormat } from '@/shared/types/usas';
 import { extractDayName, formatDayDisplay } from '@/shared/lib/dayFormat';
 import { getCourseColorSlot, type CourseColorSlot } from '@/shared/lib/courseColors';
 import { getShortTimeRange } from '@/shared/lib/timetableTime';
-import { buildWallpaperGridSlots, getWallpaperAxisPosition } from '../lib/wallpaperGrid';
+import { buildAdaptiveTimeSlots as buildWallpaperGridSlots, getAdaptiveAxisPosition as getWallpaperAxisPosition } from '@/shared/lib/adaptiveTimeGrid';
 import {
   formatDurationRange, formatShortDurationLabel, formatWallpaperSlotLabel, getModalDayColors,
   getPresetStyle, measureBoldTextWidth, parseTimeToMinutes, WALLPAPER_PRESET_SIZES,
