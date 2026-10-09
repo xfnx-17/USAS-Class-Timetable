@@ -52,7 +52,7 @@ type MinimalWeekCardProps = {
   // Apple-style liquid glass: light milky glass, dark text, bent edges and a bright rim.
   glass?: boolean;
   glassTheme?: GlassTheme;
-  background?: { url: string; nativeBlur: boolean; rootWidth: number; rootHeight: number; left: number; bottom: number };
+  background?: { url: string; rootWidth: number; rootHeight: number; left: number; bottom: number };
 };
 
 // The PNG renderer clips text inside overflow:hidden boxes, so long names are
@@ -155,7 +155,6 @@ export default function MinimalWeekCard({
         <div aria-hidden="true" className="absolute inset-0 z-0 overflow-hidden" style={{ borderRadius: radius }}>
           <img
             data-wallpaper-background-blur
-            data-wallpaper-native-blur={background.nativeBlur ? 'true' : undefined}
             src={background.url}
             draggable={false}
             className="absolute max-w-none object-cover"
@@ -164,7 +163,6 @@ export default function MinimalWeekCard({
               height: `${background.rootHeight}px`,
               left: `${-background.left}px`,
               bottom: `${-background.bottom}px`,
-              ...(background.nativeBlur ? { WebkitFilter: 'blur(16px)', filter: 'blur(16px)' } : {}),
             }}
           />
           <div className="absolute inset-0" style={{ backgroundColor: glass ? glassStyle.wash : isLight ? 'rgba(255,255,255,0.45)' : 'rgba(10,10,14,0.5)' }} />

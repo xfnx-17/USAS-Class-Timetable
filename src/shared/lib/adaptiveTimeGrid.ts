@@ -3,7 +3,7 @@ import { formatTimeFromMinutes } from './timetableTime';
 
 export type AdaptiveTimeSlot = { start: number; end: number };
 
-export const buildAdaptiveTimeSlots = (ranges: AdaptiveTimeSlot[], maxColumns = 8): AdaptiveTimeSlot[] => {
+export const buildAdaptiveTimeSlots = (ranges: AdaptiveTimeSlot[], maxColumns = 8, preserveGaps = false): AdaptiveTimeSlot[] => {
   const validRanges = ranges
     .map(({ start, end }) => ({ start: Math.max(0, start), end: Math.min(24 * 60, end) }))
     .filter(({ start, end }) => Number.isFinite(start) && Number.isFinite(end) && end > start);
@@ -15,7 +15,7 @@ export const buildAdaptiveTimeSlots = (ranges: AdaptiveTimeSlot[], maxColumns = 
   const firstHour = Math.floor(Math.min(...validRanges.map(({ start }) => start)) / 60);
   const lastHour = Math.min(24, Math.ceil(Math.max(...validRanges.map(({ end }) => end)) / 60));
   const activeHours = Array.from({ length: lastHour - firstHour }, (_, index) => firstHour + index)
-    .filter((hour) => validRanges.some(({ start, end }) => start < (hour + 1) * 60 && end > hour * 60));
+    .filter((hour) => preserveGaps || validRanges.some(({ start, end }) => start < (hour + 1) * 60 && end > hour * 60));
   const periodHours = Math.max(1, Math.ceil(activeHours.length / maxColumns));
   const slots: AdaptiveTimeSlot[] = [];
 

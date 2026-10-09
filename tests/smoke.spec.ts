@@ -229,13 +229,19 @@ test('custom lockscreen background stays sharp outside the blurred glass timetab
   const glassOverlay = page.locator('[data-wallpaper-glass-overlay]');
   await expect(background).toBeVisible();
   await expect(blurredBackground).toBeVisible();
-  await expect(blurredBackground).toHaveAttribute('data-wallpaper-native-blur', 'true');
   await expect(glassOverlay).toBeVisible();
   await expect.poll(() => blurredBackground.evaluate((element) => getComputedStyle(element).filter))
-    .toBe('blur(16px)');
+    .toBe('none');
   await expect.poll(() => background.getAttribute('src')).toMatch(/^blob:/);
   await expect.poll(() => blurredBackground.evaluate((element) => getComputedStyle(element).backgroundImage))
     .toMatch(/^url\("blob:/);
+  const blurredAssetUrl = await blurredBackground.evaluate((element) => {
+    const image = element as HTMLImageElement;
+    return image.tagName === 'IMG' ? image.src : getComputedStyle(element).backgroundImage.match(/^url\("?(.+?)"?\)$/)?.[1];
+  });
+  expect(blurredAssetUrl).toMatch(/^blob:/);
+  await expect.poll(() => page.evaluate(() => (window as Window & { __wallpaperBlurSvg?: string }).__wallpaperBlurSvg))
+    .toContain('<feGaussianBlur');
   expect(await background.evaluate((element) => getComputedStyle(element).backgroundImage))
     .not.toBe(await blurredBackground.evaluate((element) => getComputedStyle(element).backgroundImage));
   expect(await glassOverlay.evaluate((element) => getComputedStyle(element).backgroundColor))
@@ -265,18 +271,18 @@ test('custom lockscreen background stays sharp outside the blurred glass timetab
   const png = Buffer.concat(chunks);
   expect(png.readUInt32BE(16)).toBeGreaterThan(1700);
   expect(png.readUInt32BE(20)).toBeGreaterThan(3000);
-  await expect.poll(() => page.evaluate(() => (window as Window & { __wallpaperBlurSvg?: string }).__wallpaperBlurSvg))
-    .toContain('<feGaussianBlur');
 
   for (const design of [/^(minimal|minimalis)$/i, /^(liquid glass|kaca cecair)$/i]) {
-    await page.evaluate(() => { (window as Window & { __wallpaperBlurSvg?: string }).__wallpaperBlurSvg = ''; });
     await page.getByRole('button', { name: design }).click();
-    await expect(page.locator('[data-wallpaper-background-blur][data-wallpaper-native-blur="true"]')).toBeVisible();
+    await expect(page.locator('[data-wallpaper-background-blur]')).toBeVisible();
+    const designBlurredAssetUrl = await page.locator('[data-wallpaper-background-blur]').evaluate((element) => {
+      const image = element as HTMLImageElement;
+      return image.tagName === 'IMG' ? image.src : getComputedStyle(element).backgroundImage.match(/^url\("?(.+?)"?\)$/)?.[1];
+    });
+    expect(designBlurredAssetUrl).toBe(blurredAssetUrl);
     const designDownload = page.waitForEvent('download');
     await page.getByRole('button', { name: /^download$|^muat turun$/i }).evaluate((button) => (button as HTMLButtonElement).click());
     expect((await designDownload).suggestedFilename()).toContain('.png');
-    await expect.poll(() => page.evaluate(() => (window as Window & { __wallpaperBlurSvg?: string }).__wallpaperBlurSvg))
-      .toContain('<feGaussianBlur');
   }
 });
 
@@ -301,7 +307,7 @@ test('time format preference persists for the signed-in user', async ({ page }) 
   expect(gridPeriodLabels.join(' ')).not.toMatch(/\b(AM|PM)\b/i);
   expect(new Set(gridPeriodLabels.map((label) => label.length)).size).toBeGreaterThan(1);
   expect(gridPeriodLabels).toContain('10-12');
-  expect(gridPeriodLabels).toContain('12-1');
+  expect(gridPeriodLabels).toContain('12-2');
   expect(gridPeriodLabels).toContain('2-3');
   const gridCourseTimes = page.locator('[data-matrix-course-start-label], [data-matrix-course-end-label]');
   expect((await gridCourseTimes.allTextContents()).join(' ')).toMatch(/\b(AM|PM)\b/i);

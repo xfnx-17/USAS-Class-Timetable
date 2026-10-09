@@ -23,7 +23,6 @@ type WallpaperPreviewProps = {
   timeFormat: TimeFormat;
   wallpaperBackground: string;
   wallpaperBackgroundBlurred: string;
-  useNativeGlassBlur: boolean;
   currentSpacers: WallpaperSpacers;
   wallpaperRef: Ref<HTMLDivElement>;
   userZoom: number;
@@ -38,7 +37,7 @@ type WallpaperPreviewProps = {
 export default function WallpaperPreview({
   isLight, wallpaperDesign, setWallpaperDesign, t, renderFloatingZoomWidget,
   wallpaperPreset, contentDetail, timeFormat, wallpaperBackground, wallpaperBackgroundBlurred,
-  useNativeGlassBlur, currentSpacers, wallpaperRef, userZoom, allCourses, courseColorMap,
+  currentSpacers, wallpaperRef, userZoom, allCourses, courseColorMap,
   daysList, brightDayLabels, exportTheme, lockscreenConfig,
 }: WallpaperPreviewProps) {
   const renderWallpaperCourseContent = (
@@ -243,7 +242,6 @@ export default function WallpaperPreview({
                               width={w - 2 * (wallpaperPreset === 'phone' ? 12 : wallpaperPreset === 'square' ? 14 : 16)}
                               background={wallpaperBackgroundBlurred ? {
                                 url: wallpaperBackgroundBlurred,
-                                nativeBlur: useNativeGlassBlur,
                                 rootWidth: w,
                                 rootHeight: h,
                                 left: (wallpaperPreset === 'phone' ? 12 : wallpaperPreset === 'square' ? 14 : 16) + 1,
@@ -273,14 +271,12 @@ export default function WallpaperPreview({
                             <>
                               <div
                                 data-wallpaper-background-blur
-                                data-wallpaper-native-blur={useNativeGlassBlur ? 'true' : undefined}
                                 aria-hidden="true"
                                 className="absolute inset-0 z-0"
                                 style={{
                                   backgroundImage: `url(${wallpaperBackgroundBlurred})`,
                                   backgroundPosition: 'center',
                                   backgroundSize: 'cover',
-                                  ...(useNativeGlassBlur ? { WebkitFilter: 'blur(16px)', filter: 'blur(16px)' } : {}),
                                 }}
                               />
                               <div

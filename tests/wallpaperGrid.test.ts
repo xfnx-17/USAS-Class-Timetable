@@ -23,6 +23,19 @@ describe('buildAdaptiveTimeSlots', () => {
     ]);
   });
 
+  it('keeps empty periods visible between classes in the main grid', () => {
+    expect(buildAdaptiveTimeSlots([
+      { start: 11 * 60, end: 13 * 60 },
+      { start: 14 * 60, end: 16 * 60 },
+    ], 8, true)).toEqual([
+      { start: 11 * 60, end: 12 * 60 },
+      { start: 12 * 60, end: 13 * 60 },
+      { start: 13 * 60, end: 14 * 60 },
+      { start: 14 * 60, end: 15 * 60 },
+      { start: 15 * 60, end: 16 * 60 },
+    ]);
+  });
+
   it('caps periods at midnight', () => {
     expect(buildAdaptiveTimeSlots([{ start: 23 * 60, end: 25 * 60 }])).toEqual([
       { start: 23 * 60, end: 24 * 60 },

@@ -67,8 +67,6 @@ async function captureElement(
   const height = elementRef.scrollHeight || elementRef.offsetHeight || undefined;
   const exportWidth = isWallpaper && width ? width + 2 : width;
   const exportHeight = isWallpaper && height ? height + 2 : height;
-  const temporaryUrls: string[] = [];
-
   const captureOptions: Parameters<typeof html2canvas>[1] = {
     scale,
     useCORS: true,
@@ -96,42 +94,6 @@ async function captureElement(
       if (!exportRootId) return;
       const clonedRoot = clonedDoc.querySelector(`[data-export-root="${exportRootId}"]`) as HTMLElement | null;
       if (!clonedRoot) return;
-
-      const nativeBlurLayer = clonedRoot.querySelector<HTMLElement>('[data-wallpaper-native-blur="true"]');
-      const wallpaperImage = clonedRoot.querySelector<HTMLImageElement>('[data-wallpaper-background-layer]');
-      if (nativeBlurLayer && wallpaperImage) {
-        await wallpaperImage.decode().catch(() => undefined);
-      }
-      if (nativeBlurLayer && wallpaperImage?.naturalWidth && wallpaperImage.naturalHeight) {
-        const blurCanvas = clonedDoc.createElement('canvas');
-        // ponytail: cap fallback blur at 1024px (~4MB RGBA); raise only if mobile exports still look soft.
-        const downscale = Math.min(1, 1024 / Math.max(wallpaperImage.naturalWidth, wallpaperImage.naturalHeight));
-        blurCanvas.width = Math.max(1, Math.round(wallpaperImage.naturalWidth * downscale));
-        blurCanvas.height = Math.max(1, Math.round(wallpaperImage.naturalHeight * downscale));
-        const blurContext = blurCanvas.getContext('2d');
-        if (blurContext) {
-          blurContext.imageSmoothingEnabled = true;
-          blurContext.imageSmoothingQuality = 'high';
-          blurContext.drawImage(wallpaperImage, 0, 0, blurCanvas.width, blurCanvas.height);
-          const sourceScale = Math.max(nativeBlurLayer.offsetWidth / wallpaperImage.naturalWidth, nativeBlurLayer.offsetHeight / wallpaperImage.naturalHeight);
-          const blurRadius = Math.max(1, Math.min(64, 16 / sourceScale * downscale));
-          const imageData = blurCanvas.toDataURL('image/png');
-          const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${blurCanvas.width}" height="${blurCanvas.height}" viewBox="0 0 ${blurCanvas.width} ${blurCanvas.height}"><defs><filter id="blur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="${blurRadius}"/></filter></defs><image href="${imageData}" width="100%" height="100%" filter="url(#blur)"/></svg>`;
-          const blurUrl = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
-          temporaryUrls.push(blurUrl);
-          if (nativeBlurLayer.tagName === 'IMG') {
-            const blurImage = nativeBlurLayer as HTMLImageElement;
-            blurImage.src = blurUrl;
-            await blurImage.decode().catch(() => undefined);
-          } else {
-            nativeBlurLayer.style.backgroundImage = `url("${blurUrl}")`;
-          }
-          nativeBlurLayer.style.filter = 'none';
-          nativeBlurLayer.style.webkitFilter = 'none';
-        }
-        blurCanvas.width = 0;
-        blurCanvas.height = 0;
-      }
 
       // html2canvas cannot parse modern OKLCH/OKLab colors emitted by Tailwind 4.
       // Convert only affected computed declarations in the export clone.
@@ -255,12 +217,7 @@ async function captureElement(
     }
   };
 
-  let canvas: HTMLCanvasElement;
-  try {
-    canvas = await html2canvas(elementRef, captureOptions);
-  } finally {
-    temporaryUrls.forEach((url) => URL.revokeObjectURL(url));
-  }
+  const canvas = await html2canvas(elementRef, captureOptions);
   onProgress?.(82);
   return canvas;
 }

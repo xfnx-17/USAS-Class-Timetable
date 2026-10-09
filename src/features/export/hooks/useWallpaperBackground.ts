@@ -17,7 +17,6 @@ export function useWallpaperBackground({
 }: WallpaperBackgroundOptions) {
   const [wallpaperBackground, setWallpaperBackground] = useState('');
   const [wallpaperBackgroundBlurred, setWallpaperBackgroundBlurred] = useState('');
-  const [useNativeGlassBlur, setUseNativeGlassBlur] = useState(false);
   const [wallpaperBackgroundName, setWallpaperBackgroundName] = useState('');
   const [wallpaperBackgroundError, setWallpaperBackgroundError] = useState('');
   const [brightDayLabels, setBrightDayLabels] = useState<Set<number>>(() => new Set());
@@ -63,15 +62,27 @@ export function useWallpaperBackground({
       }
       blurProbe.width = blurProbe.height = 0;
 
+      const root = wallpaperRef.current;
+      const rootWidth = root?.offsetWidth || blurWidth;
+      const rootHeight = root?.offsetHeight || blurHeight;
+      const blurRadius = Math.max(1, Math.min(64, 16 / Math.max(rootWidth / blurWidth, rootHeight / blurHeight)));
+      const pad = Math.ceil(blurRadius * 2);
       blurredCanvas = document.createElement('canvas');
       blurredCanvas.width = blurWidth;
       blurredCanvas.height = blurHeight;
       const blurredContext = blurredCanvas.getContext('2d');
       if (!blurredContext) throw new Error('Canvas unavailable');
-      blurredContext.filter = 'blur(16px)';
-      blurredContext.drawImage(image, -16, -16, blurWidth + 32, blurHeight + 32);
+      if (supportsCanvasBlur) blurredContext.filter = `blur(${blurRadius}px)`;
+      blurredContext.drawImage(image, -pad, -pad, blurWidth + pad * 2, blurHeight + pad * 2);
 
-      const blurredBlob = await new Promise<Blob | null>((resolve) => blurredCanvas!.toBlob(resolve, 'image/png'));
+      let blurredBlob: Blob | null;
+      if (!supportsCanvasBlur) {
+        const imageData = blurredCanvas.toDataURL('image/png');
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${blurWidth}" height="${blurHeight}" viewBox="0 0 ${blurWidth} ${blurHeight}"><defs><filter id="blur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="${blurRadius}"/></filter></defs><image href="${imageData}" width="100%" height="100%" filter="url(#blur)"/></svg>`;
+        blurredBlob = new Blob([svg], { type: 'image/svg+xml' });
+      } else {
+        blurredBlob = await new Promise<Blob | null>((resolve) => blurredCanvas!.toBlob(resolve, 'image/png'));
+      }
       if (!blurredBlob) throw new Error('Could not encode wallpaper background.');
 
       blurredUrl = URL.createObjectURL(blurredBlob);
@@ -81,7 +92,6 @@ export function useWallpaperBackground({
       setWallpaperBackground(objectUrl);
       setWallpaperBackgroundBlurred(blurredUrl);
       setWallpaperBackgroundName(file.name);
-      setUseNativeGlassBlur(!supportsCanvasBlur);
     } catch {
       setWallpaperBackgroundError('wallpaperImageLoadFailed');
       if (!retainedUrls) {
@@ -172,7 +182,6 @@ export function useWallpaperBackground({
   return {
     wallpaperBackground,
     wallpaperBackgroundBlurred,
-    useNativeGlassBlur,
     wallpaperBackgroundName,
     wallpaperBackgroundError,
     brightDayLabels,

@@ -150,7 +150,6 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
   const {
     wallpaperBackground,
     wallpaperBackgroundBlurred,
-    useNativeGlassBlur,
     wallpaperBackgroundName,
     wallpaperBackgroundError,
     brightDayLabels,
@@ -683,7 +682,6 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
               timeFormat={timeFormat}
               wallpaperBackground={wallpaperBackground}
               wallpaperBackgroundBlurred={wallpaperBackgroundBlurred}
-              useNativeGlassBlur={useNativeGlassBlur}
               currentSpacers={currentSpacers}
               wallpaperRef={wallpaperRef}
               userZoom={userZoom}

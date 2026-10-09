@@ -123,7 +123,7 @@ export default function MatrixGridView({
       const end = parseTimeToMinutes(course.end_time);
       return [{ start, end: end !== null && end > start ? end : start + 60 }];
     });
-    return buildAdaptiveTimeSlots(ranges, 8);
+    return buildAdaptiveTimeSlots(ranges, 8, true);
   }, [timetable]);
 
   // Constant column widths + fixed text sizing: on small screens the grid
