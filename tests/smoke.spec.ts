@@ -762,7 +762,10 @@ test('minimal wallpaper design shows a week card and exports to PNG', async ({ p
   const bottomPosition = page.getByRole('slider', { name: /adjust timetable bottom space|laraskan ruang bawah jadual/i });
   await bottomPosition.focus();
   await bottomPosition.press('End');
-  await expect.poll(async () => (await card.boundingBox())!.y).toBeLessThan(cardBox.y - 80);
+  await expect.poll(async () => {
+    const [cardAfter, rootAfter] = await Promise.all([card.boundingBox(), root.boundingBox()]);
+    return cardAfter!.y - rootAfter!.y;
+  }).toBeLessThan(cardBox.y - rootBox.y - 80);
 
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: /^download$|^muat turun$/i }).click();
