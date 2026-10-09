@@ -43,6 +43,13 @@ https://mobile.usas.edu.my/umc_v2   (official USAS UMC API)
 - Providers: `ThemeProvider`, `AuthProvider`, `NotificationProvider`, `LanguageProvider`.
 - `AuthProvider` owns the session, the cached timetable, the login throttle and connectivity (`isOffline`).
 
+## Wallpaper exports
+
+- The lockscreen exporter supports the standard grid, Minimal weekly-card and Liquid Glass weekly-card layouts.
+- Minimal and Liquid Glass share `MinimalWeekCard`; Liquid Glass applies a theme-specific translucent surface and course colors.
+- Wallpaper layout controls position the timetable at the bottom of the lockscreen so the device clock area stays clear.
+- PNG rendering is performed in the browser with `html2canvas`; platform-specific clone adjustments keep exported text aligned with the preview.
+
 ## Third parties
 
 - **Prayer times**: `https://api.waktusolat.app/v2/solat/<zone>` (JAKIM), called directly from the client.

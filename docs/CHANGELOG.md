@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+* Minimal and Liquid Glass lockscreen wallpaper layouts with timetable-theme-aware glass styling, contributed by @xfnx-17 in PR #8.
 * Full 4-language support for English (default), Bahasa Melayu, Simplified Chinese (zh), and Tamil (ta).
 * Custom glassmorphic language selection dropdown in top navigation.
 * Five distinct timetable themes (Dark, Light, OLED, Emerald, and Warm Amber).

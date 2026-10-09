@@ -1,67 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTheme } from '@/app/providers/ThemeProvider';
 import { useLanguage } from '@/app/providers/LanguageProvider';
 import { Download, X } from 'lucide-react';
+import { usePwaInstall } from '../hooks/usePwaInstall';
 
 export default function PwaInstallPrompt() {
   const { theme } = useTheme();
   const { lang } = useLanguage();
   const isLight = theme === 'light';
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const handleBeforeInstallPrompt = (e: any) => {
-      if (!window.matchMedia('(min-width: 640px)').matches) return;
-
-      // Prevent the browser from showing its default install prompt
-      e.preventDefault();
-      // Stash the event so it can be triggered later.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).deferredPrompt = e;
-      setDeferredPrompt(e);
-      // Update UI to notify the user they can add to home screen
-      setIsVisible(true);
-    };
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if ((window as any).deferredPrompt) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setDeferredPrompt((window as any).deferredPrompt);
-      setIsVisible(true);
-    }
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    };
-  }, []);
-
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-
-    // Show the install prompt
-    deferredPrompt.prompt();
-
-    // Wait for the user to respond to the prompt
-    await deferredPrompt.userChoice;
-
-    // Prompt no longer needed; clear it
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window as any).deferredPrompt = null;
-    setDeferredPrompt(null);
-    setIsVisible(false);
-  };
+  const { available, promptInstall } = usePwaInstall();
+  const [dismissed, setDismissed] = useState(false);
 
   const handleDismiss = () => {
-    setIsVisible(false);
+    setDismissed(true);
   };
 
-  if (!isVisible) return null;
+  if (!available || dismissed) return null;
 
   return (
     <div className={`fixed bottom-20 left-4 right-4 sm:right-auto sm:left-6 sm:bottom-6 sm:max-w-sm z-50 p-3 sm:p-4 rounded-xl shadow-2xl border hidden sm:flex items-center justify-between gap-2 sm:gap-4 transition-all duration-300 transform translate-y-0 backdrop-blur-[2px] ${isLight
@@ -85,7 +40,7 @@ export default function PwaInstallPrompt() {
 
       <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
         <button
-          onClick={handleInstallClick}
+          onClick={() => void promptInstall()}
           className={`px-2.5 py-1.5 sm:px-3 rounded-lg text-[11px] sm:text-xs font-bold transition-colors ${isLight
               ? 'bg-amber-500 text-white hover:bg-amber-600'
               : 'bg-amber-400 text-slate-900 hover:bg-amber-300'

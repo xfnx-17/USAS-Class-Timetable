@@ -7,6 +7,15 @@ import { getOwnRecordValue } from '@/shared/lib/security';
 const WEEK_DAYS = ['ISNIN', 'SELASA', 'RABU', 'KHAMIS', 'JUMAAT', 'SABTU', 'AHAD'] as const;
 
 type ChipColor = { bg: string; text: string; bar: string };
+type GlassTheme = 'light' | 'dark' | 'emerald' | 'oled' | 'warm';
+
+const GLASS_THEMES: Record<GlassTheme, { card: string; wash: string; strong: string; muted: string; hairline: string; rim: string }> = {
+  light: { card: 'rgba(255,255,255,0.5)', wash: 'rgba(255,255,255,0.38)', strong: '#111113', muted: 'rgba(28,28,30,0.62)', hairline: 'rgba(0,0,0,0.1)', rim: '255,255,255' },
+  dark: { card: 'rgba(10,20,40,0.58)', wash: 'rgba(10,20,40,0.38)', strong: '#F8FAFC', muted: 'rgba(226,232,240,0.68)', hairline: 'rgba(255,255,255,0.16)', rim: '191,219,254' },
+  emerald: { card: 'rgba(1,45,32,0.62)', wash: 'rgba(1,33,23,0.4)', strong: '#ECFDF5', muted: 'rgba(209,250,229,0.68)', hairline: 'rgba(110,231,183,0.2)', rim: '110,231,183' },
+  oled: { card: 'rgba(0,0,0,0.72)', wash: 'rgba(0,0,0,0.52)', strong: '#FFFFFF', muted: 'rgba(228,228,231,0.68)', hairline: 'rgba(255,255,255,0.18)', rim: '212,212,216' },
+  warm: { card: 'rgba(38,23,5,0.64)', wash: 'rgba(23,14,3,0.42)', strong: '#FEF3C7', muted: 'rgba(253,230,138,0.7)', hairline: 'rgba(251,191,36,0.2)', rim: '252,211,77' },
+};
 
 // Plain rgba/hex values (not Tailwind classes) so the PNG renderer sees exact colours.
 const DARK_CHIPS: Record<CourseColorSlot, ChipColor> = {
@@ -42,6 +51,7 @@ type MinimalWeekCardProps = {
   width: number;
   // Apple-style liquid glass: light milky glass, dark text, bent edges and a bright rim.
   glass?: boolean;
+  glassTheme?: GlassTheme;
   background?: { url: string; nativeBlur: boolean; rootWidth: number; rootHeight: number; left: number; bottom: number };
 };
 
@@ -68,14 +78,15 @@ export default function MinimalWeekCard({
   t,
   width,
   glass = false,
+  glassTheme = 'light',
   background,
 }: MinimalWeekCardProps) {
-  const palette = isLight && !glass ? LIGHT_CHIPS : DARK_CHIPS;
+  const glassStyle = getOwnRecordValue<typeof GLASS_THEMES.light>(GLASS_THEMES, glassTheme) || GLASS_THEMES.light;
+  const palette = isLight ? LIGHT_CHIPS : DARK_CHIPS;
   const colorFor = (code: string): ChipColor => {
     const color = getOwnRecordValue<ChipColor>(palette, getCourseColorSlot(courseColorMap, code)) || palette.ISNIN;
     if (!glass) return color;
-    const light = getOwnRecordValue<ChipColor>(LIGHT_CHIPS, getCourseColorSlot(courseColorMap, code)) || LIGHT_CHIPS.ISNIN;
-    return { ...color, bg: hexToRgba(color.bar, 0.2), text: light.text };
+    return { ...color, bg: hexToRgba(color.bar, isLight ? 0.2 : 0.28) };
   };
 
   const startOf = (course: TimetableItem) => parseTimeToMinutes(course.start_time || course.jadual || '');
@@ -106,9 +117,9 @@ export default function MinimalWeekCard({
     new Map(courses.map((course) => [courseCode(course), course.course_name || course.kursus || ''])).entries(),
   ).filter(([code]) => code);
 
-  const muted = glass ? 'rgba(28,28,30,0.62)' : isLight ? '#64748B' : 'rgba(255,255,255,0.45)';
-  const strong = glass ? '#111113' : isLight ? '#0F172A' : 'rgba(255,255,255,0.92)';
-  const hairline = glass ? 'rgba(0,0,0,0.1)' : isLight ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.07)';
+  const muted = glass ? glassStyle.muted : isLight ? '#64748B' : 'rgba(255,255,255,0.45)';
+  const strong = glass ? glassStyle.strong : isLight ? '#0F172A' : 'rgba(255,255,255,0.92)';
+  const hairline = glass ? glassStyle.hairline : isLight ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.07)';
   const radius = glass ? '26px' : '18px';
   // Per-side rim: bright where light hits (top/left), dimmer on the far sides.
   // The PNG renderer paints inset box-shadows as a solid inner band, so the
@@ -116,23 +127,24 @@ export default function MinimalWeekCard({
   const glassRim = (strength: number, width: number) => ({
     borderStyle: 'solid',
     borderWidth: `${width}px`,
-    borderTopColor: `rgba(255,255,255,${0.85 * strength})`,
-    borderLeftColor: `rgba(255,255,255,${0.6 * strength})`,
-    borderRightColor: `rgba(255,255,255,${0.25 * strength})`,
-    borderBottomColor: `rgba(255,255,255,${0.4 * strength})`,
+    borderTopColor: `rgba(${glassStyle.rim},${0.85 * strength})`,
+    borderLeftColor: `rgba(${glassStyle.rim},${0.6 * strength})`,
+    borderRightColor: `rgba(${glassStyle.rim},${0.25 * strength})`,
+    borderBottomColor: `rgba(${glassStyle.rim},${0.4 * strength})`,
   });
 
   return (
     <div
       data-wallpaper-minimal-card
+      data-wallpaper-glass-theme={glass ? glassTheme : undefined}
       className="relative z-10 overflow-hidden"
       style={{
         borderRadius: radius,
         ...(glass
-          ? { ...glassRim(1, 2), boxShadow: '0 8px 20px rgba(0,0,0,0.3)' }
+          ? { ...glassRim(0.82, 1), boxShadow: '0 8px 20px rgba(0,0,0,0.3)' }
           : { border: `1px solid ${isLight ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.08)'}` }),
         backgroundColor: glass
-          ? (background ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.55)')
+          ? glassStyle.card
           : background
             ? (isLight ? 'rgba(255,255,255,0.55)' : 'rgba(18,18,22,0.55)')
             : (isLight ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.05)'),
@@ -154,7 +166,7 @@ export default function MinimalWeekCard({
               ...(background.nativeBlur ? { WebkitFilter: 'blur(16px)', filter: 'blur(16px)' } : {}),
             }}
           />
-          <div className="absolute inset-0" style={{ backgroundColor: glass ? 'rgba(255,255,255,0.5)' : isLight ? 'rgba(255,255,255,0.45)' : 'rgba(10,10,14,0.5)' }} />
+          <div className="absolute inset-0" style={{ backgroundColor: glass ? glassStyle.wash : isLight ? 'rgba(255,255,255,0.45)' : 'rgba(10,10,14,0.5)' }} />
         </div>
       )}
       {glass && (
@@ -164,35 +176,13 @@ export default function MinimalWeekCard({
           data-wallpaper-glass-sheen
           className="absolute inset-0 z-[1]"
           style={{ borderRadius: radius, backgroundImage: [
-              'linear-gradient(180deg, rgba(255,255,255,0.42) 0%, rgba(255,255,255,0.14) 7%, rgba(255,255,255,0) 26%, rgba(255,255,255,0) 84%, rgba(255,255,255,0.16) 100%)',
-              'linear-gradient(120deg, rgba(255,255,255,0.20) 0%, rgba(255,255,255,0) 28%)',
+              'linear-gradient(180deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.08) 8%, rgba(255,255,255,0) 28%, rgba(255,255,255,0) 84%, rgba(255,255,255,0.1) 100%)',
+              'linear-gradient(120deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 30%)',
             ].join(', ') }}
         />
       )}
-      {glass && (
-        <>
-          {/* Rainbow fringe along the bottom and top edges, like light split by thick glass. */}
-          {(['bottom', 'top'] as const).map((edge) => (
-            <div
-              key={edge}
-              aria-hidden="true"
-              className="absolute z-[1]"
-              style={{
-                [edge]: '2px',
-                left: '18px',
-                right: '18px',
-                height: '2px',
-                borderRadius: '2px',
-                opacity: edge === 'bottom' ? 0.55 : 0.3,
-                backgroundImage: 'linear-gradient(90deg, rgba(255,90,200,0) 0%, rgba(255,90,200,0.9) 18%, rgba(255,210,90,0.9) 40%, rgba(90,230,255,0.9) 62%, rgba(170,120,255,0.9) 84%, rgba(170,120,255,0) 100%)',
-              }}
-            />
-          ))}
-        </>
-      )}
-
       <div className="relative z-10" style={{ padding: glass ? `16px ${padX}px 16px` : `14px ${padX}px 12px` }}>
-        <div style={{ fontSize: '7.5px', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: muted }}>
+        <div data-wallpaper-minimal-text style={{ fontSize: '7.5px', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: muted }}>
           {title}
         </div>
 
@@ -206,7 +196,7 @@ export default function MinimalWeekCard({
         >
           {byDay.map(({ day, classes }) => (
             <div key={day} className="flex flex-col items-center" style={{ gap: '3px', minWidth: 0 }}>
-              <div style={{ fontSize: '7px', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: strong, marginBottom: '2px' }}>
+              <div data-wallpaper-minimal-text style={{ fontSize: '7px', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: strong, marginBottom: '2px' }}>
                 {t(`shortDays.${day}`)}
               </div>
               {classes.map((course) => {
@@ -227,7 +217,7 @@ export default function MinimalWeekCard({
                         lineHeight: 1.3,
                         ...(glass
                           ? {
-                              ...glassRim(0.85, 1.5),
+                              ...glassRim(0.58, 1),
                               backgroundImage: [
                                 'linear-gradient(180deg, rgba(255,255,255,0.38) 0%, rgba(255,255,255,0.1) 22%, rgba(255,255,255,0) 50%, rgba(255,255,255,0) 78%, rgba(255,255,255,0.16) 100%)',
                                 'linear-gradient(90deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0) 18%)',
@@ -236,9 +226,9 @@ export default function MinimalWeekCard({
                           : {}),
                       }}
                     >
-                      <div style={{ fontSize: `${codeFontSize}px`, fontWeight: 800, letterSpacing: '0.01em', whiteSpace: 'nowrap' }}>{code}</div>
+                      <div data-wallpaper-minimal-text style={{ fontSize: `${codeFontSize}px`, fontWeight: 800, letterSpacing: '0.01em', whiteSpace: 'nowrap' }}>{code}</div>
                       {showTimes && detail && (
-                        <div data-minimal-chip-detail style={{ fontSize: `${detailFontSize}px`, fontWeight: 600, opacity: 0.85, marginTop: '1.5px', whiteSpace: 'nowrap' }}>
+                        <div data-minimal-chip-detail data-wallpaper-minimal-text style={{ fontSize: `${detailFontSize}px`, fontWeight: 600, opacity: 0.85, marginTop: '1.5px', whiteSpace: 'nowrap' }}>
                           {detail}
                         </div>
                       )}
@@ -254,7 +244,7 @@ export default function MinimalWeekCard({
             {legend.map(([code, name]) => (
               // The colour bar is a text glyph so it shares the code's baseline; box
               // elements drift above the text in the PNG renderer.
-              <div key={code} style={{ fontSize: '7.5px', lineHeight: 1.4, minWidth: 0, whiteSpace: 'nowrap' }}>
+              <div key={code} data-wallpaper-minimal-text style={{ fontSize: '7.5px', lineHeight: 1.4, minWidth: 0, whiteSpace: 'nowrap' }}>
                 <span aria-hidden="true" style={{ color: colorFor(code).bar, marginRight: '5px' }}>{'\u258E'}</span>
                 <span style={{ fontWeight: 800, color: strong }}>{code}</span>{' '}
                 <span style={{ color: muted, whiteSpace: 'nowrap', textTransform: 'capitalize' }}>

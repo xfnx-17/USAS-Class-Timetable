@@ -1,5 +1,28 @@
 import { test, expect } from '@playwright/test';
 
+test('landing install action opens the browser PWA prompt', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => {
+    const event = new Event('beforeinstallprompt', { cancelable: true }) as Event & {
+      prompt: () => Promise<void>;
+      userChoice: Promise<{ outcome: 'accepted'; platform: string }>;
+    };
+    event.prompt = async () => { document.body.dataset.installPrompt = 'opened'; };
+    event.userChoice = Promise.resolve({ outcome: 'accepted', platform: 'web' });
+    window.dispatchEvent(event);
+  });
+
+  await page.getByRole('button', { name: /pasang portal|install portal app/i }).click();
+  await expect(page.getByRole('status')).toHaveText(/berjaya dipasang|installed successfully/i);
+  await expect.poll(() => page.locator('body').getAttribute('data-install-prompt')).toBe('opened');
+});
+
+test('landing install action explains manual install when browser prompt is unavailable', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /pasang portal|install portal app/i }).click();
+  await expect(page.getByRole('status')).toContainText(/menu pelayar|browser menu/i);
+});
+
 test('demo login opens timetable and export modal', async ({ page }) => {
   await page.goto('/');
 
@@ -688,6 +711,7 @@ test('minimal wallpaper design shows a week card and exports to PNG', async ({ p
   await expect(card).toBeVisible();
   await expect(page.locator('[data-wallpaper-grid]')).toHaveCount(0);
   await expect(card.locator('[data-export-course-color-code]')).toHaveCount(7);
+  await expect(page.getByRole('slider', { name: /adjust timetable bottom space|laraskan ruang bawah jadual/i })).toHaveValue('47');
   // Demo data has no weekend classes, so those days are left out.
   await expect(card.getByText(/^(sun|ahd|sat|sab)$/i)).toHaveCount(0);
   // Time and room stay on one line inside each chip.
@@ -701,6 +725,12 @@ test('minimal wallpaper design shows a week card and exports to PNG', async ({ p
   const rootBox = (await root.boundingBox())!;
   const cardBox = (await card.boundingBox())!;
   expect(cardBox.y).toBeGreaterThan(rootBox.y + rootBox.height / 2);
+
+  await expect(page.getByRole('slider', { name: /adjust timetable top space|laraskan ruang atas jadual/i })).toHaveCount(0);
+  const bottomPosition = page.getByRole('slider', { name: /adjust timetable bottom space|laraskan ruang bawah jadual/i });
+  await bottomPosition.focus();
+  await bottomPosition.press('End');
+  await expect.poll(async () => (await card.boundingBox())!.y).toBeLessThan(cardBox.y - 80);
 
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: /^download$|^muat turun$/i }).click();
@@ -723,8 +753,15 @@ test('glass wallpaper design renders a frosted card and exports to PNG', async (
   const card = page.locator('[data-wallpaper-minimal-card]');
   await expect(card).toBeVisible();
   await expect(card.locator('[data-wallpaper-glass-sheen]')).toHaveCount(1);
-  await expect(page.locator('[data-wallpaper-glass-backdrop]')).toHaveCount(1);
-  await expect(card).toHaveCSS('background-color', 'rgba(255, 255, 255, 0.55)');
+  await expect(page.getByRole('slider', { name: /adjust timetable top space|laraskan ruang atas jadual/i })).toHaveCount(0);
+  await expect(page.getByRole('slider', { name: /adjust timetable bottom space|laraskan ruang bawah jadual/i })).toHaveValue('47');
+  await expect(page.locator('[data-wallpaper-glass-backdrop]')).toHaveCount(0);
+  await expect(card).toHaveAttribute('data-wallpaper-glass-theme', 'dark');
+
+  await page.getByRole('button', { name: /dark theme|light theme|tema gelap|tema terang/i }).click();
+  await page.getByRole('button', { name: /oled theme|tema oled/i }).click();
+  await expect(card).toHaveAttribute('data-wallpaper-glass-theme', 'oled');
+  await expect(card).toHaveCSS('background-color', 'rgba(0, 0, 0, 0.72)');
 
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: /^download$|^muat turun$/i }).click();

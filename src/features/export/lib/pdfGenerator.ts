@@ -181,6 +181,11 @@ async function captureElement(
         clonedRoot.querySelectorAll<HTMLElement>('[data-export-course-content]').forEach((el) => {
           el.style.transform = 'translateY(-6px)';
         });
+
+        clonedRoot.querySelectorAll<HTMLElement>('[data-wallpaper-minimal-text]').forEach((el) => {
+          el.style.position = 'relative';
+          el.style.top = '-4px';
+        });
       }
 
       if (isWallpaper) {
