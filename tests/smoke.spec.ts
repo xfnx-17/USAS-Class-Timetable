@@ -809,3 +809,19 @@ test('glass wallpaper design renders a frosted card and exports to PNG', async (
   const download = await downloadPromise;
   expect(download.suggestedFilename().toLowerCase()).toContain('.png');
 });
+
+test('android wallpaper ratio exports a taller 9:20 image', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/login');
+  await page.getByRole('button', { name: /log masuk tanpa akaun|demo/i }).click();
+  await page.getByRole('button', { name: /open tools and export/i }).click();
+  await page.getByRole('button', { name: /eksport pdf & wallpaper|export pdf & wallpaper/i }).click();
+  await page.getByRole('button', { name: /wallpaper lockscreen/i }).click();
+
+  const root = page.locator('[data-export-root="wallpaper-export-root"]');
+  await page.getByRole('button', { name: /iphone \(9:16\)/i }).click();
+  await page.getByRole('button', { name: /android \(9:20\)/i }).click();
+  await expect(page.getByRole('button', { name: /android \(9:20\)/i }).first()).toBeVisible();
+  // 360px wide at 9:20 is 800px tall.
+  await expect.poll(() => root.evaluate((el) => (el as HTMLElement).offsetHeight)).toBe(800);
+});

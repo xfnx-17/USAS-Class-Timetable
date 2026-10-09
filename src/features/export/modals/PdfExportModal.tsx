@@ -36,7 +36,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
   const [exportMode, setExportMode] = useState<ExportMode>('FORMAL_A4');
   const [exportFileType, setExportFileType] = useState<ExportFileType>('PDF');
 
-  // Device Wallpaper Presets: 'phone' (9:16) | 'tablet' (4:3) | 'desktop' (16:9) | 'square' (1:1)
+  // Device Wallpaper Presets: 'phone' (iPhone, 9:16) | 'android' (9:20) | 'tablet' (4:3) | 'desktop' (16:9) | 'square' (1:1)
   const [wallpaperPreset, setWallpaperPreset] = useState<WallpaperPreset>('phone');
 
   // Content Detail Customizer: 'CODE' | 'DETAILS'
@@ -250,7 +250,8 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
   ];
 
   const ratioOptions: Array<{ id: WallpaperPreset; label: string }> = [
-    { id: 'phone', label: `${t('phonePreset')} (9:16)` },
+    { id: 'phone', label: 'iPhone (9:16)' },
+    { id: 'android', label: 'Android (9:20)' },
     { id: 'tablet', label: `${t('tabletPreset')} (4:3)` },
     { id: 'desktop', label: `${t('desktopPreset')} (16:9)` },
     { id: 'square', label: `${t('squarePreset')} (1:1)` },
@@ -396,7 +397,8 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                           }`}
                       >
                         <span>
-                          {wallpaperPreset === 'phone' && `${t('phonePreset')} (9:16)`}
+                          {wallpaperPreset === 'phone' && 'iPhone (9:16)'}
+                          {wallpaperPreset === 'android' && 'Android (9:20)'}
                           {wallpaperPreset === 'tablet' && `${t('tabletPreset')} (4:3)`}
                           {wallpaperPreset === 'desktop' && `${t('desktopPreset')} (16:9)`}
                           {wallpaperPreset === 'square' && `${t('squarePreset')} (1:1)`}

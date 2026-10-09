@@ -2,7 +2,11 @@ import { extractDayName } from '@/shared/lib/dayFormat';
 import { getOwnRecordValue } from '@/shared/lib/security';
 import { formatTimeFromMinutes, getShortTimeRange } from '@/shared/lib/timetableTime';
 
-export type WallpaperPreset = 'phone' | 'tablet' | 'desktop' | 'square';
+export type WallpaperPreset = 'phone' | 'android' | 'tablet' | 'desktop' | 'square';
+
+// Android wallpapers are just a taller phone, so they share the phone layout.
+export const getLayoutPreset = (preset: WallpaperPreset): Exclude<WallpaperPreset, 'android'> =>
+  preset === 'android' ? 'phone' : preset;
 export type ContentDetail = 'CODE' | 'DETAILS';
 export type WallpaperDesign = 'GRID' | 'MINIMAL' | 'GLASS';
 export type ExportTheme = 'light' | 'dark' | 'emerald' | 'oled' | 'warm';
@@ -149,8 +153,9 @@ export const getLockscreenThemeConfig = (theme: ExportTheme) => {
 
 export type LockscreenThemeConfig = ReturnType<typeof getLockscreenThemeConfig>;
 
-export const getPresetStyle = (preset: WallpaperPreset, detail: ContentDetail = 'DETAILS'): WallpaperPresetStyle => {
-  const base: Record<WallpaperPreset, WallpaperPresetStyle> = {
+export const getPresetStyle = (wallpaperPreset: WallpaperPreset, detail: ContentDetail = 'DETAILS'): WallpaperPresetStyle => {
+  const preset = getLayoutPreset(wallpaperPreset);
+  const base: Record<Exclude<WallpaperPreset, 'android'>, WallpaperPresetStyle> = {
     phone: {
       tableFontSize: 'text-[5.75px]',
       thPadding: 'p-0.5',
@@ -220,6 +225,7 @@ export const getPresetStyle = (preset: WallpaperPreset, detail: ContentDetail = 
 
 export const WALLPAPER_PRESET_SIZES = new Map<WallpaperPreset, { width: number; height: number }>([
   ['phone', { width: 360, height: 640 }],
+  ['android', { width: 360, height: 800 }],
   ['tablet', { width: 520, height: 640 }],
   ['square', { width: 480, height: 480 }],
   ['desktop', { width: 780, height: 480 }],
