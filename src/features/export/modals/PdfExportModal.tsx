@@ -13,6 +13,7 @@ import type { TimetableItem } from '@/shared/types/usas';
 import {
   X, Download, Smartphone, RotateCw, ChevronDown, Plus, Minus, FileBadge, ImagePlus
 } from 'lucide-react';
+import MinimalWeekCard from '../components/MinimalWeekCard';
 
 type PdfExportModalProps = {
   isOpen: boolean;
@@ -23,6 +24,7 @@ type ExportMode = 'FORMAL_A4' | 'WALLPAPER';
 type ExportFileType = 'PDF' | 'PNG';
 type WallpaperPreset = 'phone' | 'tablet' | 'desktop' | 'square';
 type ContentDetail = 'CODE' | 'DETAILS';
+type WallpaperDesign = 'GRID' | 'MINIMAL' | 'GLASS';
 type ExportTheme = 'light' | 'dark' | 'emerald' | 'oled' | 'warm';
 type WallpaperPresetStyle = {
   tableFontSize: string;
@@ -235,11 +237,25 @@ const getPresetStyle = (preset: WallpaperPreset, detail: ContentDetail = 'DETAIL
 };
 
 const WALLPAPER_PRESET_SIZES = new Map<WallpaperPreset, { width: number; height: number }>([
-  ['phone', { width: 360, height: 640 }],
+  ['phone', { width: 360, height: 780 }],
   ['tablet', { width: 520, height: 640 }],
   ['square', { width: 480, height: 480 }],
   ['desktop', { width: 780, height: 480 }],
 ]);
+
+// Phone wallpapers follow the screen they are made on, so the lockscreen does not
+// zoom and crop the sides. Off a phone (or for odd shapes) it falls back to 9:19.5.
+const getPhoneWallpaperHeight = (): number => {
+  const fallback = WALLPAPER_PRESET_SIZES.get('phone')!.height;
+  if (typeof window === 'undefined' || !window.screen) return fallback;
+  const short = Math.min(window.screen.width, window.screen.height);
+  const long = Math.max(window.screen.width, window.screen.height);
+  if (!short || short >= 600) return fallback;
+  const ratio = Math.min(22 / 9, Math.max(16 / 9, long / short));
+  return Math.round(360 * ratio);
+};
+
+const formatPhoneRatio = (height: number) => `9:${Math.round((height / 360) * 9 * 2) / 2}`;
 
 // Measures the real rendered width of bold text so the wallpaper can shrink the
 // course code to exactly fit a narrow (single-period) cell.
@@ -305,11 +321,14 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
   const [exportMode, setExportMode] = useState<ExportMode>('FORMAL_A4');
   const [exportFileType, setExportFileType] = useState<ExportFileType>('PDF');
 
-  // Device Wallpaper Presets: 'phone' (9:16) | 'tablet' (4:3) | 'desktop' (16:9) | 'square' (1:1)
+  // Device Wallpaper Presets: 'phone' (9:19.5, modern phones) | 'tablet' (4:3) | 'desktop' (16:9) | 'square' (1:1)
   const [wallpaperPreset, setWallpaperPreset] = useState<WallpaperPreset>('phone');
+  const [phoneWallpaperHeight] = useState(getPhoneWallpaperHeight);
+  const phoneRatioLabel = formatPhoneRatio(phoneWallpaperHeight);
 
   // Content Detail Customizer: 'CODE' | 'DETAILS'
   const [contentDetail, setContentDetail] = useState<ContentDetail>('DETAILS');
+  const [wallpaperDesign, setWallpaperDesign] = useState<WallpaperDesign>('GRID');
 
   const [ratioDropdownOpen, setRatioDropdownOpen] = useState(false);
   const [detailDropdownOpen, setDetailDropdownOpen] = useState(false);
@@ -704,7 +723,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
   ];
 
   const ratioOptions: Array<{ id: WallpaperPreset; label: string }> = [
-    { id: 'phone', label: `${t('phonePreset')} (9:16)` },
+    { id: 'phone', label: `${t('phonePreset')} (${phoneRatioLabel})` },
     { id: 'tablet', label: `${t('tabletPreset')} (4:3)` },
     { id: 'desktop', label: `${t('desktopPreset')} (16:9)` },
     { id: 'square', label: `${t('squarePreset')} (1:1)` },
@@ -981,7 +1000,7 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                           }`}
                       >
                         <span>
-                          {wallpaperPreset === 'phone' && `${t('phonePreset')} (9:16)`}
+                          {wallpaperPreset === 'phone' && `${t('phonePreset')} (${phoneRatioLabel})`}
                           {wallpaperPreset === 'tablet' && `${t('tabletPreset')} (4:3)`}
                           {wallpaperPreset === 'desktop' && `${t('desktopPreset')} (16:9)`}
                           {wallpaperPreset === 'square' && `${t('squarePreset')} (1:1)`}
@@ -1381,6 +1400,26 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
           {/* ── MODE 2: DEVICE LOCK SCREEN WALLPAPER (Custom Presets & Content Controls) ── */}
           {exportMode === 'WALLPAPER' && (
             <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className={`text-[10px] font-bold uppercase tracking-wider ${isLight ? 'text-amber-800' : 'text-amber-400/90'}`}>{t('wallpaperDesign')}:</span>
+                <div role="group" aria-label={t('wallpaperDesign')} className={`flex items-center gap-0.5 border rounded-lg p-0.5 ${isLight ? 'bg-slate-100/80 border-slate-200/80' : 'bg-white/[0.04] border-white/10'}`}>
+                  {([['GRID', t('wallpaperDesignGrid')], ['MINIMAL', t('wallpaperDesignMinimal')], ['GLASS', t('wallpaperDesignGlass')]] as const).map(([id, label]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      aria-pressed={wallpaperDesign === id}
+                      onClick={() => setWallpaperDesign(id)}
+                      className={`px-3 py-1 rounded-md text-[11px] font-semibold transition-colors ${
+                        wallpaperDesign === id
+                          ? (isLight ? 'bg-white text-slate-800 shadow-sm' : 'bg-amber-400/20 text-amber-300')
+                          : (isLight ? 'text-slate-500 hover:text-slate-800' : 'text-white/50 hover:text-white/80')
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div
                 data-lenis-prevent
                 className={`flex py-3 rounded-xl border overflow-x-auto overflow-y-hidden relative ${isLight ? 'border-slate-200' : 'border-white/[0.04]'
@@ -1391,7 +1430,9 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                   {renderFloatingZoomWidget(lockscreenConfig.isLight)}
                 </div>
                 {(() => {
-                  const { width: w, height: h } = WALLPAPER_PRESET_SIZES.get(wallpaperPreset) ?? WALLPAPER_PRESET_SIZES.get('phone')!;
+                  const presetSize = WALLPAPER_PRESET_SIZES.get(wallpaperPreset) ?? WALLPAPER_PRESET_SIZES.get('phone')!;
+                  const w = presetSize.width;
+                  const h = wallpaperPreset === 'phone' ? phoneWallpaperHeight : presetSize.height;
                   return (
                     <div
                       style={{
@@ -1418,6 +1459,15 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                           color: lockscreenConfig.textColor
                         }}
                       >
+                        {wallpaperDesign === 'GLASS' && !wallpaperBackground && (
+                          // Glass needs something colourful behind it to read as glass.
+                          <div
+                            data-wallpaper-glass-backdrop
+                            aria-hidden="true"
+                            className="absolute inset-0 z-0"
+                            style={{ backgroundImage: 'linear-gradient(160deg, #0F2A6B 0%, #3B2A8F 38%, #8E2C82 70%, #D2546B 100%)' }}
+                          />
+                        )}
                         {wallpaperBackground && (
                           <img
                             data-wallpaper-background-layer
@@ -1427,6 +1477,32 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                             className="absolute inset-0 z-0 h-full w-full object-cover"
                           />
                         )}
+                        {wallpaperDesign === 'MINIMAL' || wallpaperDesign === 'GLASS' ? (
+                          <>
+                            {/* Clock and photo stay visible above a compact week card */}
+                            <div className="relative z-10 flex-1 min-h-0" />
+                            <MinimalWeekCard
+                              courses={allCourses}
+                              courseColorMap={courseColorMap}
+                              isLight={lockscreenConfig.isLight}
+                              showTimes={contentDetail === 'DETAILS'}
+                              timeFormat={timeFormat}
+                              title={t('minimalWeekTitle')}
+                              t={t}
+                              glass={wallpaperDesign === 'GLASS'}
+                              width={w - 2 * (wallpaperPreset === 'phone' ? 12 : wallpaperPreset === 'square' ? 14 : 16)}
+                              background={wallpaperBackgroundBlurred ? {
+                                url: wallpaperBackgroundBlurred,
+                                nativeBlur: useNativeGlassBlur,
+                                rootWidth: w,
+                                rootHeight: h,
+                                left: (wallpaperPreset === 'phone' ? 12 : wallpaperPreset === 'square' ? 14 : 16) + 1,
+                                bottom: (wallpaperPreset === 'phone' ? 12 : wallpaperPreset === 'square' ? 14 : 16) + currentSpacers.bottom + 1,
+                              } : undefined}
+                            />
+                          </>
+                        ) : (
+                        <>
                         {/* Top Reserved Clock Area */}
                         <div style={{ height: `${currentSpacers.top}px` }} className="relative z-10 flex-shrink-0" />
 
@@ -1583,6 +1659,8 @@ export default function PdfExportModal({ isOpen, onClose }: PdfExportModalProps)
                             );
                           })()}
                         </div>
+                        </>
+                        )}
 
                         <div style={{ height: `${currentSpacers.bottom}px` }} className="flex-shrink-0" />
                       </div>
